@@ -1,0 +1,42 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Incident Response Team</title>
+    <link rel="stylesheet" href="/static/css/join.css">
+    <link rel="icon" href="/static/images/logo.png" type="image/png">
+</head>
+<body>
+    <div class="join-container">
+        <!-- Logo Section -->
+        <a class=logo><img  src="{% static 'logo.png' %}" ></a>
+
+        <!-- Incident Name and Invitation -->
+        <h1 class="incident-name">Incident: {{ incident.name }}</h1>
+        <p class="invitation-message">{{ inviter_name }} invited you to join the incident response team</p>
+
+        <!-- Registration Form -->
+        <form action="welcome" method="POST" class="join-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Choose a username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="Enter your email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Set a password" required>
+            </div>
+
+            <button type="submit" class="btn-join">Join Team</button>
+        </form>
+    </div>
+</body>
+</html>

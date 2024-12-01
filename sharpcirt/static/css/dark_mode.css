@@ -1,0 +1,15 @@
+:root {
+    --main-color-1: rgba(53, 52, 71, 0.8);
+    --main-color-2: rgba(57, 56, 69, 0.8);
+    --main-color-3: #796FA7;
+    --text-color-1: #c0c0ca;
+    --text-color-2: #5c5c5e;
+    --widget-background-color: #232325;
+    --hover-color: #4c4f54;
+    --background-color:#141415;
+    --color-severity-critical:#f06654a0;
+    --color-severity-high:#dc7c73ca;
+    --color-severity-medium:#e3cf98;
+    --color-severity-low:#c5ceae;
+    --color-case-closed:#9eb7dc;
+}

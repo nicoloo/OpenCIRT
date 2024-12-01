@@ -1,0 +1,291 @@
+
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incident Report</title>
+    <style>
+        /* General styling */
+        body {
+            font-family: 'TradeGothic';
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        /* Header styles */
+        header {
+            /* background-color: #A03232; */
+            color: black;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+
+        footer {
+            background-color: #f4f4f4;
+            color: #333;
+            padding: 10px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            font-size: 0.9em;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between; /* Distribute space between the left and right */
+            align-items: center; /* Align vertically in the middle */
+        }
+
+        .footer-left {
+            text-align: left; /* Left align the left section */
+        }
+
+        .footer-right {
+            text-align: right; /* Right align the right section */
+        }
+
+        /* Table Styling */
+        .main-table {
+            width: 100%;
+            border-collapse: separate; /* Allow spacing between cells */
+            border-spacing: 0 10px; /* Add space between rows */
+        }
+
+        .main-table th, .main-table td {
+            border-top: 1px solid #ccc; /* Top border for each row */
+            border-bottom: 1px solid #ccc; /* Bottom border for each row */
+            padding: 10px; /* Space inside each cell */
+            text-align: left; /* Align text to the left */
+        }
+
+        .communication-date{
+            font-style:italic;
+            font-size: 0.8em;
+        }
+        .main-table th {
+            font-weight: bold;
+        }
+        .sub-table, .sub-table-centered {
+            width: 100%;
+            border-collapse: separate; /* Allow space between cells */
+            border-spacing: 0 5px; /* Add space between rows in sub-table */
+        }
+
+        .sub-table th, .sub-table td {
+            border: none; /* Remove borders from sub-table */
+            text-align: left; /* Align text to the left */
+        }
+        .sub-table-centered th, .sub-table-centered td{
+            text-align: center;
+            border: none; /* Remove borders from sub-table */
+        }
+        .keep-together {
+            page-break-inside: avoid;
+        }
+
+        .break-before {
+            page-break-before: always;
+        }
+
+        .break-after {
+            page-break-after: always;
+        }
+        h1 {
+            page-break-before: always;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header>
+        <div>
+            <h1>Cyber Incident Report</h1>
+            <h2>Title : {{incident.name}}</h2>
+            <h2>Date : {{ incident.starting_time|date:"d.m.Y" }}</h2>
+        </div>
+    </header>
+
+    <!-- Main Content Section -->
+    <div class="content">
+
+        <div class="break-after"></div>
+
+    <h1>Summary</h1>
+
+    <table class="main-table">
+        <tr>
+            <th>Description</th>
+            <td>
+            <table class="sub-table">
+                <tr>
+                    <th>Title</th>
+                    <td>{{incident.name}}</td>
+                </tr>
+                <tr>
+                    <th>Description</th>
+                    <td>{{incident.description}}</td>
+                </tr>
+                <tr>
+                    <th>Starting time</th>
+                    <td>{{ incident.starting_time|date:"l j F Y \\a\\t H:i" }}</td>
+                </tr>
+                {% if incident.executive_summary %}
+                <tr>
+                    <th>Executive Summary</th>
+                    <td>{{incident.executive_summary}}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <th>Status</th>
+                    <td>{{incident.status}}</td>
+                </tr>
+                <tr>
+                    <th>Severity</th>
+                    <td>{{incident.severity}}</td>
+                </tr>
+                {% if incident.external_reference  %}
+                <tr>
+                    <th>External Ref</th>
+                    <td>{{incident.external_reference}}</td>
+                </tr>
+                {% endif %}
+            </table>
+        </td>
+        </tr>
+    </table>
+
+    <h1>Impacts</h1> 
+    <table class="main-table">
+        <tr>
+            <th>Impact type</th>
+            <th>Starting time</th>
+            <th>Ending time</th>
+            <th>Description</th>
+        </tr>
+        {% for impact in incident.impacts.all %}
+        <tr>
+            <td>{{impact.type}}</td>
+            <td>{{impact.starting_time |date:"d.m.Y  H:i"}}</td>
+            <td>{{impact.ending_time |date:"d.m.Y  H:i"}}</td>
+            <td>{{impact.duration | duration_format}}</td>
+            <td>{{impact.description}}</td>
+        </tr>
+        {% endfor %}
+
+    </table>
+
+    <h1 class="break-before">Evidence</h1>
+    <h2>IoCs</h2>
+        <table class="main-table">
+            <tr>
+                <th>Observed at</th>
+                <th>Location</th>
+                <th>Type</th>
+                <th>Value</th>
+                <th>Description</th>
+            </tr>
+            {% for ioc in incident.genericiocs.all %}
+            <tr>
+                <td>{{ioc.created_at |date:"d.m.Y  H:i"}}</td>
+                <td>{{ioc.location}}</td>
+                <td>{{ioc.type}}</td>
+                <td>{{ioc.value}}</td>
+                <td>{{ioc.description}}</td>
+            </tr>
+            {% endfor %}
+
+        </table>
+    <h2>Timeline</h2>
+
+
+
+    <h1>Roles and responsabilities</h1>
+    <h2>Points of contact</h2>
+    <table class="main-table">
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+        </tr>
+        {% for user_role in incident.incident_roles.all %}
+        {% if user_role.user.is_poc %}
+        <tr>                
+            <td>{{ user_role.user.displayname }}</td>
+            <td>{{ user_role.user.email }}</td>
+            <td>{{ user_role.display_role }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+
+    </table>
+    <h2>Cyber Incident Response Team (CIRT)</h2>
+        <table class="main-table">
+            <tr>
+                <th>Name</th>
+                <th>Role</th>
+            </tr>
+            {% for user_role in incident.incident_roles.all %}
+            <tr>                
+                <td>{{ user_role.user.displayname }}</td>
+                <td>{{ user_role.display_role }}</td>
+            </tr>
+            {% endfor %}
+
+        </table>
+
+    <h1>Communication</h1>
+                
+        <table class="main-table">
+            {% for action in incident.actions.all %}
+            {% if action.type == "COMMUNICATION" %}
+            <tr>
+                <th>{{action.title}}</th>
+                <td class="communication-date">{{action.created_at |date:"d.m.Y  H:i"}}</td>
+                <td>{{action.description}}</td>
+            </tr>
+            {% endif %}
+            {% empty %}
+            <tr>
+                <td>No communication done at this point</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+    <h1>Key Performance Indicators</h1>
+        <table class="main-table">
+            <tr>
+                <th>Duration</th>
+                <th>Time to detect (TTD)</th>
+                <th>Time to respond (TTR)</th>
+                <th>Evidence found (IoCs)</th>
+            </tr>
+            <tr>
+                <td>{{incident.duration|duration_format}}</td>
+                <td>{{incident.time_to_detect|duration_format}}</td>
+                <td>{{incident.time_to_respond|duration_format}}</td>
+                <td>{{incident.genericiocs.count}}</td>
+            </tr>
+
+        </table>
+
+
+    <h1>Appendices</h1>
+    <h2>Tasks</h2>
+    <h2>Notes</h2>
+    <h2>Activity log</h2>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,165 @@
+{% extends 'base2.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block content %}
+
+    
+    <main>
+        <div class="main-frame">
+            <!-- <button class="btn"><h3>Create incident</h3></button> -->
+            <section class="incident-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Incident ID</th>
+                            <th>Creation date</th>
+                            <th>Name</th>
+                            <th>Severity</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="incidentTableBody">
+                        {% for inc in incidents %}
+                        <tr class="incident-row" data-incident-id="{{ inc.id }}" onclick="window.location.href='/incident/{{ inc.id }}/overview'">
+                            <td>{{ inc.id }}</td>
+                            <td>{{ inc.created_at }}</td>
+                            <td>{{ inc.name }}</td>
+                            <td>
+                                {% if inc.severity == 'CRITICAL' %}
+                                <i class="fa-solid fa-angles-up"></i>
+                                {% elif inc.severity == 'HIGH' %}
+                                <i class="fa-solid fa-angle-up"></i>
+                                {% elif inc.severity == 'MEDIUM' %}
+                                <i class="fa-solid fa-angle-down"></i>
+                                {% elif inc.severity == 'LOW' %}
+                                <i class="fa-solid fa-angles-down"></i>
+                                {% endif %}
+                                {{inc.severity|label:"INCIDENT_SEVERITY_CHOICES"}}
+                            </td>
+                            <td>{{ inc.status|label:"INCIDENT_STATUS_CHOICES" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5">No incidents assigned to you.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+
+
+            </section>
+            <aside class="sidebar">
+                
+                <div class="widget kpi">
+                    <h3>Average KPIs</h3>
+                    {% for k in kpis %}
+                        <p class="h4">{{k.label}}</p>
+                        <p class="KPI-value">{{k.value|duration_format}}</p>
+                    {% endfor %}   
+                </div>
+                
+                
+            </aside>
+
+        </div>
+            
+            <footer class="footer">
+                <div class="widget chart">
+                    <h3>Incidents over time</h3>
+                    <div class="timechart-container">
+                        <canvas id="incidentsChart"></canvas>
+                    </div>
+                    
+                </div>
+                <div class="widget status">
+                    <h3>Incident status</h3>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+                <div class="widget responders">
+                    <h3>Top responders</h3>
+                    <ul>
+                        <li><img src="{% static '/temp/nico.png' %}" alt="Nico"><h5 class="name">Nico</h5><h5 class="value">122</h5></li>
+                        <li><img src="{% static '/temp/toto.png' %}" alt="Nico"><h5 class="name">Toto</h5><h5 class="value">37</h5></li>
+                        <li><img src="{% static '/temp/gazo.png' %}" alt="Nico"><h5 class="name">Gazo</h5><h5 class="value">20</h5></li>
+                    </ul>
+                </div>
+                
+            </footer>    
+            
+        
+    </main>
+    
+    
+    
+    <script>
+        // Pie Chart
+        var pieCtx = document.getElementById('statusChart').getContext('2d');
+        var statusPieChart = new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ status_counts.labels|safe }},
+                datasets: [{
+                    data: {{ status_counts.values|safe }},
+                    backgroundColor: [
+                        getComputedStyle(document.documentElement).getPropertyValue('--color-severity-critical').trim(),
+                        getComputedStyle(document.documentElement).getPropertyValue('--color-severity-high').trim(),
+                        getComputedStyle(document.documentElement).getPropertyValue('--color-case-closed').trim(),
+                        getComputedStyle(document.documentElement).getPropertyValue('--color-severity-low').trim(),
+                    ],
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom' // Move legend to the right
+                    }
+                }
+            }
+        });
+        </script>
+<script>
+    // Get the CSS variables from the root element
+    const criticalColor = getComputedStyle(document.documentElement).getPropertyValue('--color-severity-critical').trim();
+    const highColor = getComputedStyle(document.documentElement).getPropertyValue('--color-severity-high').trim();
+    const mediumColor = getComputedStyle(document.documentElement).getPropertyValue('--color-severity-medium').trim();
+    const lowColor = getComputedStyle(document.documentElement).getPropertyValue('--color-severity-low').trim();
+
+    // Line Chart (Incidents Chart)
+    var lineCtx = document.getElementById('incidentsChart').getContext('2d');
+    var incidentsLineChart = new Chart(lineCtx, {
+        type: "bar",
+        data: {
+            labels: {{ timechart_data.labels|safe }},
+            datasets: {{ timechart_data.datasets|safe }}.map(dataset => {
+                dataset.backgroundColor = dataset.label === 'CRITICAL' ? criticalColor :
+                                          dataset.label === 'HIGH' ? highColor :
+                                          dataset.label === 'MEDIUM' ? mediumColor :
+                                          lowColor;
+
+                dataset.borderColor = dataset.backgroundColor;  // Border color should match the background
+
+                return dataset;
+            })
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { title: { display: true, text: "Date" }, stacked: true },
+                y: { title: { display: true, text: "Number of Incidents" }, beginAtZero: true, stacked: true, min: 0, max: 10, tick: { stepSize: 1 } },
+            },
+            plugins: {
+                legend: {
+                    position: 'right' // Move legend to the right
+                }
+            }
+        }
+    });
+</script>
+    
+
+{% endblock %}

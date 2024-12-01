@@ -1,0 +1,158 @@
+{% extends 'incidents/base2.html' %}
+{% load static %}
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/modal.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Main content -->
+<main>
+<div class="main-frame">
+    <div class="right-container">
+        <div class="info-container">
+            <div class="form-group">
+                <label for="title">Value</label>
+                <input type="text" id="value" name="value" value="" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+            </div>
+            <div class="selectors">
+                <div class="form-group">
+                    <label for="severity">Type of evidence</label>
+                    <div class="custom-select">
+                        <select id="type" name="type" autocomplete="off" class="{{ioc.type}}" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+                            {% for choice_value, choice_label in GENERIC_IOC_TYPE_CHOICES %}
+                            <option value="{{ choice_value }}" {% if impact.type_of_impact == choice_value %}selected{% endif %}>
+                                {{ choice_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="severity">Status</label>
+                    <div class="custom-select">
+                        <select id="status" name="status" autocomplete="off" class="{{ioc.status}}" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+                            {% for choice_value, choice_label in GENERIC_IOC_STATUS_CHOICES %}
+                            <option value="{{ choice_value }}" {% if impact.severity == choice_value %}selected{% endif %}>
+                                {{ choice_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div> 
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" {% if current_user_role.role in 'READER, PUBLIC_VIEWER' %}disabled{% endif %}>{{impact.description}}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="external_reference">External reference</label>
+                <input type="text" id="external_reference" name="external_reference" value="{{impact.external_reference}}" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+            </div>
+            <div id="ioc-tags" class="tagbox"></div>
+
+            <div id="ioc-actions" class="actions-container"></div>
+
+        </div>
+    </div>
+    <div class="left-container">
+        <div class="ioc-container">
+        <div class="search-bar">
+                <div class="search-bar-box">
+                    <input type="text" id="search-bar" name="search-bar"></input>
+                    <div class="search-icon">
+                        <img src="{% get_media_prefix %}images/SEARCH-ICON.png" alt="SEARCH ICON">
+                    </div>
+                </div>
+            <div class="filter-button">
+                <img src="{% get_media_prefix %}images/FILTER-ICON.png" alt="FILTER ICON">
+            </div>
+        </div>
+        <div class="ioc-list-container">
+            
+            {% for ioc in incident.genericiocs.all %}
+                <div class="ioc-item" data-ioc-id="{{ ioc.id }}">
+                    <!-- <p>{{  ioc.type }}</p> -->
+                    <img src="{% get_media_prefix %}images/{{ ioc.type }}-ICON.png" alt="{{ ioc.type }} ICON" onerror="this.onerror=null; this.src='{% get_media_prefix %}images/GENERICIOC-ICON.png';">
+                    <p>
+                    {% if ioc.value|length > 20 %}
+                        {{ ioc.value|slice:":20" }}...
+                    {% else %}
+                        {{ ioc.value }}
+                    {% endif %}        
+                    </p>  
+                                                  
+                </div>
+
+               
+            {% endfor %}
+        </div>
+    </div>
+    </div>
+
+</div> 
+</main>
+
+<script>
+    
+// Handle IoC Details Display
+// Handle IoC Details Display
+const ioc_type = document.getElementById('type');
+const ioc_description = document.getElementById('description');
+const ioc_value = document.getElementById('value');
+const ioc_status = document.getElementById('status');
+const ioc_tags = document.getElementById('ioc-tags');
+const ioc_actions = document.getElementById('ioc-actions');
+
+
+
+document.querySelectorAll('.ioc-item').forEach(item => {
+        item.addEventListener('click', function () {
+            event.stopPropagation();
+            const iocId = this.dataset.iocId;
+            const incidentId = '{{ incident.id }}';
+
+            currentIoCId = iocId; // Save the current IoC ID for editing
+
+            fetch(`/api/incident/${incidentId}/get-ioc/${iocId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        const ioc = data.data;
+                        ioc_type.value = ioc.type;
+                        ioc_value.value = ioc.value;
+                        ioc_status.value = ioc.status;
+                        ioc_description.value = ioc.description;
+
+                        ioc_tags.innerHTML = '';
+                        ioc.tags.forEach(tag => {
+                            const tagElement = document.createElement('div');
+                            tagElement.className = 'tag';
+                            tagElement.style.backgroundColor = tag.color;
+                            tagElement.innerHTML = `<span class="tag-item-value">#${tag.name}</span>`;
+                            ioc_tags.appendChild(tagElement);
+                        });
+
+                        ioc_actions.innerHTML = '';
+                        ioc.actions.forEach(action => {
+                            const actionElement = document.createElement('div');
+                            actionElement.className = 'action';
+                            actionElement.innerHTML = `<span>${action.created_at} - ${action.title} </span>`;
+                            ioc_actions.appendChild(actionElement);
+                        });
+
+                    } else {
+                        console.error('Error:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching IoC details:', error);
+                });
+        });
+    });
+
+
+</script>
+
+{% endblock %}
+
+

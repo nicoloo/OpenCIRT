@@ -1,0 +1,74 @@
+{% extends 'base2.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block content %}
+
+    <main>
+        <div class="widget profile">
+        <form method="POST" enctype="multipart/form-data" action="{% url 'update_profile' %}">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="user">Username</label>
+                <input type="text" name="username" value="{{ user.username }}" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="display_name">Display Name</label>
+                <input type="text" name="displayname" value="{{ user.displayname }}" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" name="email" value="{{ user.email }}" class="form-control">
+            </div>
+        
+            <div class="form-group">
+                <label for="light_mode">Light Mode</label>
+                <select name="light_mode" class="form-control">
+                    <option value="light_mode" {% if user.light_mode == "light_mode" %}selected{% endif %}>Light mode</option>
+                    <option value="dark_mode" {% if user.light_mode == "dark_mode" %}selected{% endif %}>Dark mode (for emo only)</option>
+                </select>
+            </div>
+        
+            <div class="form-group">
+                <label for="profile_picture">Profile Picture</label>
+                <input type="file" name="profile_picture" class="form-control">
+            </div>
+
+            <!-- Change Password Button -->
+            <button type="button" class="btn btn-secondary" onclick="togglePasswordForm()">Change Password</button>
+
+            <!-- Password Change Form (Initially Hidden) -->
+            <div id="password-form" style="display: none; margin-top: 15px;">
+                <div class="form-group">
+                    <label for="current_password">Current Password</label>
+                    <input type="password" name="current_password" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="new_password">New Password</label>
+                    <input type="password" name="new_password" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">Confirm New Password</label>
+                    <input type="password" name="confirm_password" class="form-control">
+                </div>
+            </div>
+
+        
+            <button type="submit" class="btn btn-primary">Update Profile</button>
+        </form>
+    </div>
+            
+    </main>
+    <script>
+        function togglePasswordForm() {
+            var form = document.getElementById("password-form");
+            form.style.display = form.style.display === "none" ? "block" : "none";
+        }
+    </script>
+
+
+    {% endblock %}

@@ -1,0 +1,55 @@
+from django.urls import path
+from django.contrib.auth import views as auth_views
+from . import views
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    path('', views.index, name='index'),
+    path('home', views.home, name='home'),
+    path('login/', views.custom_login, name='login'),
+    path('logout/', views.custom_logout, name='logout'),
+    path('incident/<int:id>/overview', views.overview, name='overview'),
+    path('incident/<int:id>/timeline', views.timeline, name='timeline'),
+    path('incident/<int:id>/activity', views.activity, name='activity'),
+    path('incident/<int:id>/impacts', views.impacts, name='impacts'),
+    path('incident/<int:id>/join', views.join, name='join'),
+    path('incident/<int:id>/welcome', views.welcome, name='welcome'),
+    path('incident/<int:id>/tasks', views.tasks, name='tasks'),
+    path('incident/<int:id>/notes', views.notes, name='notes'),
+    path('incident/<int:id>/responders', views.responders, name='responders'),
+    path('incident/<int:id>/report', views.report, name='report'),
+    path('incident/<int:id>/iocs', views.iocs, name='iocs'),
+    path('about', views.about, name='about'),
+    path('profile', views.profile, name='profile'), 
+    path('api/update-profile/', views.update_profile, name='update_profile'),
+    path('profile_change_password', views.profile_change_password, name='profile_change_password'),
+    path('api/incident/<int:id>/update/', views.update_incident, name='update_incident'),
+    path('api/incident/<int:id>/update-role/', views.update_role, name='update_role'),
+    path('api/incident/<int:id>/delete-role/', views.delete_role, name='delete_role'),
+    path('api/incident/<int:id>/download-json/', views.download_incident_json, name='download_incident_json'),
+    path('api/incident/<int:id>/download-markdown/', views.download_incident_markdown, name='download_incident_markdown'),
+    path('api/incident/<int:id>/download-pdf/', views.download_incident_pdf, name='download_incident_pdf'),
+    path('api/incident/<int:id>/send-message/', views.send_message, name='send_message'),
+    path('api/incident/<int:id>/add-ioc/', views.add_ioc, name='add_ioc'),
+    path('api/incident/<int:id>/update-ioc/', views.update_ioc, name='update_ioc'),
+    path('api/incident/<int:id>/delete-ioc/', views.delete_ioc, name='delete_ioc'),
+    path('api/incident/<int:id>/iocs/', views.get_all_iocs, name='get_all_iocs'),
+    path('api/incident/<int:id>/add-note/', views.add_note, name='add_note'),
+    path('api/incident/<int:id>/update-note/', views.update_note, name='update_note'),
+    path('api/incident/<int:id>/delete-note/', views.delete_note, name='delete_note'),
+    path('api/incident/<int:id>/add-task/', views.add_task, name='add_task'),
+    path('api/incident/<int:id>/update-task/', views.update_task, name='update_task'),
+    path('api/incident/<int:id>/delete-task/', views.delete_task, name='delete_task'),
+    path('api/incident/<int:id>/add-action/', views.add_action, name='add_action'),
+    path('api/incident/<int:id>/update-action/', views.update_action, name='update_action'),
+    path('api/incident/<int:id>/get-action/<int:action_id>/', views.get_action, name='get_action'),
+    path('api/incident/<int:id>/delete-action/', views.delete_action, name='delete_action'),
+    path('api/incident/<int:id>/get-ioc/<int:ioc_id>/', views.get_ioc, name='get_ioc'),
+    path('api/incident/<int:id>/get-impact/<int:impact_id>/', views.get_impact, name='get_impact'),
+    path('api/incident/<int:id>/update-impact/', views.update_impact, name='update_impact'),
+    path('api/incident/<int:id>/delete-impact/', views.delete_impact, name='delete_impact'),
+]
+# Serve media files in development mode
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

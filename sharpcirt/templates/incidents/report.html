@@ -1,0 +1,83 @@
+{% extends 'incidents/base2.html' %}
+{% load static %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/report.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+
+    <div class="report-container">
+
+        <div class="export-boxes">
+            <div class="export-box" id="pdf-box">
+                <img src="/static/icons/pdf-icon.png" alt="PDF Icon">
+                <p>Export as PDF</p>
+            </div>
+            <div class="export-box" id="markdown-box">
+                <img src="/static/icons/markdown-icon.png" alt="Markdown Icon">
+                <p>Export as Markdown</p>
+            </div>
+            <div class="export-box" id="json-box">
+                <img src="/static/icons/json-icon.png" alt="JSON Icon">
+                <p>Export as JSON</p>
+            </div>
+            <div class="export-box" id="word-box" disabled>
+                <img src="/static/icons/word-icon.png" alt="Word Icon">
+                <p>Export as Word</p>
+            </div>
+        </div>
+
+        <div class="pdf-generation" id="pdf-fields" style="display: none;">
+            <form method="post" action="{% url 'download_incident_pdf' incident.id %}">{% csrf_token %}
+                <label for="template-select">Select PDF Template:</label>
+                <select id="template-select" name="template">
+                    {% for template in templates %}
+                    {% if template.type == "html" %}
+                        <option value="{{ template.name }}">{{ template.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+                <button type="submit" class="export-button">Generate PDF</button>
+            </form>
+        </div>
+
+        <div class="markdown-generation" id="markdown-fields" style="display: none;">
+            <form method="post" action="{% url 'download_incident_markdown' incident.id %}">{% csrf_token %}
+                
+                <label for="markdown-template-select">Select Markdown Template:</label>
+                <select id="markdown-template-select" name="template">
+                    {% for template in templates %}
+                    {% if template.type == "markdown" %}
+                        <option value="{{ template.name }}">{{ template.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+                <button type="submit" class="export-button">Generate Markdown</button>
+            </form>
+        </div>
+
+        <form method="post" action="{% url 'download_incident_json' incident.id %}" id="json-form">{% csrf_token %}
+            <input type="hidden" name="export" value="json">
+        </form>
+
+    </div>
+</div>
+
+<script>
+    document.getElementById('pdf-box').addEventListener('click', function () {
+        document.getElementById('pdf-fields').style.display = 'block';
+        document.getElementById('markdown-fields').style.display = 'none';
+    });
+
+    document.getElementById('markdown-box').addEventListener('click', function () {
+        document.getElementById('markdown-fields').style.display = 'block';
+        document.getElementById('pdf-fields').style.display = 'none';
+    });
+
+    document.getElementById('json-box').addEventListener('click', function () {
+        document.getElementById('json-form').submit();
+    });
+</script>
+{% endblock %}

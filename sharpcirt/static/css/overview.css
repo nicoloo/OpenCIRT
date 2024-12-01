@@ -1,0 +1,34 @@
+/* General Stat Block Styling */
+.stat-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+    font-family: Arial, sans-serif;
+}
+
+/* Individual Stat Container */
+.stat-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Remove bottom border for the last item */
+.stat-container:last-child {
+    border-bottom: none;
+}
+
+/* Stat Label Styling */
+.stat-label {
+    font-weight: 600;
+    color: #555;
+}
+
+/* Stat Value Styling */
+.stat-value {
+    font-weight: 700;
+    color: #222;
+}

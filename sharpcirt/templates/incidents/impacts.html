@@ -1,0 +1,150 @@
+{% extends 'incidents/base2.html' %}
+{% load custom_filters %}
+
+{% load static %}
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/modal.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Main content -->
+<main>
+<div class="main-frame">
+
+    <div class="right-container">
+        <div class="info-container">
+            <div class="form-group">
+                <label for="title">Impact title</label>
+                <input type="text" id="title" name="title" value="{{impact.name}}" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+            </div>
+            <div class="selectors">
+                <div class="form-group">
+                    <label for="severity">Type of impact</label>
+                    <div class="custom-select">
+                        <select id="type" name="severity" autocomplete="off" class="{{impact.type_of_impact}}" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+                            {% for choice_value, choice_label in IMPACT_TYPES_CHOICES %}
+                            <option value="{{ choice_value }}" {% if impact.type_of_impact == choice_value %}selected{% endif %}>
+                                {{ choice_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="severity">Severity</label>
+                    <div class="custom-select">
+                        <select id="severity" name="severity" autocomplete="off" class="{{impact.severity}}" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+                            {% for choice_value, choice_label in IMPACT_SEVERITY_CHOICES %}
+                            <option value="{{ choice_value }}" {% if impact.severity == choice_value %}selected{% endif %}>
+                                {{ choice_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="severity">Status</label>
+                    <div class="custom-select">
+                        <select id="status" name="severity" autocomplete="off" class="{{impact.severity}}" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+                            {% for choice_value, choice_label in IMPACT_STATUS_CHOICES %}
+                            <option value="{{ choice_value }}" {% if impact.severity == choice_value %}selected{% endif %}>
+                                {{ choice_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div> 
+            </div>
+            
+            <div class="selectors">
+                <div class="form-group">
+                    <label for="starting_time">Starting Time</label>
+                    <input type="datetime-local" id="starting_time" name="starting_time" value="{{ impact.starting_time|date:'Y-m-d\TH:i' }}"
+                    {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ending_time">Ending Time</label>
+                    <input type="datetime-local" id="ending_time" name="ending_time" value="{{ impact.ending_time|date:'Y-m-d\TH:i' }}"
+                    {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+                </div>
+                <button type="button" class="btn" onclick="setEndingTimeNow()">Now</button>
+                
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" {% if current_user_role.role in 'READER, PUBLIC_VIEWER' %}disabled{% endif %}>{{impact.description}}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="external_reference">External reference</label>
+                <input type="text" id="external_reference" name="external_reference" value="{{impact.external_reference}}" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+            </div>
+            {% include "incidents/related_items.html" %}  
+
+            <button id="saveButton" class="btn" >Save Changes</button>
+            
+        </div>
+    </div>
+
+
+    <div class="left-container"> 
+        <div class="container-box">
+            {% for impact in incident.impacts.all %}
+                <div class="impact-item container" data-impact-id="{{ impact.id }}">
+                    <div class="task-content">
+                        <p class="container-title">{{ impact.title }}</p>
+
+                        <p class="container-subtitle">
+                            {{ impact.type|label:"IMPACT_TYPES_CHOICES"  }} ● {{ impact.severity|label:"IMPACT_SEVERITY_CHOICES"  }} ● {{ impact.status|label:"IMPACT_STATUS_CHOICES"  }} ● {{impact.duration|duration_format}} 
+                        </p>
+
+                        {% if impact.description|length > 100 %}
+                        <p class="container-description">{{ impact.description|slice:":100" }}...</p>
+                        {% else %}
+                        <p class="container-description">{{ impact.description }}</p>
+                        {% endif %}
+                        <p class="container-time">
+                            {{ impact.starting_time|date:"d.m.Y H:i" }} - 
+                            {% if impact.starting_time|date:"d.m.Y" != impact.ending_time|date:"d.m.Y" %}{{ impact.ending_time|date:"d.m.Y H:i" }}
+                            {% else %} {{ impact.ending_time|date:"H:i" }}{% endif %}
+                        </p>
+                    </div>
+
+                    <div class="container-right">
+<!-- 
+                        <div>{{ impact.type|label:"IMPACT_TYPES_CHOICES"  }}</div>
+                        <div>{{ impact.severity|label:"IMPACT_SEVERITY_CHOICES"  }}</div>
+                        <div>{{ impact.status|label:"IMPACT_STATUS_CHOICES"  }}</div> -->
+
+                        <div class="timeline-item-iocbox">
+                            {% for ioc in action.iocs.all %}
+                                <div class="ioc-item" data-ioc-id="{{ ioc.id }}">
+                                    <span class="ioc-item-value {{ ioc.type }}">
+                                        {% if ioc.value|length > 20 %}
+                                            {{ ioc.value|slice:":20" }}...
+                                        {% else %}
+                                            {{ ioc.value }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    
+
+                    </div>
+                </div>
+            {% endfor %}
+
+        </div>
+        
+    </div>
+    </div>
+    
+
+
+</div> 
+</main>
+
+<script defer src="/static/js/impacts.js"></script>
+
+{% endblock %}

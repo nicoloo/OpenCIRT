@@ -1,0 +1,205 @@
+{% extends 'incidents/base2.html' %}
+{% load static %}
+
+{% block content %}
+<main>
+    <div class="main-frame-vertical">
+
+        <button class="btn">Invite responders</button>
+        <table class="incident-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Username</th>
+                    <th>Display Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Display Role</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+
+                {% for user_role in incident.incident_roles.all %}
+                <tr>
+                    <!-- User Info -->
+                    <td>
+                    {% if user_role.user.profile_picture %}
+                        <div class="profile-pic"> 
+                            <img src="{{ user_role.user.profile_picture.url }}" alt="{{user_role.user.username}} profile picture">
+                        </div>
+                    </td>
+                    {% endif %}
+                
+
+                    <td>{{ user_role.user.username }}</td>
+                    <td>{{ user_role.user.displayname }}</td>
+                    <td>{{ user_role.user.email }}</td>
+                
+                    <td>
+                        <select 
+                            class="role-select" data-incident-id="{{ incident.id }}" data-user-id="{{ user_role.user.id }}" autocomplete="off" {% if current_user_role.role not in 'INCIDENT_LEAD' %}disabled{% endif %}>
+                            {% for value, label in USER_ROLES_CHOICES %}
+                                <option value="{{ value }}" {{user_role.role}} {% if user_role.role == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <input 
+                            type="text" 
+                            class="display-role-input" 
+                            data-incident-id="{{ incident.id }}" 
+                            data-user-id="{{ user_role.user.id }}" 
+                            value="{{ user_role.display_role }}" 
+                            {% if current_user_role.role not in 'INCIDENT_LEAD' %}disabled{% endif %} 
+                        />
+                    </td>
+                
+                    <td>
+                        <button class="btn btn-sm btn-danger btn-icon delete-btn" 
+                                title="Delete" 
+                                data-incident-id="{{ incident.id }}" 
+                                data-user-id="{{ user_role.user.id }}"
+                                {% if current_user_role.role not in 'INCIDENT_LEAD' %}disabled{% endif %}>
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                    
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No responders yet.</td>
+                </tr>
+                {% endfor %}
+                
+                
+            
+            </tbody>
+        </table>
+</div>
+<main>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Handle Role Changes
+        const roleSelects = document.querySelectorAll('.role-select');
+
+        roleSelects.forEach(select => {
+            select.addEventListener('change', async (event) => {
+                const selectElement = event.target;
+                const incidentId = selectElement.dataset.incidentId; // Get incident ID
+                const userId = selectElement.dataset.userId; // Get user ID
+                const newRole = selectElement.value; // Get selected role
+
+                try {
+                    const response = await fetch(`/api/incident/${incidentId}/update-role/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            role: newRole
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to update role');
+                    }
+
+                    const data = await response.json();
+                    console.log('Role updated successfully:', data);
+                } catch (error) {
+                    console.error('Error updating role:', error);
+                    alert('Failed to update role. Please try again.');
+                }
+            });
+        });
+
+        // Handle Display Role Changes
+        const displayRoleInputs = document.querySelectorAll('.display-role-input');
+
+        displayRoleInputs.forEach(input => {
+            input.addEventListener('change', async (event) => {
+                const inputElement = event.target;
+                const incidentId = inputElement.dataset.incidentId; // Get incident ID
+                const userId = inputElement.dataset.userId; // Get user ID
+                const newDisplayRole = inputElement.value; // Get new display role value
+
+                try {
+                    const response = await fetch(`/api/incident/${incidentId}/update-role/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            display_role: newDisplayRole
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to update display role');
+                    }
+
+                    const data = await response.json();
+                    console.log('Display role updated successfully:', data);
+                } catch (error) {
+                    console.error('Error updating display role:', error);
+                    alert('Failed to update display role. Please try again.');
+                }
+            });
+        });
+
+
+        // Handle Deletions
+        const deleteButtons = document.querySelectorAll('.delete-btn');
+
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', async (event) => {
+                const buttonElement = event.target.closest('.delete-btn');
+                const incidentId = buttonElement.dataset.incidentId; // Get incident ID
+                const userId = buttonElement.dataset.userId; // Get user ID
+
+                if (confirm('Are you sure you want to delete this responder?')) {
+                    try {
+                        const response = await fetch(`/api/incident/${incidentId}/delete-role/`, {
+                            method: 'POST', // Use POST instead of DELETE
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({
+                                user_id: userId,
+                                action: 'delete'
+                            })
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Failed to delete responder');
+                        }
+
+                        const data = await response.json();
+                        console.log('Responder deleted successfully:', data);
+
+                        // Remove the row from the table
+                        buttonElement.closest('tr').remove();
+                    } catch (error) {
+                        console.error('Error deleting responder:', error);
+                        alert('Failed to delete responder. Please try again.');
+                    }
+                }
+            });
+        });
+    });
+</script>
+
+
+
+{% endblock %}

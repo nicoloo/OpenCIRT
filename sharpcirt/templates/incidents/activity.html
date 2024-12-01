@@ -1,0 +1,57 @@
+{% extends 'incidents/base2.html' %}
+{% load static %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/chat.css' %}">
+{% endblock %}
+
+{% block content %}
+<script defer src="/static/js/chat.js"></script>
+
+<main>
+    <div class="main-frame">
+                
+        <div class="main-content chat-container">
+            <div class="chat-window">
+                <div class="chat-header">
+                    <h2>Chat</h2>
+                    <button class="btn btn-sm btn-danger btn-chat-filter" title="Delete">
+                        <i class="fa-solid fa-filter"></i>
+                    </button>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    {% for message in incident.messages.all %}
+                    {% if message.sender == request.user %}
+                        <div class="user-message">
+                            <a class="sending_time">{{ message.created_at|date:"H:i" }}</a>
+                            <a class="message">{{ message.text }}</a>
+                        </div>
+                    {% else %}
+                        <div class="bot-message">
+                            <a class="sender" title="{% if message.sender.displayname %}{{ message.sender.displayname }}{% else %}{{ message.sender.username }}{% endif %}">
+                                {{ message.sender.username|slice:":1"|upper }}
+                            </a>
+                            {% if message.sender in incident_leads %}
+                                <a class="message incidentlead" title="This message is highlighted because it was sent by an incident lead">{{ message.text }}</a>
+                            {% else %}
+                                <a class="message">{{ message.text }}</a>
+                            {% endif %}
+                            
+                            <a class="sending_time">{{ message.created_at|date:"H:i" }}</a>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                
+
+                </div>
+                <div class="chat-input">
+                    <textarea id="chatInput" placeholder="Type a message..."></textarea>
+                    <button id="sendButton">Send</button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</main>
+{% endblock %}

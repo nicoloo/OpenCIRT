@@ -1,0 +1,298 @@
+{% extends 'incidents/base.html' %}
+{% csrf_token %}
+{% block content %}
+<input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+
+<div class="main-content">
+    <div class="note-window">
+        <div class="note-header">
+            <h2>Notes</h2>
+        </div>
+    
+        <div class="note-container">
+            <!-- Left panel for note names -->
+            <div class="note-panel">
+                <ul id="note-list">
+                    {% for note in incident.notes.all %}
+                    <li class="note-item">
+                        <span class="note-name" data-id="{{ note.id }}"  data-text="{{ note.text }}" data-name="{{ note.name }}">{{ note.name }}</span>
+                        <span class="note-author">{{ note.created_by }}</span>
+                        <button class="btn btn-sm btn-danger btn-icon delete-note" title="Delete">
+                            <i class="fas fa-trash-alt delete-note" data-id="{{ note.id }}"></i>
+                        </button>
+                    </li>
+                    
+                    {% endfor %}
+                </ul>
+                <div class="note-button-container">
+                    <button id="add-note">Add New Note</button>
+                </div>
+            </div>
+        
+            <!-- Right panel for editing notes -->
+            <div class="note-editor">
+                {% if incident.notes.exists %}
+                    <input 
+                        type="text" 
+                        id="note-title" 
+                        placeholder="Note Title" 
+                        value="{{ incident.notes.first.name }}"
+                    />
+                    <button id="save-note" class="btn btn-primary btn-sm">Save</button>
+                    <textarea 
+                        id="note-content" 
+                        placeholder="Edit your note here..."
+                    >{{ incident.notes.first.text }}</textarea>
+                {% else %}
+                    <input 
+                        type="text" 
+                        id="note-title" 
+                        placeholder="Note Title" 
+                        value="My note"
+                    />
+                    <button id="save-note" class="btn btn-primary btn-sm">Save</button>
+                    <textarea 
+                        id="note-content" 
+                        placeholder="Edit your note here..."
+                    ></textarea>
+                {% endif %}
+            </div>
+        </div>
+        
+        
+        
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const noteList = document.getElementById('note-list');
+    const noteContent = document.getElementById('note-content');
+    const saveNoteButton = document.getElementById('save-note');
+    const noteTitle = document.getElementById('note-title');
+    const addNoteButton = document.getElementById('add-note');
+    let activeNoteId = null; // Tracks the currently active note ID
+    let saveTimeout = null;
+
+    // Helper: Debounce API Calls
+    function debounceSave(callback, delay = 500) {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(callback, delay);
+    }
+
+    // Helper: Unified Note Update Function
+    function updateNote() {
+        const name = noteTitle.value;
+        const text = noteContent.value;
+
+        // If no note is selected (activeNoteId is null), create a new note
+        if (!activeNoteId) {
+            createNote(name, text);
+        } else {
+            debounceSave(() => {
+                fetch(`{% url 'update_note' incident.id %}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        note_id: activeNoteId, 
+                        name: name,
+                        text: text
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== 'success') {
+                        console.error('Failed to update note:', data.error);
+                    } else {
+                        // Update the active note's name and text in the UI
+                        const activeNote = document.querySelector('.note-name.active');
+                        if (activeNote) {
+                            activeNote.textContent = name; // Update the note name in the list
+                            activeNote.dataset.name = name;
+                            activeNote.dataset.text = text;
+                        }
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        }
+    }
+
+    // Create a New Note
+    function createNote(name, text) {
+
+
+        fetch("{% url 'add_note' incident.id %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                name: name,
+                text: text
+            })
+            
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error(data.error);
+                return;
+            }
+
+            // Create the new note element
+            const newNote = document.createElement('li');
+            newNote.classList.add('note-item');
+            newNote.innerHTML = `
+                <span class="note-name active" data-id="${data.id}" data-text="${data.text}" data-name="${data.name}">${data.name}</span>
+                <button class="btn btn-sm btn-danger btn-icon delete-note" title="Delete">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            `;
+
+            // Append the new note to the list
+            document.querySelectorAll('.note-name').forEach(el => el.classList.remove('active'));
+            noteList.appendChild(newNote);
+
+            // Set the newly created note as the active note
+            noteTitle.value = data.name;
+            noteContent.value = data.text;
+            activeNoteId = data.id;
+
+            newNote.querySelector('.note-name').classList.add('active');
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // Handle Note Click
+    noteList.addEventListener('click', (event) => {
+        const target = event.target;
+
+        if (target.classList.contains('note-name')) {
+            // Set the active note ID
+            activeNoteId = target.dataset.id;
+            // Update the textarea and title based on the clicked note
+            noteContent.value = target.dataset.text;
+            noteTitle.value = target.dataset.name;
+
+            // Set active state for the clicked note
+            document.querySelectorAll('.note-name').forEach(el => el.classList.remove('active'));
+            target.classList.add('active');
+        }
+
+        // Handle the delete button click
+        if (target.classList.contains('delete-note')) {
+            const noteItem = target.closest('.note-item');
+            const noteId = noteItem.querySelector('.note-name').dataset.id;
+
+            if (noteId) {
+                // Trigger note deletion
+                deleteNote(noteId);
+            }
+        }
+    });
+
+    // Delete Note function
+    function deleteNote(noteId) {
+        const incidentId = `{{ incident.id }}`;
+        fetch(`/api/incident/${incidentId}/delete-note/`, {            
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ note_id: noteId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Remove the note from the UI
+                const noteItem = document.querySelector(`.note-name[data-id="${noteId}"]`).closest('.note-item');
+                noteItem.remove();
+
+                // Clear the note content and title if it was the active note
+                if (noteId == activeNoteId) {
+                    noteContent.value = '';
+                    noteTitle.value = '';
+                    activeNoteId = null; // Reset active note
+                }
+            } else {
+                console.error('Failed to delete note:', data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // Update Note Name (on input)
+    noteTitle.addEventListener('input', () => {
+        const activeNote = document.querySelector('.note-name.active');
+        if (activeNote) {
+            activeNote.textContent = noteTitle.value;
+            activeNote.dataset.name = noteTitle.value;
+        }
+    });
+
+    // Save Note when the Save button is clicked
+    saveNoteButton.addEventListener('click', () => {
+        updateNote();
+    });
+
+    // Load the first note by default if available
+    const firstNote = noteList.querySelector('.note-name');
+    if (firstNote) {
+        activeNoteId = firstNote.dataset.id;
+        noteContent.value = firstNote.dataset.text;
+        noteTitle.value = firstNote.dataset.name;
+        firstNote.classList.add('active');
+    }
+
+    // Add New Note
+    addNoteButton.addEventListener('click', () => {
+        fetch("{% url 'add_note' incident.id %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error(data.error);
+                return;
+            }
+
+            const newNote = document.createElement('li');
+            newNote.classList.add('note-item');
+            newNote.innerHTML = `
+                <span class="note-name active" data-id="${data.id}" data-text="${data.text}" data-name="${data.name}">${data.name}</span>
+                <button class="btn btn-sm btn-danger btn-icon" title="Delete">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            `;
+
+            document.querySelectorAll('.note-name').forEach(el => el.classList.remove('active'));
+            noteList.appendChild(newNote);
+
+            noteTitle.value = data.name;
+            noteContent.value = data.text;
+            activeNoteId = data.id;
+
+            newNote.querySelector('.note-name').classList.add('active');
+        })
+        .catch(error => console.error('Error:', error));
+    });
+});
+
+
+</script>
+
+
+
+
+{% endblock %}

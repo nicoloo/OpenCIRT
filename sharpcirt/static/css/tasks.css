@@ -1,0 +1,89 @@
+
+
+.task-container {
+    margin: 20px;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.add-task-button {
+    margin-bottom: 15px;
+}
+
+.filter-buttons {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px; /* Space between buttons */
+}
+
+.filter-button {
+    background-color: #e0e0e0; /* Light gray */
+    color: #333; /* Dark text */
+    border: none;
+    border-radius: 4px;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.filter-button:hover {
+    background-color: #d0d0d0; /* Darker gray on hover */
+}
+
+.kanban-board {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+}
+
+.kanban-column {
+    flex: 1;
+    margin: 0 10px;
+    background-color: #f4f4f4;
+    border-radius: 5px;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.kanban-tasks {
+    margin-top: 10px;
+}
+
+.kanban-task {
+    background-color: white;
+    border-radius: 3px;
+    padding: 10px;
+    margin: 5px 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping */
+}
+
+.task-content {
+    flex: 1; /* Allow this to take up remaining space */
+    margin-right: 10px; /* Space between text and assignee circle */
+}
+
+.assignee-circle {
+    width: 30px;
+    height: 30px;
+    background-color: #007bff; /* Default color */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    text-align: center;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.my-assignee {
+    background-color: rgb(224, 224, 22); /* Highlight for user's own tasks */
+}
+
+

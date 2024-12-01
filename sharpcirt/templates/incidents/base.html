@@ -1,0 +1,62 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCIRT</title>
+    <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}" >
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block styles %}
+    {% endblock %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
+    <!-- jQuery (necessary for DataTables plugin) -->
+    <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- DataTables JS -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
+
+</head>
+<body>
+    <!-- Sidebar -->
+        <div class="sidebar">
+            <a class=logo href="/home"><img  src="{% static 'logo.png' %}" ></a>
+            <h2>{{ incident.name }}</h2>
+            <a href="/incident/{{incident.id}}/overview" class="link">Overview</a>
+            <a href="/incident/{{incident.id}}/timeline" class="link">Timeline</a>
+            <a href="/incident/{{incident.id}}/iocs" class="link">IoC</a>
+            <a href="/incident/{{incident.id}}/activity" class="link">Activity</a>
+            <a href="/incident/{{incident.id}}/notes" class="link">Notes</a>
+            <a href="/incident/{{incident.id}}/tasks" class="link">Tasks</a>
+            <a href="/incident/{{incident.id}}/responders" class="link">Responders</a>
+            <a href="/incident/{{incident.id}}/report" class="link">Reporting</a>
+
+            <div class="bottom-links">
+                
+                <a href="{% url 'logout' %}" class="link">Logout</a>
+                <a href="/about" class="link">About</a>
+                <a href="/about" class="link">Settings</a>
+
+                {% if user.profile_pictureurl %}
+                <div class="profile-picture-base">
+                    <img src="{{ user.profile_pictureurl }}" alt="{{ user.username }}'s Profile Picture" class="profile-picture-base">
+                </div>
+                {% else %}
+                <a href="/profile">
+                    <div class="default-picture-base" title="{{ user.username }}" >
+                        
+                        {{ user.username|slice:":1" }}
+                    </div>
+                </a>
+                <p>{{current_user_role.role}}</p> <!-- To remove when done -->
+                {% endif %}
+                
+            </div>
+        </div>
+
+        {% block content %}{% endblock %}
+
+
+</html>

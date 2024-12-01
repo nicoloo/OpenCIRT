@@ -1,0 +1,373 @@
+{% extends 'incidents/base.html' %}
+{% load static %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/timeline.css' %}">
+    <link rel="stylesheet" href="{% static 'css/modal.css' %}">
+
+{% endblock %}
+
+{% block content %}
+<div class="main-content" incident-id="{{ incident.id }}" >
+    
+    <div class="timeline-container">
+        <div class="timeline-header">
+            <h1>Incident Timeline</h1>
+            <button class="ActionAddButton btn btn-primary">
+                <span class="btn-icon">+</span> Add Action
+            </button>
+        </div>
+        
+        <ul class="timeline">
+            {% for action in incident.sorted_actions %}
+                {% if action.is_first_action_this_day %}
+                    <div class="timeline-item timeline-header">
+                        <div class="timeline-left">
+                            <div class="timeline-dot"></div>
+                        </div>
+                        <div class="timeline-header-content">
+                            <span>{{ action.observed_at|date:"l d F Y" }}</span>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <li class="timeline-item" data-action-id={{ action.id }} >
+                    
+                    <div class="timeline-left">
+                        {% if action.type == "DEFENSIVE" %}
+                            <div class="timeline-dot blue"></div>
+                        {% elif action.type == "MALICIOUS" %}
+                            <div class="timeline-dot red"></div>
+                        {% elif action.type == "ALERT" %}
+                            <div class="timeline-dot yellow"></div>
+                        {% elif action.type == "COMMUNICATION" %}
+                            <div class="timeline-dot yellow"></div>
+                        {% elif action.type == "MITIGATION" %}
+                            <div class="timeline-dot purple"></div>
+                        {% else %}
+                            <div class="timeline-dot"></div>
+                        {% endif %}
+                        <div class="timeline-line"></div>
+                    </div>
+
+                    <div class="timeline-right">
+                        <div class="timeline-card">
+                            <div class="timeline-card-header">
+                                <h3 class="timeline-title">{{ action.title }}</h3>
+                                <div class="timeline-meta-info">
+                                    <span class="timeline-time">{{ action.observed_at|date:"H:i" }}</span>
+                                    <span class="timeline-type" data-type="{{ action.type }}">{{ action.type }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="timeline-card-body">
+                                <p class="timeline-description">{{ action.description }}</p>
+                                
+                                {% if action.iocs.all %}
+                                <div class="timeline-section">
+                                    <h4 class="section-title">Evidence</h4>
+                                    <div class="timeline-item-iocbox">
+                                        {% for ioc in action.iocs.all %}
+                                            <div class="ioc-item" data-ioc-id="{{ ioc.id }}">
+                                                <span class="ioc-item-value {{ ioc.type }}">
+                                                    {% if ioc.value|length > 20 %}
+                                                        {{ ioc.value|slice:":20" }}...
+                                                    {% else %}
+                                                        {{ ioc.value }}
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if action.tags.all %}
+                                <div class="timeline-section">
+                                    <h4 class="section-title">Tags</h4>
+                                    <div class="timeline-item-tagbox">
+                                        {% for tag in action.tags.all %}
+                                            <div class="tag" style="background-color: {{ tag.color }}">
+                                                <span class="tag-item-value">#{{ tag.name }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="timeline-card-footer">
+                                <button class="btn btn-sm btn-primary edit-action" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger delete-action" title="Delete">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<!-- Modal structure -->
+<div id="editIocModal" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>Evidence Details</h2>
+            <span class="close ioc-modal">&times;</span>
+        </div>
+        <form class="modern-form">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">            
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ioc-type">Type</label>
+                    <select id="modal-ioc-type" value="">
+                        {% for choice_value, choice_label in GENERIC_IOC_TYPE_CHOICES %}
+                            <option value="{{ choice_value }}">{{ choice_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="ioc-status">Status</label>
+                    <select id="modal-ioc-status" value="">
+                        <option value="" selected>None</option>
+                        {% for choice_value, choice_label in GENERIC_IOC_STATUS_CHOICES %}
+                            <option value="{{ choice_value }}">{{ choice_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="ioc-value">Value</label>
+                    <input type="text" id="modal-ioc-value" maxlength="64" placeholder="Enter IOC value"/>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="ioc-description">Description</label>
+                    <textarea id="modal-ioc-description" rows="4" placeholder="Enter evidence description"></textarea>
+                </div>
+            </div>           
+
+            <div class="form-section">
+                <h3 class="form-section-title">Tags</h3>
+                <div id="modal-ioc-tags" class="tags-container"></div>
+            </div>
+            
+            <div class="form-section">
+                <h3 class="form-section-title">Observed in Incident</h3>
+                <div id="modal-ioc-actions" class="actions-container"></div>
+            </div>
+            
+            <div class="form-section">
+                <h3 class="form-section-title">Audit</h3>
+                <div id="modal-ioc-audit" class="audit-container">
+                    <p>Created by <span id="modal-ioc-createdby"></span> on <span id="modal-ioc-createdat"></span></p>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" id="saveEditIoC" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-secondary close ioc-modal">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Action Modal -->
+<div id="actionAddModal" class="modal" style="display: none;">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>Add Action</h2>
+            <span id="closeActionModal" class="close">&times;</span>
+        </div>
+        <form id="actionForm" method="POST" class="modern-form">
+            {% csrf_token %}
+
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="actionTitle">Title <span class="required">*</span></label>
+                    <input type="text" id="actionTitle" name="title" placeholder="Enter action title" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="actionDescription">Description <span class="required">*</span></label>
+                    <textarea id="actionDescription" name="description" placeholder="Enter action description" rows="4" required></textarea>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="actionType">Type <span class="required">*</span></label>
+                    <select id="actionType" name="type" required>
+                        {% for value, label in GENERIC_ACTION_CHOICES %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Timing Section -->
+            <div class="form-section">
+                <h3 class="form-section-title">Timing</h3>
+                <!-- Observed At Field -->
+                <div class="form-group timing-fields" id="observedAtField">
+                    <label for="actionObservedAt">Observed At</label>
+                    <input type="datetime-local" id="actionObservedAt" name="observed_at">
+                </div>
+
+                <!-- Starting/Ending Time Fields -->
+                <div class="form-row timing-fields" id="startingEndingTimeFields" style="display: none;">
+                    <div class="form-group">
+                        <label for="actionStartingTime">Starting Time</label>
+                        <input type="datetime-local" id="actionStartingTime" name="starting_time">
+                    </div>
+                    <div class="form-group">
+                        <label for="actionEndingTime">Ending Time</label>
+                        <input type="datetime-local" id="actionEndingTime" name="ending_time">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="button" id="toggleTimingFields" class="btn btn-secondary btn-small">
+                        Switch to Starting/Ending Time
+                    </button>
+                </div>
+            </div>
+
+            <!-- Evidence Section -->
+            <div class="form-section">
+                <button type="button" id="toggleEvidenceSection" class="btn btn-secondary form-section-toggle">
+                    <span class="toggle-icon">+</span> Add Evidence
+                </button>
+                
+                <div id="evidenceSection" class="evidence-section" style="display: none;">
+                    <div class="form-group form-group-full">
+                        <label for="actionIocs">IoCs (Indicators of Compromise)</label>
+                        <input type="text" id="actionIocs" name="iocs" placeholder="Comma-separated values">
+                        <small>Add IOCs related to this action</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tags Section -->
+            <div class="form-section">
+                <h3 class="form-section-title">Tags</h3>
+                <div class="form-group form-group-full">
+                    <label for="actionTags">Tags</label>
+                    <input type="text" id="actionTags" name="tag" placeholder="Comma-separated values">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Create Action</button>
+                <button type="button" id="cancelActionForm" class="btn btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- Modal Action edit  -->
+<div id="editActionModal" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>Action Details</h2>
+            <span class="close action-modal">&times;</span>
+        </div>
+        <form id="actionEditForm" method="POST" class="modern-form">
+            <input type="hidden" id="modalEditActionId" value="">            
+            {% csrf_token %}
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="action-type">Type</label>
+                    <select id="modal-action-type" value="">
+                        {% for choice_value, choice_label in GENERIC_ACTION_CHOICES %}
+                            <option value="{{ choice_value }}">{{ choice_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="action-title">Title</label>
+                    <input type="text" id="modal-action-title" maxlength="64" placeholder="Enter action title"/>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="action-description">Description</label>
+                    <textarea id="modal-action-description" rows="4" placeholder="Enter action description"></textarea>
+                </div>
+            </div>           
+
+            <div class="form-section">
+                <h3 class="form-section-title">Tags</h3>
+                <div id="modal-action-tags" class="tags-container"></div>
+            </div>
+            
+            <div class="form-section">
+                <h3 class="form-section-title">Related Evidence</h3>
+                <div id="modal-action-iocs" class="actions-container"></div>
+            </div>
+            
+            <div class="form-section">
+                <h3 class="form-section-title">Timing</h3>
+                <!-- Toggle Button -->
+                <div class="form-group">
+                    <button type="button" id="toggleTimingFieldsEdit" class="btn btn-secondary btn-small">
+                        Switch to Starting/Ending Time
+                    </button>
+                </div>
+
+                <!-- Observed At Field -->
+                <div class="form-group timing-fields" id="observedAtFieldEdit">
+                    <label for="actionObservedAtEdit">Observed At</label>
+                    <input type="datetime-local" id="actionObservedAtEdit" name="observed_at">
+                </div>
+
+                <!-- Starting/Ending Time Fields -->
+                <div class="form-row timing-fields" id="startingEndingTimeFieldsEdit" style="display: none;">
+                    <div class="form-group">
+                        <label for="actionStartingTimeEdit">Starting Time</label>
+                        <input type="datetime-local" id="actionStartingTimeEdit" name="starting_time">
+                    </div>
+                    <div class="form-group">
+                        <label for="actionEndingTimeEdit">Ending Time</label>
+                        <input type="datetime-local" id="actionEndingTimeEdit" name="ending_time">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3 class="form-section-title">Audit</h3>
+                <div id="modal-action-audit" class="audit-container">
+                    <p>Created by <span id="modal-action-createdby"></span> on <span id="modal-action-createdat"></span></p>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-secondary close action-modal">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script defer src="/static/js/iocs.js"></script>
+<script defer src="/static/js/timeline.js"></script>
+{% endblock %}

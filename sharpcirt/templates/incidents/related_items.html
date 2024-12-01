@@ -1,0 +1,126 @@
+<div class="form-group">
+    <label for="related-items">Related Items</label>
+
+    <div id="selected-items-container" class="selected-items-container">
+    </div>
+
+
+    <div class="form-group">
+            <input type="text" id="search-items" class="form-control" placeholder="Search actions, tags, IOCs..." 
+            {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+
+    </div>
+
+
+    <div id="item-container" class="mt-2 item-container">
+
+
+    {% for action in incident.actions.all %}
+        <div class="ioc-item" id="action-{{ action.id }}" data-id="{{ action.id }}">
+            {{ action.title }}
+        </div>
+    {% endfor %}
+    {% for tag in incident.tags.all %}
+        <div class="ioc-item" id="tag-{{ tag.id }}" data-id="{{ tag.id }}">
+            {{ tag.name }}
+        </div>
+    {% endfor %}
+    {% for ioc in incident.genericiocs.all %}
+        <div class="ioc-item" id="ioc-{{ ioc.id }}" data-id="{{ ioc.id }}">
+            {{ ioc.value }}
+        </div>
+    {% endfor %}
+    {% for impact in incident.impacts.all %}
+        <div class="ioc-item" id="impact-{{ impact.id }}" data-id="{{ impact.id }}">
+            {{ impact.title }}
+        </div>
+    {% endfor %}
+    </div>
+</div>
+
+<script>
+    const searchBar = document.getElementById('search-items');
+    const selectableItemsContainer = document.getElementById('item-container');
+    const selectedItemsContainer = document.getElementById('selected-items-container');
+    
+    // Function to check and toggle visibility of the selected-items-container
+    function toggleSelectedItemsContainerVisibility() {
+        if (selectedItemsContainer.children.length > 0) {
+            selectedItemsContainer.style.display = 'flex'; // Show the container if there are selected items
+        } else {
+            selectedItemsContainer.style.display = 'none'; // Hide the container if no items are selected
+        }
+    }
+    
+    // Check if the elements exist before adding event listeners
+    if (searchBar && selectableItemsContainer && selectedItemsContainer) {
+        // When the search bar is focused, show the selectable items
+        searchBar.addEventListener('focus', function() {
+            console.log("Search bar focused! Showing selectable items.");
+            selectableItemsContainer.style.display = 'flex';
+            selectableItemsContainer.style.visibility = 'visible'; // Ensure visibility is reset
+        });
+    
+        // When the search bar loses focus, hide the selectable items (optional)
+        searchBar.addEventListener('blur', function() {
+            console.log("Search bar lost focus! Hiding selectable items.");
+            setTimeout(function() {
+                selectableItemsContainer.style.display = 'none';
+                selectableItemsContainer.style.visibility = 'hidden'; // Ensure it remains hidden
+            }, 300); // Optional delay to prevent flickering
+        });
+    
+        // When hovering over the search bar, show the selectable items
+        searchBar.addEventListener('mouseenter', function() {
+            console.log("Hovered over the search bar! Showing selectable items.");
+            selectableItemsContainer.style.display = 'flex';
+            selectableItemsContainer.style.visibility = 'visible'; // Ensure visibility is reset
+        });
+    
+        // When the mouse leaves the search bar, hide the selectable items
+        selectableItemsContainer.addEventListener('mouseleave', function() {
+            console.log("Mouse left the search bar! Hiding selectable items.");
+            setTimeout(function() {
+                selectableItemsContainer.style.display = 'none';
+                selectableItemsContainer.style.visibility = 'hidden'; // Ensure it remains hidden
+            }, 300); // Optional delay to prevent flickering
+        });
+    
+        // Attach click event listeners to each item in the selectable container
+        const items = selectableItemsContainer.getElementsByClassName('ioc-item');
+        Array.from(items).forEach(item => {
+            item.addEventListener('click', function() {
+                // Check if the item is already in the selected-items-container by looking for its clone
+                const itemId = item.getAttribute('data-id');  // Get the item's data-id attribute
+                const existingItem = selectedItemsContainer.querySelector(`[data-id="${itemId}"]`);  // Look for an item with the same data-id in the selected container
+    
+                if (existingItem) {
+                    console.log("Item is already selected, skipping.");
+                    return;  // Do not add the item again
+                }
+    
+                // Clone the selected item and add it inside the search bar container
+                const itemClone = item.cloneNode(true); // Clone the clicked item
+                itemClone.classList.add('selected-item');  // Add class for styling
+    
+                // Append the cloned item to the selected-items-container inside the search bar
+                selectedItemsContainer.appendChild(itemClone);
+    
+                // Call the function to check if the container should be visible
+                toggleSelectedItemsContainerVisibility();
+    
+                // Optionally, you can clear the search input field after selection
+                searchBar.value = "";  // Reset search input field
+    
+                console.log("Item added to search bar:", itemClone);
+            });
+        });
+    
+        // Also ensure to call the toggle function on load, in case there are already preselected items
+        toggleSelectedItemsContainerVisibility();
+    
+    } else {
+        console.error('Elements not found: search-items, item-container, or selected-items-container');
+    }
+</script>
+    

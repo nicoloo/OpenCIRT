@@ -1,0 +1,161 @@
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timeline-header-content {
+  /* width: 600px; */
+  width:100%;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+
+  span {
+    color: rgb(168, 168, 168);
+  }
+}
+
+.timeline-item {
+  width: 700px;
+  display: flex;
+  gap: 15px;
+}
+
+.timeline-item:not(.timeline-header) {
+  min-height: 100px;
+}
+
+/* le rond et la ligne */
+.timeline-left {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.timeline-dot {
+  background-color: rgb(168, 168, 168);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.timeline-line {
+  background-color: rgb(168, 168, 168);
+  width: 2px;
+  height: 100%;
+}
+
+.timeline-item:last-of-type .timeline-line {
+  display: none;
+}
+
+/* le contenu associé au bouton (texte, image ou peu importe) */
+.timeline-right {
+  display: flex;
+  width:100%;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.timeline-meta {
+  font-style: italic;
+  color: gray;
+}
+
+.timeline-dot.green {
+  background-color: green;
+}
+
+.timeline-dot.red {
+  background-color: red;
+}
+
+.timeline-dot.purple {
+  background-color: purple;
+}
+.timeline-dot.blue {
+  background-color: blue;
+}
+.timeline-dot.yellow {
+  background-color: rgba(235, 201, 11, 0.849);
+}
+
+.timeline-item-description {
+  padding: 10px;
+  color:rgb(39, 36, 36);
+}
+
+.timeline-item-createdby {
+  color:rgb(71, 68, 68);
+  padding-left: 10px;
+  font-size: small;
+}
+
+.timeline-item-iocbox {
+display: flex;
+flex-wrap: wrap;
+gap: 6px;
+justify-content: flex-end;
+margin-top: 4px;
+}
+
+
+.ioc-item {
+display: inline-flex;
+align-items: flex-end;
+margin: 5px 0;
+border-radius: 4px;
+font-size: 14px;
+color: #fff;
+}
+
+
+.ioc-item-value.HASH::before {
+content: '📄';
+}
+.ioc-item-value.FILENAME::before {
+content: '📄';
+}
+.ioc-item-value.EMAIL::before {
+content: '📧';
+}
+.ioc-item-value.ACCOUNT::before {
+content: '🧑';
+}
+
+/* Default Style for Other Types */
+.ioc-item-value {
+padding: 3px 6px;
+border-radius: 4px;
+/* margin-right: 8px; */
+align-self: flex-end;
+}
+.ioc-item-value::before {
+position: relative;
+padding-right: 5px;
+top: 50%;
+transform: translateY(-50%);
+font-size: 14px; /* Adjust icon size */
+}
+
+/* IoC Value Styling */
+.ioc-item-value {
+word-break: break-all;
+color: #333;
+}
+
+
+.timeline-item-tagbox {
+display: flex;
+flex-wrap: wrap;
+gap: 6px;
+justify-content: flex-end;
+margin-top: 4px;
+}
+
+

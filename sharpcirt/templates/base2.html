@@ -1,0 +1,55 @@
+{% load static %}
+{% load custom_filters %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>OpenCIRT</title>
+    {% block styles %}
+    {% endblock %}
+    <link rel="stylesheet" href="/static/css/new_style.css">
+    <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}" >
+
+    {% if request.user.light_mode %}
+        <link rel="stylesheet" href="/static/css/{{ request.user.light_mode }}.css">
+    {% else %}
+        <link rel="stylesheet" href="/static/css/light_mode.css">
+    {% endif %}
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+</head>
+
+<body>
+    <header class="header">
+
+        {% if request.user.light_mode == 'light_mode'%}
+            <a class=logo href="/home"><img  src="{% static 'logo_phrase_light.png' %}" ></a>
+        {% elif request.user.light_mode == 'dark_mode' %}
+            <a class=logo href="/home"><img  src="{% static 'logo_phrase_dark.png' %}" ></a>
+        {% endif %}
+
+        <nav class="links">
+            <ul>
+              <li><a href="#">New incident</a></li>
+              <li><a href="/about">Settings</a></li>
+            </ul>
+          </nav>
+        
+        <!-- <div class="profile-pic"><img src="{% static '/temp/nico.png' %}" alt="Profile"></div> -->
+        {% if user.profile_picture %}
+        <a  href="/profile">
+            <div class="profile-pic">
+            <img src="{{ user.profile_picture.url }}" alt="Profile Picture">
+            </div>
+        </a>
+        
+        {% endif %}
+    </header>
+        
+    {% block content %}{% endblock %}
+    
+
+</body>
+</html>
