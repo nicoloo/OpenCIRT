@@ -19,6 +19,15 @@ from io import BytesIO
 import os
 from django.http import FileResponse
 from collections import Counter, defaultdict
+from .report_generators import (
+    parse_sections, parse_tlp, TLP_STYLES,
+    DEFAULT_SECTIONS, ALL_SECTIONS,
+    generate_markdown, generate_deep_json,
+)
+import csv
+from io import StringIO
+from docx import Document as DocxDocument
+from docx.shared import Pt, RGBColor
 
 @login_required(login_url='login')
 def index(request):
@@ -360,35 +369,53 @@ def responders(request, id):
 
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
+def report_preview(request, id):
+    """
+    GET /api/incident/<id>/report-preview/?sections=executive_summary,iocs&tlp=AMBER
+    Returns HTML string for iframe srcdoc.
+    """
+    try:
+        incident = Incident.objects.get(pk=id)
+    except Incident.DoesNotExist:
+        return HttpResponse('<p style="padding:20px;color:#dc2626;">Incident not found.</p>', status=404)
+
+    sections = parse_sections(request.GET)
+    tlp = parse_tlp(request.GET)
+    tlp_style = TLP_STYLES[tlp]
+
+    html = render_to_string('reports/report_template.html', {
+        'incident': incident,
+        'sections': sections,
+        'tlp': tlp,
+        'tlp_style': tlp_style,
+        'is_pdf': False,
+        'generated_at': timezone.now().strftime('%d %B %Y, %H:%M'),
+        'generated_by': request.user.username,
+    })
+    return HttpResponse(html, content_type='text/html; charset=utf-8')
+
+
+@login_required(login_url='login')
+@user_is_incident_responder_orpublic
 def report(request, id):
     try:
         incident = Incident.objects.get(pk=id)
         user_role = UserRole.objects.get(user=request.user, incident=incident)
-        
-        templates_dir = os.path.join(BASE_DIR, 'sharpcirt', 'templates', 'report-templates')
-        templates = []
-        if os.path.exists(templates_dir):
-            for template_file in os.listdir(templates_dir):
-                if template_file.endswith('.html'):
-                    template_type = 'html'
-                elif template_file.endswith('.md'):
-                    template_type = 'markdown'
-                else:
-                    continue
-                templates.append({
-                    'name': template_file, 
-                    'type': template_type
-                })
-
     except UserRole.DoesNotExist:
         if incident.is_public:
             user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
         else:
             return HttpResponseForbidden("You do not have permission to access this incident.")
     except Incident.DoesNotExist:
-        my_object = None
-    return render(request, 'incidents/report.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role, 'templates': templates})
-    # return render(request,'incidents/responders.html')
+        return HttpResponse("Incident not found.", status=404)
+
+    return render(request, 'incidents/report.html', {
+        'incident': incident,
+        'user': request.user,
+        'current_user_role': user_role,
+        'all_sections': list(ALL_SECTIONS),
+        'default_sections': list(DEFAULT_SECTIONS),
+    })
 
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
@@ -649,92 +676,367 @@ def settings_view(request):
 
 
 @login_required(login_url='login')
+@user_is_incident_responder_orpublic
 def download_incident_json(request, id):
+    """
+    GET /api/incident/<id>/download-json/
+    Returns full deep JSON export (sections don't apply — always full).
+    """
     try:
         incident = Incident.objects.get(pk=id)
-        data = model_to_dict(incident)
-        for key, value in data.items():
-            if hasattr(value, 'isoformat'):
-                data[key] = value.isoformat()
-            elif isinstance(value, timedelta):
-                data[key] = str(value)
-        
-        data['users'] = [ { 'id': userrole.user.id, 'username': userrole.user.username,'email': userrole.user.email, 'role': userrole.role} for userrole in UserRole.objects.filter(incident=incident)]
-
-        response = HttpResponse(
-            json.dumps(data, indent=4),
-            content_type='application/json'
-        )
-        response['Content-Disposition'] = f'attachment; filename="incident_{incident.id}.json"'
-        return response
     except Incident.DoesNotExist:
         return JsonResponse({'error': 'Incident not found'}, status=404)
+
+    data = generate_deep_json(incident, request.user.username)
+
+    response = HttpResponse(
+        json.dumps(data, indent=2, ensure_ascii=False),
+        content_type='application/json; charset=utf-8'
+    )
+    response['Content-Disposition'] = (
+        f'attachment; filename="incident_{incident.id}_full.json"'
+    )
+    return response
+
+
+@login_required(login_url='login')
+@user_is_incident_responder_orpublic
+def download_incident_csv(request, id):
+    """
+    GET /api/incident/<id>/download-csv/
+    Returns a CSV of all IoCs (sections don't apply).
+    Columns: Type, Value, Status, Description, Created At, Linked Actions
+    """
+    try:
+        incident = Incident.objects.get(pk=id)
+    except Incident.DoesNotExist:
+        return JsonResponse({'error': 'Incident not found'}, status=404)
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Type', 'Value', 'Status', 'Description', 'Created At', 'Linked Actions'])
+
+    for ioc in (
+        incident.genericiocs.all()
+        .prefetch_related('actions')
+        .select_related('created_by')
+    ):
+        linked = ', '.join(str(a.title) for a in ioc.actions.all())
+        writer.writerow([
+            ioc.get_type_display(),
+            ioc.value,
+            ioc.get_status_display(),
+            ioc.description or '',
+            ioc.created_at.strftime('%Y-%m-%d %H:%M') if ioc.created_at else '',
+            linked,
+        ])
+
+    response = HttpResponse(output.getvalue(), content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = (
+        f'attachment; filename="incident_{incident.id}_iocs.csv"'
+    )
+    return response
+
+
+@login_required(login_url='login')
+@user_is_incident_responder
+def download_incident_html(request, id):
+    """
+    POST /api/incident/<id>/download-html/
+    Body: sections=..., tlp=...
+    Returns the report as a self-contained .html archive download.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        incident = Incident.objects.get(pk=id)
+    except Incident.DoesNotExist:
+        return JsonResponse({'error': 'Incident not found'}, status=404)
+
+    sections = parse_sections(request.POST)
+    tlp = parse_tlp(request.POST)
+    tlp_style = TLP_STYLES[tlp]
+
+    html = render_to_string('reports/report_template.html', {
+        'incident': incident,
+        'sections': sections,
+        'tlp': tlp,
+        'tlp_style': tlp_style,
+        'is_pdf': False,
+        'generated_at': timezone.now().strftime('%d %B %Y, %H:%M'),
+        'generated_by': request.user.username,
+    })
+
+    response = HttpResponse(html, content_type='text/html; charset=utf-8')
+    response['Content-Disposition'] = (
+        f'attachment; filename="incident_{incident.id}_report.html"'
+    )
+    return response
 
 @login_required(login_url='login')
 @user_is_incident_responder
 def download_incident_markdown(request, id):
+    """
+    POST /api/incident/<id>/download-markdown/
+    Body: sections=..., tlp=...
+    Returns a .md file download.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
     try:
         incident = Incident.objects.get(pk=id)
-    
-        
-        # Render the markdown template with the context
-        markdown_content = render_to_string(
-            'report-templates/report_template_1.md',
-            {'incident': incident}
-        )
-        
-        # Create a downloadable response
-        response = HttpResponse(markdown_content, content_type='text/markdown')
-        response['Content-Disposition'] = f'attachment; filename="INCIDENT_REPORT_{incident.id}.md"'
-    
     except Incident.DoesNotExist:
         return JsonResponse({'error': 'Incident not found'}, status=404)
 
+    sections = parse_sections(request.POST)
+    tlp = parse_tlp(request.POST)
+
+    content = generate_markdown(incident, sections, tlp, request.user.username)
+
+    response = HttpResponse(content, content_type='text/markdown; charset=utf-8')
+    response['Content-Disposition'] = (
+        f'attachment; filename="incident_{incident.id}_report.md"'
+    )
     return response
 
-@login_required(login_url='login')  
+@login_required(login_url='login')
 @user_is_incident_responder
 def download_incident_pdf(request, id):
+    """
+    POST /api/incident/<id>/download-pdf/
+    Body: sections=..., tlp=...
+    Returns a PDF file download using xhtml2pdf.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
     try:
-        # Fetch the incident by ID
         incident = Incident.objects.get(pk=id)
-        
-
-        # Render the HTML template with the incident data
-        template_name = request.POST.get('template')
-
-        html_content = render_to_string(f'report-templates/{template_name}', {'incident': incident})
-
-        # Path to wkhtmltopdf executable
-        wkhtmltopdf_path = "C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe"
-        config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
-
-        # Configure wkhtmltopdf options (optional)
-        pdf_options = {
-            'page-size': 'A4',
-            'encoding': 'UTF-8',
-            'no-outline': None,
-            'footer-left': f'{datetime.now().strftime("%d.%m.%Y")} | OpenCIRT Incident Report | TLP:GREEN' ,  # Custom footer content
-            'footer-right': f'{incident.name.upper()} | [page] of [topage]',  # Custom footer content
-            'footer-font-size': 10,
-            'footer-font-name': 'TradeGothic',
-            'footer-spacing': 5,
-        }
-
-        # Generate the PDF as a byte string
-        pdf_content = pdfkit.from_string(html_content, output_path=False, options=pdf_options, configuration=config)
-
-        # Return the PDF as an HTTP response for download
-        response = HttpResponse(pdf_content, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{template_name}_incident_{id}.pdf"'
-        return response
-
     except Incident.DoesNotExist:
         return JsonResponse({'error': 'Incident not found'}, status=404)
-    except Exception as e:
-        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+    sections = parse_sections(request.POST)
+    tlp = parse_tlp(request.POST)
+    tlp_style = TLP_STYLES[tlp]
+
+    html = render_to_string('reports/report_template.html', {
+        'incident': incident,
+        'sections': sections,
+        'tlp': tlp,
+        'tlp_style': tlp_style,
+        'is_pdf': True,
+        'generated_at': timezone.now().strftime('%d %B %Y, %H:%M'),
+        'generated_by': request.user.username,
+    })
+
+    buffer = BytesIO()
+    pisa_status = pisa.CreatePDF(html, dest=buffer, encoding='utf-8')
+
+    if pisa_status.err:
+        return HttpResponse(
+            f'PDF generation error (xhtml2pdf code {pisa_status.err}). '
+            f'Try the HTML export as a workaround.',
+            status=500
+        )
+
+    buffer.seek(0)
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'attachment; filename="incident_{incident.id}_report.pdf"'
+    )
+    return response
 
     
+@login_required(login_url='login')
+@user_is_incident_responder
+def download_incident_word(request, id):
+    """
+    POST /api/incident/<id>/download-word/
+    Body: sections=..., tlp=...
+    Returns a .docx file download.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        incident = Incident.objects.get(pk=id)
+    except Incident.DoesNotExist:
+        return JsonResponse({'error': 'Incident not found'}, status=404)
+
+    sections = parse_sections(request.POST)
+    tlp = parse_tlp(request.POST)
+
+    TLP_COLORS = {
+        'WHITE': RGBColor(80, 80, 80),
+        'GREEN': RGBColor(40, 167, 69),
+        'AMBER': RGBColor(253, 126, 20),
+        'RED':   RGBColor(220, 53, 69),
+    }
+
+    doc = DocxDocument()
+
+    # ── Cover ──
+    doc.add_heading(incident.name, 0)
+
+    tlp_para = doc.add_paragraph()
+    tlp_run = tlp_para.add_run(f'TLP:{tlp}')
+    tlp_run.bold = True
+    tlp_run.font.size = Pt(13)
+    tlp_run.font.color.rgb = TLP_COLORS.get(tlp, RGBColor(80, 80, 80))
+
+    meta_para = doc.add_paragraph()
+    meta_run = meta_para.add_run(
+        f'Generated {timezone.now().strftime("%d %B %Y, %H:%M")} by {request.user.username}'
+    )
+    meta_run.font.color.rgb = RGBColor(130, 130, 130)
+    doc.add_paragraph()  # spacer
+
+    # ── Executive Summary ──
+    if 'executive_summary' in sections:
+        doc.add_heading('Executive Summary', 1)
+        doc.add_paragraph(incident.executive_summary or 'No executive summary provided.')
+
+    # ── Metadata ──
+    if 'metadata' in sections:
+        doc.add_heading('Incident Metadata', 1)
+        table = doc.add_table(rows=0, cols=2)
+        table.style = 'Table Grid'
+        for label, value in [
+            ('Severity', incident.severity),
+            ('Status', incident.get_status_display()),
+            ('Start time', str(incident.starting_time)),
+            ('End time', str(incident.ending_time)),
+            ('Duration', str(incident.duration)),
+            ('Time to detect', str(incident.time_to_detect)),
+            ('Time to respond', str(incident.time_to_respond)),
+            ('Created by', incident.created_by.username if incident.created_by else 'Unknown'),
+            ('Public', 'Yes' if incident.is_public else 'No'),
+        ]:
+            row = table.add_row().cells
+            row[0].text = label
+            row[1].text = value
+
+    # ── Responders ──
+    if 'responders' in sections:
+        doc.add_heading('Responders', 1)
+        roles_qs = incident.incident_roles.all().select_related('user')
+        if roles_qs.exists():
+            table = doc.add_table(rows=1, cols=4)
+            table.style = 'Table Grid'
+            for i, h in enumerate(['Username', 'Display Name', 'Role', 'Display Role']):
+                table.rows[0].cells[i].text = h
+            for ur in roles_qs:
+                row = table.add_row().cells
+                row[0].text = ur.user.username
+                row[1].text = ur.user.displayname or '-'
+                row[2].text = ur.get_role_display()
+                row[3].text = ur.display_role or '-'
+        else:
+            doc.add_paragraph('No responders recorded.')
+
+    # ── Timeline ──
+    if 'timeline' in sections:
+        doc.add_heading('Timeline', 1)
+        actions_qs = incident.actions.all().order_by('observed_at').select_related('created_by')
+        if not actions_qs.exists():
+            doc.add_paragraph('No timeline events recorded.')
+        else:
+            for action in actions_qs:
+                if action.observed_at:
+                    time_str = action.observed_at.strftime('%d %b %Y %H:%M')
+                elif action.starting_time:
+                    time_str = action.starting_time.strftime('%d %b %Y %H:%M')
+                else:
+                    time_str = ''
+                p = doc.add_paragraph(style='List Bullet')
+                r = p.add_run(f'[{action.get_type_display()}] {action.title}')
+                r.bold = True
+                if time_str:
+                    p.add_run(f'  —  {time_str}')
+                if action.description:
+                    doc.add_paragraph(action.description)
+
+    # ── IoCs ──
+    if 'iocs' in sections:
+        doc.add_heading('IoC / Evidence', 1)
+        iocs_qs = incident.genericiocs.all()
+        if not iocs_qs.exists():
+            doc.add_paragraph('No IoCs recorded.')
+        else:
+            table = doc.add_table(rows=1, cols=4)
+            table.style = 'Table Grid'
+            for i, h in enumerate(['Type', 'Value', 'Status', 'Description']):
+                table.rows[0].cells[i].text = h
+            for ioc in iocs_qs:
+                row = table.add_row().cells
+                row[0].text = ioc.get_type_display()
+                row[1].text = ioc.value
+                row[2].text = ioc.get_status_display()
+                row[3].text = ioc.description or '-'
+
+    # ── Tasks ──
+    if 'tasks' in sections:
+        doc.add_heading('Tasks', 1)
+        tasks_qs = incident.tasks.all().select_related('assignee')
+        if not tasks_qs.exists():
+            doc.add_paragraph('No tasks recorded.')
+        else:
+            table = doc.add_table(rows=1, cols=5)
+            table.style = 'Table Grid'
+            for i, h in enumerate(['Priority', 'Title', 'Status', 'Assignee', 'Description']):
+                table.rows[0].cells[i].text = h
+            for task in tasks_qs:
+                row = table.add_row().cells
+                row[0].text = task.priority
+                row[1].text = task.title
+                row[2].text = task.status
+                row[3].text = task.assignee.username if task.assignee else '-'
+                row[4].text = task.description or '-'
+
+    # ── Notes ──
+    if 'notes' in sections:
+        doc.add_heading('Notes', 1)
+        notes_qs = incident.notes.all().select_related('created_by')
+        if not notes_qs.exists():
+            doc.add_paragraph('No notes recorded.')
+        else:
+            for note in notes_qs:
+                doc.add_heading(note.name, 2)
+                author = note.created_by.username if note.created_by else 'Unknown'
+                p = doc.add_paragraph()
+                p.add_run(
+                    f'{author}  ·  {note.created_at.strftime("%d %b %Y %H:%M")}'
+                ).italic = True
+                doc.add_paragraph(note.text)
+
+    # ── Lessons Learned ──
+    if 'lessons_learned' in sections:
+        doc.add_heading('Lessons Learned', 1)
+        ll = incident.lessons_learned
+        doc.add_paragraph(
+            ll if ll and ll != 'SOME STRING' else 'No lessons learned recorded.'
+        )
+
+    # ── Technical Details ──
+    if 'technical_details' in sections:
+        doc.add_heading('Technical Details', 1)
+        td = incident.technical_details
+        doc.add_paragraph(
+            td if td and td != 'SOME STRING' else 'No technical details recorded.'
+        )
+
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+
+    response = HttpResponse(
+        buffer.read(),
+        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+    response['Content-Disposition'] = (
+        f'attachment; filename="incident_{incident.id}_report.docx"'
+    )
+    return response
+
+
 @login_required
 @verify_permissions(['INCIDENT_LEAD', 'RESPONDER'])
 @user_is_incident_responder
