@@ -7,6 +7,7 @@ from sharpcirt.report_generators import (
     parse_sections,
     parse_tlp,
     generate_markdown,
+    generate_deep_json,
 )
 
 
@@ -135,3 +136,158 @@ def test_generate_markdown_pipe_in_value_is_escaped():
 
     md = generate_markdown(incident, frozenset({'iocs'}), 'AMBER', 'u')
     assert 'a\\|b' in md
+
+
+# ── generate_deep_json ──────────────────────────────────────────
+
+def _make_deep_incident():
+    """Mock incident for generate_deep_json tests."""
+    # Mock UserRole
+    ur = MagicMock()
+    ur.user.username = 'responder1'
+    ur.user.displayname = 'Responder One'
+    ur.user.email = 'r1@example.com'
+    ur.role = 'RESPONDER'
+    ur.display_role = 'IR Lead'
+
+    # Mock IoC
+    ioc = MagicMock()
+    ioc.id = 1
+    ioc.type = 'IPADRESS'
+    ioc.get_type_display.return_value = 'IP Address'
+    ioc.value = '10.0.0.1'
+    ioc.status = 'COMPROMISED'
+    ioc.description = 'Attacker C2'
+    ioc.created_at = None
+    ioc.created_by = MagicMock(username='analyst')
+    ioc.actions.values_list.return_value = [42]
+
+    # Mock Action
+    action = MagicMock()
+    action.id = 5
+    action.type = 'MALICIOUS'
+    action.get_type_display.return_value = 'Malicious'
+    action.title = 'Lateral move'
+    action.description = 'Attacker moved laterally'
+    action.observed_at = None
+    action.starting_time = None
+    action.ending_time = None
+    action.created_at = None
+    action.created_by = MagicMock(username='lead')
+    action.iocs.values_list.return_value = [1]
+    action.tags.all.return_value = []
+
+    # Mock Task
+    task = MagicMock()
+    task.id = 10
+    task.title = 'Patch server'
+    task.description = 'Apply patches'
+    task.status = 'OPEN'
+    task.priority = 'HIGH'
+    task.assignee = MagicMock(username='engineer')
+    task.external_reference = 'JIRA-123'
+    task.created_at = None
+
+    # Mock Impact
+    impact = MagicMock()
+    impact.id = 20
+    impact.title = 'Data exposure'
+    impact.description = 'PII data exposed'
+    impact.severity = 'HIGH'
+    impact.status = 'IN_PROGRESS'
+    impact.type = 'DATA_LOSS'
+
+    # Mock Note
+    note = MagicMock()
+    note.id = 7
+    note.name = 'Initial findings'
+    note.text = 'Found malicious traffic'
+    note.created_at = None
+    note.created_by = MagicMock(username='analyst')
+
+    incident = MagicMock()
+    incident.id = 99
+    incident.name = 'Test Incident'
+    incident.description = 'A test'
+    incident.status = 'OPEN'
+    incident.severity = 'HIGH'
+    incident.executive_summary = 'Summary'
+    incident.lessons_learned = 'Lessons'
+    incident.technical_details = 'Details'
+    incident.starting_time = None
+    incident.ending_time = None
+    incident.duration = None
+    incident.time_to_detect = None
+    incident.time_to_respond = None
+    incident.created_at = None
+    incident.is_public = False
+    incident.created_by = MagicMock(username='lead_admin')
+
+    incident.incident_roles.all.return_value.select_related.return_value = [ur]
+    incident.genericiocs.all.return_value.prefetch_related.return_value.select_related.return_value = [ioc]
+    incident.actions.all.return_value.order_by.return_value.prefetch_related.return_value.select_related.return_value = [action]
+    incident.notes.all.return_value.select_related.return_value = [note]
+    incident.tasks.all.return_value.select_related.return_value = [task]
+    incident.impacts.all.return_value = [impact]
+
+    return incident
+
+
+def test_generate_deep_json_top_level_keys():
+    result = generate_deep_json(_make_deep_incident(), 'test_user')
+    assert 'exported_at' in result
+    assert 'exported_by' in result
+    assert 'tlp' in result
+    assert 'incident' in result
+    assert 'responders' in result
+    assert 'iocs' in result
+    assert 'timeline' in result
+    assert 'notes' in result
+    assert 'tasks' in result
+    assert 'impacts' in result
+
+
+def test_generate_deep_json_exported_by():
+    result = generate_deep_json(_make_deep_incident(), 'my_user')
+    assert result['exported_by'] == 'my_user'
+
+
+def test_generate_deep_json_tlp_default_amber():
+    result = generate_deep_json(_make_deep_incident(), 'u')
+    assert result['tlp'] == 'AMBER'
+
+
+def test_generate_deep_json_tlp_custom():
+    result = generate_deep_json(_make_deep_incident(), 'u', tlp='RED')
+    assert result['tlp'] == 'RED'
+
+
+def test_generate_deep_json_incident_fields():
+    result = generate_deep_json(_make_deep_incident(), 'u')
+    inc = result['incident']
+    assert inc['id'] == 99
+    assert inc['name'] == 'Test Incident'
+    assert inc['severity'] == 'HIGH'
+    assert inc['is_public'] is False
+
+
+def test_generate_deep_json_responders():
+    result = generate_deep_json(_make_deep_incident(), 'u')
+    assert len(result['responders']) == 1
+    assert result['responders'][0]['username'] == 'responder1'
+    assert result['responders'][0]['role'] == 'RESPONDER'
+
+
+def test_generate_deep_json_iocs():
+    result = generate_deep_json(_make_deep_incident(), 'u')
+    assert len(result['iocs']) == 1
+    assert result['iocs'][0]['value'] == '10.0.0.1'
+    assert result['iocs'][0]['type'] == 'IPADRESS'
+    assert 42 in result['iocs'][0]['linked_actions']
+
+
+def test_generate_deep_json_tasks():
+    result = generate_deep_json(_make_deep_incident(), 'u')
+    assert len(result['tasks']) == 1
+    assert result['tasks'][0]['title'] == 'Patch server'
+    assert result['tasks'][0]['assignee'] == 'engineer'

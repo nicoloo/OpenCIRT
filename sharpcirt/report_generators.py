@@ -73,6 +73,10 @@ def generate_markdown(incident, sections, tlp, generated_by):
     tlp: one of 'WHITE', 'GREEN', 'AMBER', 'RED'.
     generated_by: username string shown in the header.
     """
+    def _esc(s):
+        """Escape pipe characters (and backticks) in Markdown table cell values."""
+        return (s or '-').replace('|', '\\|').replace('`', "'")
+
     lines = []
 
     # Header
@@ -119,9 +123,7 @@ def generate_markdown(incident, sections, tlp, generated_by):
             '|----------|--------------|------|--------------|',
         ]
         for ur in incident.incident_roles.all().select_related('user'):
-            dn = ur.user.displayname or '-'
-            dr = ur.display_role or '-'
-            lines.append(f'| {ur.user.username} | {dn} | {ur.get_role_display()} | {dr} |')
+            lines.append(f'| {_esc(ur.user.username)} | {_esc(ur.user.displayname)} | {ur.get_role_display()} | {_esc(ur.display_role)} |')
         lines.append('')
 
     if 'timeline' in sections:
@@ -154,10 +156,10 @@ def generate_markdown(incident, sections, tlp, generated_by):
             lines.append('| — | _No IoCs recorded._ | — | — |')
         else:
             for ioc in incident.genericiocs.all():
-                val = ioc.value.replace('|', '\\|')
-                desc = (ioc.description or '-').replace('|', '\\|')
+                val = _esc(ioc.value)
+                desc = _esc(ioc.description)
                 lines.append(
-                    f'| {ioc.get_type_display()} | `{val}` | {ioc.get_status_display()} | {desc} |'
+                    f'| {ioc.get_type_display()} | {val} | {ioc.get_status_display()} | {desc} |'
                 )
         lines.append('')
 
@@ -173,7 +175,7 @@ def generate_markdown(incident, sections, tlp, generated_by):
         else:
             for task in incident.tasks.all().select_related('assignee'):
                 assignee = task.assignee.username if task.assignee else '-'
-                lines.append(f'| {task.priority} | {task.title} | {task.status} | {assignee} |')
+                lines.append(f'| {task.priority} | {_esc(task.title)} | {task.status} | {_esc(assignee)} |')
         lines.append('')
 
     if 'notes' in sections:
@@ -212,10 +214,11 @@ def generate_markdown(incident, sections, tlp, generated_by):
 
 # ── Deep JSON serialiser ─────────────────────────────────────────────────────
 
-def generate_deep_json(incident, generated_by):
+def generate_deep_json(incident, generated_by, tlp='AMBER'):
     """
     Build a deep JSON-serialisable dict for the incident.
     Always exports all sections — the section picker does not apply.
+    tlp: one of 'WHITE', 'GREEN', 'AMBER', 'RED'. Defaults to 'AMBER'.
     """
 
     def fmt_dt(dt):
@@ -227,7 +230,7 @@ def generate_deep_json(incident, generated_by):
     return {
         'exported_at': timezone.now().isoformat(),
         'exported_by': generated_by,
-        'tlp': 'AMBER',
+        'tlp': tlp,
         'incident': {
             'id': incident.id,
             'name': incident.name,
