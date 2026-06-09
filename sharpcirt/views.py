@@ -2,7 +2,6 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
-from django.forms.models import model_to_dict
 from sharpcirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact
 from . import models
 from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, get_incidents_by_day_and_severity
@@ -13,11 +12,9 @@ from datetime import timedelta, datetime
 from django.utils import timezone
 from .models import Incident
 from django.template.loader import render_to_string
-from crud.settings import BASE_DIR
 from xhtml2pdf import pisa
 from io import BytesIO
 import os
-from django.http import FileResponse
 from collections import Counter, defaultdict
 from .report_generators import (
     parse_sections, parse_tlp, TLP_STYLES,
@@ -28,6 +25,14 @@ import csv
 from io import StringIO
 from docx import Document as DocxDocument
 from docx.shared import Pt, RGBColor
+
+# TLP → python-docx RGBColor mapping (used by download_incident_word)
+TLP_COLORS = {
+    'WHITE': RGBColor(80, 80, 80),
+    'GREEN': RGBColor(40, 167, 69),
+    'AMBER': RGBColor(253, 126, 20),
+    'RED':   RGBColor(220, 53, 69),
+}
 
 @login_required(login_url='login')
 def index(request):
@@ -863,13 +868,6 @@ def download_incident_word(request, id):
 
     sections = parse_sections(request.POST)
     tlp = parse_tlp(request.POST)
-
-    TLP_COLORS = {
-        'WHITE': RGBColor(80, 80, 80),
-        'GREEN': RGBColor(40, 167, 69),
-        'AMBER': RGBColor(253, 126, 20),
-        'RED':   RGBColor(220, 53, 69),
-    }
 
     doc = DocxDocument()
 
