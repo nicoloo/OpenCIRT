@@ -4,6 +4,18 @@ body {
     padding: 0;
 }
 
+/* ── Legacy .header (incidents/base2.html) ────────────────── */
+.header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px;
+    height: 52px;
+    background: var(--widget-background-color);
+    border-bottom: 1px solid var(--border-color);
+}
+.header .logo img { height: 32px; width: auto; }
+
 /* ── Topbar (base2.html) ─────────────────────────────────── */
 .topbar {
     display: flex;
@@ -26,7 +38,7 @@ body {
     text-decoration: none;
 }
 .topbar-logo img {
-    height: 34px;
+    height: 44px;
     width: auto;
 }
 

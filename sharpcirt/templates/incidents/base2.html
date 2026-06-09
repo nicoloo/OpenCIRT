@@ -5,6 +5,7 @@
 <html lang="en">
 <head>
     <title>OpenCIRT</title>
+    <link rel="stylesheet" href="/static/css/variables.css">
     {% block styles %}
     {% endblock %}
     <link rel="stylesheet" href="/static/css/new_style.css">
@@ -39,15 +40,13 @@
             </ul>
           </nav>
         
-        <!-- <div class="profile-pic"><img src="{% static '/temp/nico.png' %}" alt="Profile"></div> -->
-        {% if user.profile_picture %}
-        <a  href="/profile">
-            <div class="profile-pic">
-            <img src="{{ user.profile_picture.url }}" alt="Profile Picture">
-            </div>
+        <a href="/profile" class="topbar-avatar" title="{{ user.username }}">
+            {% if user.profile_picture %}
+                <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
+            {% else %}
+                <span class="topbar-avatar-initial">{{ user.username|slice:":1" }}</span>
+            {% endif %}
         </a>
-        
-        {% endif %}
     </header>
 
     <input type="hidden" id="incident-id" value="{{ incident.id }}">    
