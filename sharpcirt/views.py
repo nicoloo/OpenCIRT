@@ -16,7 +16,6 @@ from django.template.loader import render_to_string
 from crud.settings import BASE_DIR
 from xhtml2pdf import pisa
 from io import BytesIO
-import pdfkit
 import os
 from django.http import FileResponse
 from collections import Counter, defaultdict
