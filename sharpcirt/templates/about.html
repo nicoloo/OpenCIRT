@@ -1,39 +1,66 @@
 {% extends 'base2.html' %}
 
 {% block content %}
+<main>
+    <div class="main-frame-vertical" style="max-width:800px;">
 
-<div class="main">
-    <h1>OpenCIRT - TODO</h1>
+        <div class="widget" style="padding:0 0 20px 0;">
+            <h3>In progress / Next up</h3>
+            <div style="padding:0 24px;">
 
-    
-    <h2>Before 1.0 release</h2>
-    <p>- <s>Modify IoC feature</s></p>   
-    <p>- <s>Add action feature</s></p>   
-    <p>- <s>Delete action feature</s></p>   
-    
-    <p>- Modify action feature</p>
-    <p>- Audit feature</p>
-    <p>- Correct all created_at by observed_at</p>
-    <p>- Export and import incident as JSON</p>
-    <p>- Download All IoCs in misp importable format</p>
-    <p>- Improve incident join workflow </p>
-    <p>- Create incident feature </p>
-    <p>- Profile picture feature</p>
-    <p>- Proper RBAC</p>
-    <p>- Frontend refactor</p>
+                <p class="h4" style="margin-top:16px;">Platform</p>
+                <ul>
+                    <li>Proper RBAC (role-based access control)</li>
+                    <li>Audit trail — full history of changes to an incident</li>
+                    <li>Export and import incident as JSON</li>
+                    <li>Download all IoCs in MISP-importable format</li>
+                    <li>MISP / Jira / Microsoft Defender integration stubs</li>
+                </ul>
 
+            </div>
+        </div>
 
-    <h5>- Frontend refactor</h5>
-    <p>Regroup Timeline and IoC -> Evidence</p>
-    <p>Regroup Activity, Notes and Tasks -> Activity</p>
-    <p>Responders -> Team</p>
-    
+        <div class="widget" style="padding:0 0 20px 0;">
+            <h3>Done ✓</h3>
+            <div style="padding:0 24px;">
+                <ul>
+                    <li><s>Modify / Add / Delete IoC feature</s></li>
+                    <li><s>Frontend refactor — sidebar design, ochre palette, CSS variables</s></li>
+                    <li><s>Refactor all templates to new design</s></li>
+                    <li><s>Profile picture fallback (letter avatar)</s></li>
+                    <li><s>Fix IoC modal display bug</s></li>
+                    <li><s>Fix chat message rendering</s></li>
+                    <li><s>Fix 403 on note save (CSRF)</s></li>
+                    <li><s>Observed time visible on each timeline action</s></li>
+                    <li><s>Role select styling in Responders</s></li>
+                    <li><s>IoC filter — search bar + type dropdown (client-side, instant)</s></li>
+                    <li><s>Delete confirmation without JS confirm() — IoC page + Timeline</s></li>
+                    <li><s>IoC format validation (IP, email, hash, network, ports)</s></li>
+                    <li><s>Tasks page — spacing between toolbar and kanban board</s></li>
+                    <li><s>Activity page — auto-post chat message on IoC / task / note / action add</s></li>
+                    <li><s>Floating chat tab — accessible from any incident page</s></li>
+                    <li><s>Timeline — IoC picker in Add Action modal</s></li>
+                    <li><s>Modify action feature (edit in timeline)</s></li>
+                    <li><s>Home page redesign — stats bar, search/filter toolbar, incident cards, 3 charts</s></li>
+                    <li><s>Create incident page — minimal form, auto-assigns creator as Incident Lead</s></li>
+                    <li><s>Invite flow — join link + 6-digit code + QR code, post-creation invite screen</s></li>
+                    <li><s>Settings page — theme, notifications, platform defaults, security</s></li>
+                </ul>
+            </div>
+        </div>
 
-    <h2>Future functionalities</h2>    
-    <p> - Share IOCs between incidents</p>
-    <p> - Word report export</p>
-    <p> - Import tasks playbook (pre-created tasks)</p>
+        <div class="widget" style="padding:0 0 20px 0;">
+            <h3>Future</h3>
+            <div style="padding:0 24px;">
+                <ul>
+                    <li>Share IOCs between incidents</li>
+                    <li>Word report export</li>
+                    <li>Import tasks playbook (pre-created tasks)</li>
+                    <li>Documentation and README for integrations</li>
+                </ul>
+            </div>
+        </div>
 
-
-</div>
+    </div>
+</main>
 {% endblock %}

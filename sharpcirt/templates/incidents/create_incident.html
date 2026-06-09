@@ -1,0 +1,248 @@
+{% extends 'base2.html' %}
+{% load static %}
+
+{% block styles %}
+<style>
+.create-page {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: calc(100vh - 70px);
+    padding: 48px 24px 64px;
+    background: var(--background-color);
+}
+
+.create-card {
+    width: 100%;
+    max-width: 560px;
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 36px 40px;
+    box-shadow: 0 4px 24px rgba(196,152,64,0.08);
+}
+
+.create-card-header {
+    margin-bottom: 28px;
+}
+
+.create-card-header h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    margin: 0 0 6px 0;
+}
+
+.create-card-header p {
+    font-size: 0.85rem;
+    color: var(--text-color-2);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.create-form .form-group {
+    margin-bottom: 18px;
+}
+
+.create-form label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.create-form input[type="text"],
+.create-form textarea,
+.create-form select,
+.create-form input[type="datetime-local"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--background-color);
+    color: var(--text-color-1);
+    font-size: 0.88rem;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+
+.create-form input:focus,
+.create-form textarea:focus,
+.create-form select:focus {
+    outline: none;
+    border-color: var(--main-color-3);
+}
+
+.create-form textarea {
+    resize: vertical;
+    min-height: 90px;
+}
+
+.create-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.create-checkbox-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent-color);
+    flex-shrink: 0;
+}
+
+.create-checkbox-row label {
+    font-size: 0.85rem;
+    color: var(--text-color-2);
+    margin: 0;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+.create-form-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-create-submit {
+    flex: 1;
+    padding: 11px 20px;
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-create-submit:hover {
+    background: #a8832c;
+}
+
+.btn-create-cancel {
+    padding: 11px 20px;
+    background: transparent;
+    color: var(--text-color-2);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-create-cancel:hover {
+    border-color: var(--main-color-3);
+    color: var(--text-color-1);
+    text-decoration: none;
+}
+
+.create-error {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: #991b1b;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.required { color: #dc2626; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="create-page">
+    <div class="create-card">
+
+        <div class="create-card-header">
+            <h1>
+                <i class="fa-solid fa-circle-exclamation" style="color:var(--accent-color);margin-right:8px;"></i>
+                Open New Incident
+            </h1>
+            <p>Fill in the basics. You can always add more details once the incident is opened.</p>
+        </div>
+
+        {% if error %}
+        <div class="create-error">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form class="create-form" method="POST">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="name">Incident Name <span class="required">*</span></label>
+                <input type="text" id="name" name="name"
+                       placeholder="e.g. Ransomware attack on prod servers"
+                       value="{{ form_data.name|default:'' }}"
+                       required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description"
+                          placeholder="Brief description of what is happening…">{{ form_data.description|default:'' }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="severity">Severity</label>
+                <select id="severity" name="severity">
+                    {% for value, label in INCIDENT_SEVERITY_CHOICES %}
+                    <option value="{{ value }}"
+                        {% if form_data.severity == value %}selected
+                        {% elif not form_data.severity and value == 'MEDIUM' %}selected
+                        {% endif %}>{{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="starting_time">Start Time <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-color-2)">(leave blank to use now)</span></label>
+                <input type="datetime-local" id="starting_time" name="starting_time"
+                       value="{{ form_data.starting_time|default:'' }}">
+            </div>
+
+            <div class="create-checkbox-row">
+                <input type="checkbox" id="is_public" name="is_public"
+                       {% if form_data.is_public %}checked{% endif %}>
+                <label for="is_public">Make this incident public — anyone can view it without joining</label>
+            </div>
+
+            <div class="create-form-actions">
+                <button type="submit" class="btn-create-submit">
+                    <i class="fa-solid fa-bolt"></i> Open Incident
+                </button>
+                <a href="/home" class="btn-create-cancel">Cancel</a>
+            </div>
+        </form>
+
+    </div>
+</main>
+{% endblock %}

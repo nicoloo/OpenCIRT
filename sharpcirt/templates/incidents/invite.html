@@ -1,0 +1,305 @@
+{% extends 'base2.html' %}
+{% load static %}
+
+{% block styles %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+.invite-page {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: calc(100vh - 70px);
+    padding: 48px 24px 64px;
+    background: var(--background-color);
+}
+
+.invite-card {
+    width: 100%;
+    max-width: 500px;
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 36px 40px;
+    box-shadow: 0 4px 24px rgba(196,152,64,0.08);
+    text-align: center;
+}
+
+.invite-icon {
+    width: 64px;
+    height: 64px;
+    background: var(--main-color-1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 1.6rem;
+    color: var(--main-color-3);
+}
+
+.invite-card h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    margin: 0 0 6px 0;
+}
+
+.invite-subtitle {
+    font-size: 0.88rem;
+    color: var(--text-color-2);
+    margin: 0 0 30px 0;
+    line-height: 1.5;
+}
+
+.invite-section {
+    margin-bottom: 22px;
+    text-align: left;
+}
+
+.invite-section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-color-2);
+    margin-bottom: 8px;
+}
+
+.invite-link-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.invite-link-input {
+    flex: 1;
+    padding: 9px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--background-color);
+    color: var(--text-color-1);
+    font-size: 0.78rem;
+    font-family: 'Courier New', monospace;
+    min-width: 0;
+}
+
+.btn-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    background: var(--main-color-2);
+    color: var(--text-color-1);
+    border: none;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+}
+.btn-copy:hover { opacity: 0.8; }
+
+.btn-regen {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    color: var(--text-color-2);
+    font-size: 0.78rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+.btn-regen:hover {
+    border-color: var(--main-color-3);
+    color: var(--text-color-1);
+}
+
+.invite-code-display {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    font-family: 'Courier New', monospace;
+    color: var(--main-color-3);
+    background: var(--main-color-1);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px 24px;
+    text-align: center;
+    user-select: all;
+}
+
+.invite-code-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    gap: 8px;
+}
+
+.invite-qr-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 14px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.copy-confirm {
+    font-size: 0.78rem;
+    color: var(--accent-color);
+    margin-top: 6px;
+    display: none;
+}
+
+.invite-divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 22px 0;
+}
+
+.btn-go-incident {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 32px;
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+    margin-top: 6px;
+}
+.btn-go-incident:hover {
+    background: #a8832c;
+    color: #fff;
+    text-decoration: none;
+}
+
+.btn-go-incident i { transition: transform 0.15s; }
+.btn-go-incident:hover i { transform: translateX(3px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="invite-page">
+    <div class="invite-card">
+
+        <div class="invite-icon">
+            <i class="fa-solid fa-user-group"></i>
+        </div>
+        <h1>Incident created!</h1>
+        <p class="invite-subtitle">
+            Invite your team to join <strong>{{ incident.name }}</strong>
+        </p>
+
+        <!-- ── Join Link ── -->
+        <div class="invite-section">
+            <div class="invite-section-label">Join link</div>
+            <div class="invite-link-row">
+                <input type="text" class="invite-link-input" id="joinLinkInput"
+                       value="{{ join_url }}" readonly>
+                <button class="btn-copy" id="copyLinkBtn">
+                    <i class="fa-solid fa-copy"></i> Copy
+                </button>
+            </div>
+            <div class="copy-confirm" id="linkCopied">
+                <i class="fa-solid fa-check"></i> Copied to clipboard!
+            </div>
+        </div>
+
+        <hr class="invite-divider">
+
+        <!-- ── 6-digit Code ── -->
+        <div class="invite-section">
+            <div class="invite-section-label">6-digit code</div>
+            <div class="invite-code-display" id="inviteCodeDisplay">
+                {{ incident.invite_code }}
+            </div>
+            <div class="invite-code-actions">
+                <span style="font-size:0.78rem;color:var(--text-color-2);">Share this code with your team</span>
+                <button class="btn-regen" id="regenCodeBtn" data-incident-id="{{ incident.id }}">
+                    <i class="fa-solid fa-arrows-rotate"></i> Regenerate
+                </button>
+            </div>
+        </div>
+
+        <hr class="invite-divider">
+
+        <!-- ── QR Code ── -->
+        <div class="invite-section">
+            <div class="invite-section-label">QR code</div>
+            <div class="invite-qr-wrap">
+                <div id="qrcode"></div>
+            </div>
+        </div>
+
+        <hr class="invite-divider">
+
+        <a href="/incident/{{ incident.id }}/overview" class="btn-go-incident">
+            Go to incident <i class="fa-solid fa-arrow-right"></i>
+        </a>
+
+    </div>
+</main>
+
+<script>
+const joinUrl    = "{{ join_url }}";
+const incidentId = {{ incident.id }};
+
+// Generate QR code
+new QRCode(document.getElementById('qrcode'), {
+    text: joinUrl,
+    width: 160,
+    height: 160,
+    colorDark:  '#c49840',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M,
+});
+
+// Copy link
+document.getElementById('copyLinkBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(joinUrl).then(() => {
+        const el = document.getElementById('linkCopied');
+        el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 3000);
+    });
+});
+
+// Regenerate code
+document.getElementById('regenCodeBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('regenCodeBtn');
+    btn.disabled = true;
+    try {
+        const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+        const resp = await fetch(`/api/incident/${incidentId}/regenerate-invite/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            document.getElementById('inviteCodeDisplay').textContent = data.code;
+        } else {
+            alert('Failed to regenerate code. Please try again.');
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+    } finally {
+        btn.disabled = false;
+    }
+});
+</script>
+{% endblock %}

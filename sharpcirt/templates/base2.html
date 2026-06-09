@@ -5,51 +5,43 @@
 <html lang="en">
 <head>
     <title>OpenCIRT</title>
+    <link rel="stylesheet" href="/static/css/variables.css">
     {% block styles %}
     {% endblock %}
     <link rel="stylesheet" href="/static/css/new_style.css">
     <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}" >
-
-    {% if request.user.light_mode %}
-        <link rel="stylesheet" href="/static/css/{{ request.user.light_mode }}.css">
-    {% else %}
-        <link rel="stylesheet" href="/static/css/light_mode.css">
-    {% endif %}
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
 </head>
 
 <body>
     <header class="header">
-
-        {% if request.user.light_mode == 'light_mode'%}
-            <a class=logo href="/home"><img  src="{% static 'logo_phrase_light.png' %}" ></a>
-        {% elif request.user.light_mode == 'dark_mode' %}
-            <a class=logo href="/home"><img  src="{% static 'logo_phrase_dark.png' %}" ></a>
-        {% endif %}
+        <a class="logo" href="/home"><img src="{% static 'logo_phrase_light.png' %}" alt="OpenCIRT"></a>
 
         <nav class="links">
             <ul>
-              <li><a href="#">New incident</a></li>
-              <li><a href="/about">Settings</a></li>
+              <li><a href="/incident/create">New incident</a></li>
+              <li><a href="/settings">Settings</a></li>
+              <li><a href="/about">About</a></li>
             </ul>
-          </nav>
-        
-        <!-- <div class="profile-pic"><img src="{% static '/temp/nico.png' %}" alt="Profile"></div> -->
+        </nav>
+
         {% if user.profile_picture %}
-        <a  href="/profile">
+        <a href="/profile">
             <div class="profile-pic">
-            <img src="{{ user.profile_picture.url }}" alt="Profile Picture">
+                <img src="{{ user.profile_picture.url }}" alt="Profile Picture">
             </div>
         </a>
-        
+        {% else %}
+        <a href="/profile">
+            <div class="default-picture-base" title="{{ user.username }}">
+                {{ user.username|slice:":1" }}
+            </div>
+        </a>
         {% endif %}
     </header>
-        
+
     {% block content %}{% endblock %}
-    
 
 </body>
 </html>

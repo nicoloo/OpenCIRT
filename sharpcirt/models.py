@@ -13,6 +13,7 @@ class User(AbstractUser):
     displayname = models.CharField(max_length=100, blank=True, null=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', default='profile_pics/default.jpg')
     light_mode = models.CharField(max_length=15, default='light_mode')
+    preferences = models.JSONField(default=dict, blank=True)
     groups = models.ManyToManyField(
         Group,
         related_name='custom_user_groups',
@@ -59,6 +60,7 @@ class Incident(models.Model):
     updated_at = models.DateTimeField(auto_now=True)  # Timestamp for updates
     is_public = models.BooleanField(default=False)
     iocs_shared = models.BooleanField(default=False)
+    invite_code = models.CharField(max_length=6, blank=True, default='')
 
     def __str__(self):
         return self.name

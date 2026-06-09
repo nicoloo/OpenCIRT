@@ -8,7 +8,9 @@ from . import models
 from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, get_incidents_by_day_and_severity
 from django.contrib import messages
 import json
+import random
 from datetime import timedelta, datetime
+from django.utils import timezone
 from .models import Incident
 from django.template.loader import render_to_string
 from crud.settings import BASE_DIR
@@ -106,12 +108,31 @@ def home(request):
         "datasets": datasets
     }
 
+    # Stats bar
+    incidents_list = list(incidents)
+    total_count = len(incidents_list)
+    active_count = sum(1 for inc in incidents_list if inc.status in ('OPEN', 'IN_PROGRESS'))
+    critical_count = sum(1 for inc in incidents_list if inc.severity == 'CRITICAL')
+    total_iocs = sum(inc.genericiocs.count() for inc in incidents_list)
+
+    # Severity distribution donut
+    severity_counter = Counter(inc.severity for inc in incidents_list)
+    severity_chart_data = {
+        'labels': list(severity_counter.keys()),
+        'values': list(severity_counter.values()),
+    }
+
     return render(request, 'home.html', {
-        'incidents': incidents,
+        'incidents': incidents_list,
         'user': request.user,
         'status_counts': piechart_data,
         'timechart_data': context,
         'kpis': kpis,
+        'total_count': total_count,
+        'active_count': active_count,
+        'critical_count': critical_count,
+        'total_iocs': total_iocs,
+        'severity_chart_data': severity_chart_data,
     })
 
 
@@ -183,7 +204,7 @@ def overview(request, id):
         else:
             return HttpResponseForbidden("You do not have permission to access this incident.")
 
-    return render(request, 'incidents/overview2.html', {
+    return render(request, 'incidents/overview.html', {
         'incident': incident,
         'user': request.user,
         'current_user_role': user_role
@@ -256,7 +277,7 @@ def tasks(request, id):
             return HttpResponseForbidden("You do not have permission to access this incident.")
     except Incident.DoesNotExist:
         my_object = None
-    return render(request,'incidents/tasks2.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
+    return render(request,'incidents/tasks.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
 
 @login_required(login_url='login')
 @user_is_incident_responder
@@ -273,6 +294,11 @@ def add_note(request, id):
             name=name,
             text=text,
             created_by = request.user
+            )
+            Message.objects.create(
+                incident=incident,
+                sender=request.user,
+                text=f"{request.user.username} created note: {new_note.name}"
             )
             return JsonResponse({
             'id': new_note.id,
@@ -393,14 +419,65 @@ def timeline(request, id):
             return HttpResponseForbidden("You do not have permission to access this incident.")
     except Incident.DoesNotExist:
         my_object = None
-    return render(request,'incidents/timeline2.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
+    return render(request,'incidents/timeline.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
 
 def join(request, id):
     try:
         incident = Incident.objects.get(pk=id)
     except Incident.DoesNotExist:
-        my_object = None
-    return render(request,'incidents/join.html', {'incident': incident})
+        return redirect('/home')
+
+    if request.method == 'POST':
+        code = request.POST.get('code', '').strip()
+
+        # Validate invite code
+        if incident.invite_code and code != incident.invite_code:
+            return render(request, 'incidents/join.html', {
+                'incident': incident,
+                'error': 'Invalid code. Please check with your incident lead.',
+                'user': request.user,
+            })
+
+        if request.user.is_authenticated:
+            # Already logged in — just add to incident
+            if not UserRole.objects.filter(user=request.user, incident=incident).exists():
+                UserRole.objects.create(
+                    user=request.user,
+                    incident=incident,
+                    role='READER',
+                    display_role='Responder'
+                )
+            return redirect('overview', id=incident.id)
+        else:
+            # Create a new account
+            username = request.POST.get('username', '').strip()
+            email = request.POST.get('email', '').strip()
+            password = request.POST.get('password', '').strip()
+
+            if not username or not password:
+                return render(request, 'incidents/join.html', {
+                    'incident': incident,
+                    'error': 'Username and password are required.',
+                })
+            if User.objects.filter(username=username).exists():
+                return render(request, 'incidents/join.html', {
+                    'incident': incident,
+                    'error': 'Username already taken. Please choose another.',
+                })
+            user = User.objects.create_user(username=username, email=email, password=password)
+            UserRole.objects.create(
+                user=user,
+                incident=incident,
+                role='READER',
+                display_role='Responder'
+            )
+            login(request, user)
+            return redirect('overview', id=incident.id)
+
+    return render(request, 'incidents/join.html', {
+        'incident': incident,
+        'user': request.user,
+    })
 
 
 def welcome(request, id):
@@ -433,8 +510,146 @@ def welcome(request, id):
         my_object = None
         return render(request,'incidents/join.html', {'incident': incident})
 
+# ─────────────────────────────────────────────────────
+# INVITE HELPERS
+# ─────────────────────────────────────────────────────
+
+def generate_invite_code():
+    return str(random.randint(100000, 999999))
+
+
+# ─────────────────────────────────────────────────────
+# CREATE INCIDENT
+# ─────────────────────────────────────────────────────
+
 @login_required(login_url='login')
-@user_is_incident_responder
+def create_incident(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        severity = request.POST.get('severity', 'MEDIUM')
+        starting_time_str = request.POST.get('starting_time', '')
+        is_public = request.POST.get('is_public') == 'on'
+
+        if not name:
+            return render(request, 'incidents/create_incident.html', {
+                'user': request.user,
+                'error': 'Incident name is required.',
+                'form_data': request.POST,
+            })
+
+        # Parse start time
+        if starting_time_str:
+            try:
+                starting_time = datetime.strptime(starting_time_str, '%Y-%m-%dT%H:%M')
+                starting_time = timezone.make_aware(starting_time)
+            except ValueError:
+                starting_time = timezone.now()
+        else:
+            starting_time = timezone.now()
+
+        invite_code = generate_invite_code()
+
+        incident = Incident.objects.create(
+            name=name,
+            description=description,
+            severity=severity,
+            status='OPEN',
+            starting_time=starting_time,
+            ending_time=starting_time,
+            duration=timedelta(0),
+            time_to_detect=timedelta(0),
+            time_to_respond=timedelta(0),
+            executive_summary='',
+            lessons_learned='',
+            technical_details='',
+            is_public=is_public,
+            created_by=request.user,
+            invite_code=invite_code,
+        )
+
+        UserRole.objects.create(
+            user=request.user,
+            incident=incident,
+            role='INCIDENT_LEAD',
+            display_role='Incident Lead',
+        )
+
+        return redirect('incident_invite', id=incident.id)
+
+    return render(request, 'incidents/create_incident.html', {'user': request.user})
+
+
+# ─────────────────────────────────────────────────────
+# POST-CREATION INVITE SCREEN
+# ─────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+def incident_invite(request, id):
+    try:
+        incident = Incident.objects.get(pk=id)
+    except Incident.DoesNotExist:
+        return redirect('/home')
+
+    if not incident.invite_code:
+        incident.invite_code = generate_invite_code()
+        incident.save()
+
+    join_url = request.build_absolute_uri(f'/incident/{id}/join')
+
+    return render(request, 'incidents/invite.html', {
+        'incident': incident,
+        'user': request.user,
+        'join_url': join_url,
+    })
+
+
+@login_required(login_url='login')
+def regenerate_invite(request, id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        incident = Incident.objects.get(pk=id)
+        try:
+            user_role = UserRole.objects.get(user=request.user, incident=incident)
+            if user_role.role not in ('INCIDENT_LEAD', 'RESPONDER'):
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+        except UserRole.DoesNotExist:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        incident.invite_code = generate_invite_code()
+        incident.save()
+        return JsonResponse({'status': 'success', 'code': incident.invite_code})
+    except Incident.DoesNotExist:
+        return JsonResponse({'error': 'Incident not found'}, status=404)
+
+
+# ─────────────────────────────────────────────────────
+# SETTINGS PAGE
+# ─────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+def settings_view(request):
+    user = request.user
+    prefs = user.preferences if user.preferences else {}
+
+    if request.method == 'POST':
+        prefs['theme'] = request.POST.get('theme', 'light_mode')
+        prefs['default_severity'] = request.POST.get('default_severity', 'MEDIUM')
+        prefs['notify_assignment'] = 'notify_assignment' in request.POST
+        prefs['notify_mention'] = 'notify_mention' in request.POST
+        prefs['chart_period'] = request.POST.get('chart_period', '30d')
+        user.preferences = prefs
+        user.light_mode = prefs['theme']
+        user.save()
+        return redirect('/settings?saved=1')
+
+    return render(request, 'settings.html', {
+        'user': user,
+        'prefs': prefs,
+    })
+
+
+@login_required(login_url='login')
 def download_incident_json(request, id):
     try:
         incident = Incident.objects.get(pk=id)
@@ -546,6 +761,35 @@ def send_message(request, id):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
+
+@login_required(login_url='login')
+@user_is_incident_responder
+def get_messages(request, id):
+    try:
+        incident = Incident.objects.get(pk=id)
+        msgs = incident.messages.all().order_by('created_at').select_related('sender')
+        data = []
+        for msg in msgs:
+            if msg.sender:
+                display = (msg.sender.displayname if hasattr(msg.sender, 'displayname') and msg.sender.displayname
+                           else msg.sender.username)
+                initial = display[0].upper() if display else '?'
+                username = msg.sender.username
+            else:
+                display, initial, username = 'System', 'S', None
+            data.append({
+                'id': msg.id,
+                'text': msg.text,
+                'sender_username': username,
+                'sender_display': display,
+                'sender_initial': initial,
+                'created_at': msg.created_at.strftime('%H:%M'),
+            })
+        return JsonResponse({'status': 'success', 'messages': data, 'current_user': request.user.username})
+    except Incident.DoesNotExist:
+        return JsonResponse({'error': 'Incident not found'}, status=404)
+
+
 @login_required(login_url='login')
 @user_is_incident_responder
 @verify_permissions(['INCIDENT_LEAD', 'RESPONDER'])
@@ -565,6 +809,11 @@ def add_ioc(request, id):
                 value=ioc_value,
                 description=ioc_description,
                 tag=ioc_tags
+            )
+            Message.objects.create(
+                incident=incident,
+                sender=request.user,
+                text=f"{request.user.username} added a new {ioc.get_type_display()} IoC: {ioc.value}"
             )
             return redirect('/incident/' + str(id) + '/iocs')
         
@@ -615,7 +864,11 @@ def add_action(request, id):
                 action.iocs.set(action_iocs)
                 action.save()
             update_first_actions(incident=incident)
-            # return redirect('/incident/' + str(id) + '/timeline')
+            Message.objects.create(
+                incident=incident,
+                sender=request.user,
+                text=f"{request.user.username} added timeline action: {action.title}"
+            )
             return JsonResponse({"status": "success", "message": "Action added successfully"})
         else:
             return JsonResponse({'error': 'Invalid method'}, status=400)
@@ -770,6 +1023,11 @@ def add_task(request, id):
                 task.tags.set(task_tags)
                 task.save()
 
+            Message.objects.create(
+                incident=incident,
+                sender=request.user,
+                text=f"{request.user.username} created task: {task.title}"
+            )
             return redirect('/incident/' + str(id) + '/tasks')
         
     except Incident.DoesNotExist:

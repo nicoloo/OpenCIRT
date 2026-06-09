@@ -1,0 +1,314 @@
+{% extends 'base2.html' %}
+{% load static %}
+
+{% block styles %}
+<style>
+.settings-page {
+    padding: 32px 32px;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.settings-page h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    margin: 0 0 28px 0;
+}
+
+.settings-section {
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.settings-section-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--main-color-1);
+}
+
+.settings-section-header h2 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-1);
+    margin: 0;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 20px;
+}
+
+.settings-row:last-child {
+    border-bottom: none;
+}
+
+.settings-row-label {
+    flex: 1;
+    min-width: 0;
+}
+
+.settings-row-label strong {
+    display: block;
+    font-size: 0.88rem;
+    color: var(--text-color-1);
+    margin-bottom: 2px;
+}
+
+.settings-row-label span {
+    font-size: 0.77rem;
+    color: var(--text-color-2);
+    line-height: 1.4;
+}
+
+.settings-select {
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--background-color);
+    color: var(--text-color-1);
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+    min-width: 140px;
+    flex-shrink: 0;
+    transition: border-color 0.15s;
+}
+
+.settings-select:focus {
+    outline: none;
+    border-color: var(--main-color-3);
+}
+
+/* Toggle switch */
+.settings-toggle {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.settings-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border-color);
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    left: 3px;
+    top: 3px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.settings-toggle input:checked + .toggle-slider {
+    background: var(--accent-color);
+}
+
+.settings-toggle input:checked + .toggle-slider:before {
+    transform: translateX(18px);
+}
+
+.settings-link {
+    color: var(--accent-color);
+    font-size: 0.85rem;
+    text-decoration: none;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.settings-link:hover { text-decoration: underline; }
+
+.settings-meta {
+    font-size: 0.8rem;
+    color: var(--text-color-2);
+    font-family: monospace;
+    flex-shrink: 0;
+}
+
+.settings-save-row {
+    margin-top: 24px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.btn-settings-save {
+    padding: 11px 28px;
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s;
+}
+
+.btn-settings-save:hover { background: #a8832c; }
+
+.settings-saved-msg {
+    font-size: 0.85rem;
+    color: var(--accent-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<main>
+<form class="settings-page" method="POST" action="/settings">
+    {% csrf_token %}
+
+    <h1>
+        <i class="fa-solid fa-gear" style="color:var(--accent-color);margin-right:8px;"></i>
+        Settings
+    </h1>
+
+    <!-- ── Appearance ── -->
+    <div class="settings-section">
+        <div class="settings-section-header"><h2>Appearance</h2></div>
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <strong>Theme</strong>
+                <span>Choose between light and dark interface</span>
+            </div>
+            <select class="settings-select" name="theme">
+                <option value="light_mode" {% if user.light_mode == 'light_mode' or not user.light_mode %}selected{% endif %}>
+                    Light
+                </option>
+                <option value="dark_mode" {% if user.light_mode == 'dark_mode' %}selected{% endif %}>
+                    Dark
+                </option>
+            </select>
+        </div>
+    </div>
+
+    <!-- ── Notifications ── -->
+    <div class="settings-section">
+        <div class="settings-section-header"><h2>Notifications</h2></div>
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <strong>Email on new assignment</strong>
+                <span>Receive an email when assigned to a new incident</span>
+            </div>
+            <label class="settings-toggle">
+                <input type="checkbox" name="notify_assignment"
+                       {% if prefs.notify_assignment %}checked{% endif %}>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <strong>Email on @mention</strong>
+                <span>Receive an email when mentioned in incident chat</span>
+            </div>
+            <label class="settings-toggle">
+                <input type="checkbox" name="notify_mention"
+                       {% if prefs.notify_mention %}checked{% endif %}>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- ── Platform Defaults ── -->
+    <div class="settings-section">
+        <div class="settings-section-header"><h2>Platform Defaults</h2></div>
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <strong>Default incident severity</strong>
+                <span>Pre-selected severity when creating a new incident</span>
+            </div>
+            <select class="settings-select" name="default_severity">
+                {% for value, label in INCIDENT_SEVERITY_CHOICES %}
+                <option value="{{ value }}"
+                    {% if prefs.default_severity == value %}selected
+                    {% elif not prefs.default_severity and value == 'MEDIUM' %}selected
+                    {% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <strong>Default chart period</strong>
+                <span>Time range shown in home page charts</span>
+            </div>
+            <select class="settings-select" name="chart_period">
+                <option value="7d"  {% if prefs.chart_period == '7d' %}selected{% endif %}>Last 7 days</option>
+                <option value="30d" {% if prefs.chart_period == '30d' or not prefs.chart_period %}selected{% endif %}>Last 30 days</option>
+                <option value="all" {% if prefs.chart_period == 'all' %}selected{% endif %}>All time</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- ── Security ── -->
+    <div class="settings-section">
+        <div class="settings-section-header"><h2>Security</h2></div>
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <strong>Password</strong>
+                <span>Change your login password</span>
+            </div>
+            <a href="/profile_change_password" class="settings-link">
+                Change password →
+            </a>
+        </div>
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <strong>Last login</strong>
+                <span>Your most recent login time</span>
+            </div>
+            <span class="settings-meta">
+                {{ user.last_connection_time|default:"Never recorded" }}
+            </span>
+        </div>
+    </div>
+
+    <!-- ── Save ── -->
+    <div class="settings-save-row">
+        <button type="submit" class="btn-settings-save">
+            <i class="fa-solid fa-floppy-disk"></i> Save settings
+        </button>
+        {% if request.GET.saved %}
+        <span class="settings-saved-msg">
+            <i class="fa-solid fa-check"></i> Settings saved
+        </span>
+        {% endif %}
+    </div>
+
+</form>
+</main>
+{% endblock %}
