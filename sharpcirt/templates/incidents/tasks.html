@@ -77,14 +77,10 @@
                                         </div>
 
                                         {% if task.assignee %}
-                                            {% if task.assignee.profile_picture %}
+                                            {% if task.assignee.profile_picture and task.assignee.profile_picture.name != 'profile_pics/default.jpg' %}
                                                 <img src="{{ task.assignee.profile_picture.url }}"
                                                      alt="{{ task.assignee.displayname|default:task.assignee.username }}"
-                                                     style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;"
-                                                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                                                <span class="assignee-circle {% if task.assignee.username == user.username %}my-assignee{% endif %}" style="display:none">
-                                                    {{ task.assignee.displayname|default:task.assignee.username|slice:":1"|upper }}
-                                                </span>
+                                                     style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;">
                                             {% else %}
                                                 <span class="assignee-circle {% if task.assignee.username == user.username %}my-assignee{% endif %}">
                                                     {{ task.assignee.displayname|default:task.assignee.username|slice:":1"|upper }}

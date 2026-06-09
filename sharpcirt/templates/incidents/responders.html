@@ -64,14 +64,10 @@
                 <tr>
                     <!-- User Info -->
                     <td>
-                        {% if user_role.user.profile_picture %}
+                        {% if user_role.user.profile_picture and user_role.user.profile_picture.name != 'profile_pics/default.jpg' %}
                             <img src="{{ user_role.user.profile_picture.url }}"
                                  alt="{{ user_role.user.displayname|default:user_role.user.username }}"
-                                 style="width:32px;height:32px;border-radius:50%;object-fit:cover;"
-                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                            <div class="assignee-circle" style="display:none" title="{{ user_role.user.displayname|default:user_role.user.username }}">
-                                {{ user_role.user.displayname|default:user_role.user.username|slice:":1"|upper }}
-                            </div>
+                                 style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
                         {% else %}
                             <div class="assignee-circle" title="{{ user_role.user.displayname|default:user_role.user.username }}">
                                 {{ user_role.user.displayname|default:user_role.user.username|slice:":1"|upper }}
