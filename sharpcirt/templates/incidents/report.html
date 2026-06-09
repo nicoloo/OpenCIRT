@@ -77,22 +77,22 @@
             <div class="panel-label">Export</div>
             <div class="export-btn-grid">
                 <button class="export-btn export-primary" onclick="exportFormat('pdf')">
-                    <i class="fa-regular fa-file-pdf"></i> PDF
+                    <i class="fa-regular fa-file-pdf" aria-hidden="true"></i> PDF
                 </button>
                 <button class="export-btn" onclick="exportFormat('word')">
-                    <i class="fa-regular fa-file-word"></i> Word
+                    <i class="fa-regular fa-file-word" aria-hidden="true"></i> Word
                 </button>
                 <button class="export-btn" onclick="exportFormat('markdown')">
-                    <i class="fa-brands fa-markdown"></i> Markdown
+                    <i class="fa-brands fa-markdown" aria-hidden="true"></i> Markdown
                 </button>
                 <button class="export-btn" onclick="exportFormat('json')">
-                    <i class="fa-solid fa-code"></i> JSON
+                    <i class="fa-solid fa-code" aria-hidden="true"></i> JSON
                 </button>
                 <button class="export-btn" onclick="exportFormat('csv')">
-                    <i class="fa-regular fa-file-lines"></i> CSV IoCs
+                    <i class="fa-regular fa-file-lines" aria-hidden="true"></i> CSV IoCs
                 </button>
                 <button class="export-btn" onclick="exportFormat('html')">
-                    <i class="fa-brands fa-html5"></i> HTML
+                    <i class="fa-brands fa-html5" aria-hidden="true"></i> HTML
                 </button>
             </div>
         </div>
@@ -115,7 +115,7 @@
 </div>
 
 <script>
-const INCIDENT_ID = {{ incident.id }};
+const INCIDENT_ID = parseInt(document.querySelector('[incident-id]').getAttribute('incident-id'), 10);
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -131,8 +131,8 @@ function getSelectedTlp() {
 }
 
 function getCsrf() {
-    const m = document.cookie.match(/csrftoken=([^;]+)/);
-    return m ? m[1] : '';
+    const el = document.getElementById('csrf-token');
+    return el ? el.value : '';
 }
 
 // ── Preview ──────────────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ let previewTimer = null;
 async function refreshPreview() {
     const sections = getSelectedSections();
     const tlp = getSelectedTlp();
-    const url = `/api/incident/${INCIDENT_ID}/report-preview/?sections=${encodeURIComponent(sections)}&tlp=${tlp}`;
+    const url = `/api/incident/${INCIDENT_ID}/report-preview/?sections=${encodeURIComponent(sections)}&tlp=${encodeURIComponent(tlp)}`;
 
     document.getElementById('preview-loading').style.display = 'inline-flex';
     try {
@@ -151,8 +151,10 @@ async function refreshPreview() {
         const html = await resp.text();
         document.getElementById('report-preview').srcdoc = html;
     } catch (e) {
-        document.getElementById('report-preview').srcdoc =
-            `<p style="padding:20px;color:#dc2626;font-family:sans-serif;">Preview failed: ${e.message}</p>`;
+        const errP = document.createElement('p');
+        errP.style.cssText = 'padding:20px;color:#dc2626;font-family:sans-serif;';
+        errP.textContent = `Preview failed: ${e.message}`;
+        document.getElementById('report-preview').srcdoc = errP.outerHTML;
     } finally {
         document.getElementById('preview-loading').style.display = 'none';
     }
@@ -199,7 +201,6 @@ function exportFormat(format) {
 
     document.body.appendChild(form);
     form.submit();
-    document.body.removeChild(form);
 }
 
 // ── Event listeners ──────────────────────────────────────────────────────────
