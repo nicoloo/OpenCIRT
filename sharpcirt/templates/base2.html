@@ -18,7 +18,7 @@
     <header class="header">
         <a class="logo" href="/home"><img src="{% static 'logo_phrase_light.png' %}" alt="OpenCIRT"></a>
 
-        <nav class="links">
+        <nav class="links" id="mainNav">
             <ul>
               <li><a href="/incident/create">New incident</a></li>
               <li><a href="/settings">Settings</a></li>
@@ -39,7 +39,23 @@
             </div>
         </a>
         {% endif %}
+
+        <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation" aria-expanded="false">
+            <i class="fa-solid fa-bars"></i>
+        </button>
     </header>
+    <script>
+    (function() {
+        const btn = document.getElementById('navHamburger');
+        const nav = document.getElementById('mainNav');
+        if (btn && nav) {
+            btn.addEventListener('click', function() {
+                const open = nav.classList.toggle('nav-open');
+                btn.setAttribute('aria-expanded', open);
+            });
+        }
+    })();
+    </script>
 
     {% block content %}{% endblock %}
 

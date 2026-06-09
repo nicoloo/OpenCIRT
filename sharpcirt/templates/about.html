@@ -1,8 +1,23 @@
 {% extends 'base2.html' %}
 
+{% block styles %}
+<style>
+.about-wrap {
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+}
+@media (max-width: 640px) {
+    .about-wrap { padding: 0 2px; }
+    main { padding: 14px 12px; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <main>
-    <div class="main-frame-vertical" style="max-width:800px;">
+    <div class="about-wrap">
+    <div class="main-frame-vertical">
 
         <div class="widget" style="padding:0 0 20px 0;">
             <h3>In progress / Next up</h3>
@@ -61,6 +76,7 @@
             </div>
         </div>
 
+    </div>
     </div>
 </main>
 {% endblock %}

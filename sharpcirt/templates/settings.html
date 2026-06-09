@@ -164,7 +164,7 @@
     background: var(--accent-color);
     color: #fff;
     border: none;
-    border-radius: 8px;
+    border-radius: 20px;
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
@@ -184,6 +184,12 @@
     align-items: center;
     gap: 6px;
     font-weight: 600;
+}
+
+@media (max-width: 640px) {
+    .settings-page { padding: 16px 14px; }
+    .settings-row { flex-wrap: wrap; gap: 10px; }
+    .settings-select { min-width: 100%; }
 }
 </style>
 {% endblock %}

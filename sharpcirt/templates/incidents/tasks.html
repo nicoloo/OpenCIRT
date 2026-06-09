@@ -7,134 +7,190 @@
     <link rel="stylesheet" href="{% static 'css/modal.css' %}">
 {% endblock %}
 
-
 {% block content %}
 <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
 <input type="hidden" id="current-username" value="{{ user.username }}">
 
-<div class="main-content">
-    <div class="task-container">
-        <button class="button add-task-button">Add task</button>
+<div class="tasks-page">
+    <div class="main-frame-vertical">
 
-        <div class="filter-buttons">
-            <button class="button filter-button" id="my-tasks-button">My tasks only</button>
-            <button class="button filter-button" id="unassigned-button">Unassigned only</button>
-            <button class="button filter-button" id="reset-button">Reset Filters</button>
+        <div class="tasks-toolbar">
+            <button class="btn add-task-button">
+                <i class="fa-solid fa-plus"></i> Add task
+            </button>
+            <div class="filter-buttons">
+                <button class="btn filter-button" id="my-tasks-button">
+                    <i class="fa-solid fa-user"></i> My tasks
+                </button>
+                <button class="btn filter-button" id="unassigned-button">
+                    <i class="fa-solid fa-user-slash"></i> Unassigned
+                </button>
+                <button class="btn filter-button" id="reset-button">
+                    <i class="fa-solid fa-rotate-left"></i> Reset
+                </button>
+            </div>
         </div>
-        
+
         <div class="kanban-board">
             {% for status, status_label in TASK_STATUS_CHOICES %}
                 <div class="kanban-column" data-status="{{ status }}">
-                    <h2>{{ status_label }}</h2>
+                    <div class="kanban-column-header">
+                        <span class="kanban-column-title">{{ status_label }}</span>
+                        <span class="kanban-column-count">
+                            {% with count=0 %}
+                                {% for task in incident.tasks.all %}{% if task.status == status %}{% with count=count|add:1 %}{% endwith %}{% endif %}{% endfor %}
+                            {% endwith %}
+                        </span>
+                    </div>
                     <div class="kanban-tasks">
                         {% for task in incident.tasks.all %}
                             {% if task.status == status %}
-                                <div class="kanban-task" 
-                                    data-task-id="{{ task.id }}" 
-                                    data-assignee="{{ task.assignee.username|default:'' }}" 
-                                    data-status="{{ task.status }}" 
-                                    data-priority="{{ task.priority }}" 
-                                    data-tags="{{ task.tags.all|join:',' }}" 
+                                <div class="kanban-task"
+                                    data-task-id="{{ task.id }}"
+                                    data-assignee="{{ task.assignee.username|default:'' }}"
+                                    data-status="{{ task.status }}"
+                                    data-priority="{{ task.priority }}"
+                                    data-tags="{{ task.tags.all|join:',' }}"
                                     data-external-reference="{{ task.external_reference }}">
-                                    <div class="task-content">
-                                        <h3>{{ task.title }}</h3>
-                                        <p>{{ task.description }}</p>
-                                        <p class="external-reference">{{ task.external_reference }}</p>
+
+                                    <div class="task-main">
+                                        <p class="task-title">{{ task.title }}</p>
+                                        {% if task.description %}
+                                            <p class="task-description">{{ task.description }}</p>
+                                        {% endif %}
+                                        {% if task.external_reference %}
+                                            <p class="task-ext-ref">
+                                                <i class="fa-solid fa-link"></i> {{ task.external_reference }}
+                                            </p>
+                                        {% endif %}
                                     </div>
-                                    {% if task.priority == 'HIGH' %}
-                                    <i class="fa-solid fa-angles-up" style="color:red;"></i>
-                                    {% elif task.priority == 'MEDIUM' %}
-                                    <i class="fa-solid fa-grip-lines" style="color:orange;"></i>
-                                    {% elif task.priority == 'LOW' %}
-                                    <i class="fa-solid fa-angles-down" style="color:blue;"></i>
-                                    {{inc.severity}}
-                                    {% endif %}
-                                    {% if task.assignee %}
-                                        <span class="assignee-circle {% if task.assignee.username == user.username %}my-assignee{% endif %}">
-                                            {{ task.assignee.username|slice:":1"|upper }}
-                                        </span>
-                                    {% else %}
-                                        <span class="assignee-circle" style="opacity: 0;">&nbsp;</span>
-                                    {% endif %}
-                                    
-                                    {% for tag in task.tags.all %}
-                                    <div class="tag" style="background-color: {{ tag.color }}">
-                                        <span class="tag-item-value">#{{ tag.name }}</span> 
+
+                                    <div class="task-meta">
+                                        <div class="task-priority">
+                                            {% if task.priority == 'HIGH' %}
+                                                <i class="fa-solid fa-angles-up"></i>
+                                            {% elif task.priority == 'MEDIUM' %}
+                                                <i class="fa-solid fa-grip-lines"></i>
+                                            {% elif task.priority == 'LOW' %}
+                                                <i class="fa-solid fa-angles-down"></i>
+                                            {% endif %}
+                                        </div>
+
+                                        {% if task.assignee %}
+                                            {% if task.assignee.profile_picture %}
+                                                <img src="{{ task.assignee.profile_picture.url }}"
+                                                     alt="{{ task.assignee.displayname|default:task.assignee.username }}"
+                                                     style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;"
+                                                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                                <span class="assignee-circle {% if task.assignee.username == user.username %}my-assignee{% endif %}" style="display:none">
+                                                    {{ task.assignee.displayname|default:task.assignee.username|slice:":1"|upper }}
+                                                </span>
+                                            {% else %}
+                                                <span class="assignee-circle {% if task.assignee.username == user.username %}my-assignee{% endif %}">
+                                                    {{ task.assignee.displayname|default:task.assignee.username|slice:":1"|upper }}
+                                                </span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="assignee-circle unassigned">&nbsp;</span>
+                                        {% endif %}
                                     </div>
-                                    {% endfor %}
 
+                                    {% if task.tags.all %}
+                                        <div class="task-tags">
+                                            {% for tag in task.tags.all %}
+                                                <span class="task-tag" style="background-color: {{ tag.color }}">#{{ tag.name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
 
-
-                                    <button class="btn btn-sm btn-danger btn-icon delete-task" title="Delete">
+                                    <button class="task-delete delete-task" title="Delete">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </div>
                             {% endif %}
                         {% endfor %}
-
                     </div>
                 </div>
             {% endfor %}
         </div>
+
     </div>
 </div>
 
 
-
-
+<!-- Task Modal -->
 <div id="task-modal" class="modal hidden">
     <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2 id="modal-title">Add/Edit Task</h2>
-        <form id="task-form">
+        <div class="modal-header">
+            <h2 id="modal-title">Add Task</h2>
+            <span class="close close-modal">&times;</span>
+        </div>
+        <form id="task-form" class="modern-form">
             <input type="hidden" name="task-id" id="task-id" value="">
-            <div class="form-group">
-                <label for="task-title">Title</label>
-                <input type="text" id="task-title" name="title" required>
-            </div>
-            <div class="form-group">
-                <label for="task-description">Description</label>
-                <textarea id="task-description" name="description" required></textarea>
-            </div>
-            <div class="form-group">
-                <label for="task-external-reference">External reference</label>
-                <input type="text" id="task-external-reference" name="external_reference">
-            </div>
-            <div class="form-group">
-                <label for="task-status">Status</label>
-                <select id="task-status" name="status" required>
-                    <option value="OPEN">To Do</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="DONE">Done</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="task-priority">Priority</label>
-                <select id="task-priority" name="priority" required>
-                    <option value="HIGH">High</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="LOW">Low</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="task-assignee">Assignee</label>
-                <select id="task-assignee" name="assignee">
-                    <option value="">None</option> <!-- Option to leave unassigned -->
-                    {% for user_role in incident.incident_roles.all %}
-                    <option value={{ user_role.user.id }}>{{ user_role.user.username }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="task-tags">Tags</label>
-                <select id="task-tags" name="tags" multiple>
-                    {% for tag in incident.tags.all %}
-                    <option value="{{ tag.id }}">{{ tag.name }}</option>
-                    {% endfor %}
 
-                </select>
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="task-title">Title <span class="required">*</span></label>
+                    <input type="text" id="task-title" name="title" required>
+                </div>
             </div>
-            <button type="submit" class="button submit-button">Save Task</button>
+
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="task-description">Description</label>
+                    <textarea id="task-description" name="description"></textarea>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="task-external-reference">External reference</label>
+                    <input type="text" id="task-external-reference" name="external_reference">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="task-status">Status <span class="required">*</span></label>
+                    <select id="task-status" name="status" required>
+                        <option value="OPEN">To Do</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="DONE">Done</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-priority">Priority <span class="required">*</span></label>
+                    <select id="task-priority" name="priority" required>
+                        <option value="HIGH">High</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="LOW">Low</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="task-assignee">Assignee</label>
+                    <select id="task-assignee" name="assignee">
+                        <option value="">None</option>
+                        {% for user_role in incident.incident_roles.all %}
+                            <option value="{{ user_role.user.id }}">{{ user_role.user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-tags">Tags</label>
+                    <select id="task-tags" name="tags" multiple>
+                        {% for tag in incident.tags.all %}
+                            <option value="{{ tag.id }}">{{ tag.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Task</button>
+            </div>
         </form>
     </div>
 </div>
@@ -143,30 +199,22 @@
 <script>
     document.getElementById('my-tasks-button').addEventListener('click', function() {
         const currentUsername = document.getElementById('current-username').value;
-        const tasks = document.querySelectorAll('.kanban-task');
-
-        tasks.forEach(task => {
-            const assignee = task.getAttribute('data-assignee');
-            task.style.display = assignee === currentUsername ? 'flex' : 'none';
+        document.querySelectorAll('.kanban-task').forEach(task => {
+            task.style.display = task.getAttribute('data-assignee') === currentUsername ? 'block' : 'none';
         });
     });
 
     document.getElementById('unassigned-button').addEventListener('click', function() {
-        const tasks = document.querySelectorAll('.kanban-task');
-
-        tasks.forEach(task => {
-            const assignee = task.getAttribute('data-assignee');
-            task.style.display = assignee === '' ? 'flex' : 'none'; // Display only unassigned tasks
+        document.querySelectorAll('.kanban-task').forEach(task => {
+            task.style.display = task.getAttribute('data-assignee') === '' ? 'block' : 'none';
         });
     });
 
     document.getElementById('reset-button').addEventListener('click', function() {
-        const tasks = document.querySelectorAll('.kanban-task');
-        tasks.forEach(task => {
-            task.style.display = 'flex'; // Reset to display all tasks
+        document.querySelectorAll('.kanban-task').forEach(task => {
+            task.style.display = 'block';
         });
     });
-
 
 
     const modal = document.getElementById('task-modal');
@@ -174,30 +222,33 @@
     const closeModal = document.querySelector('.close-modal');
     const taskForm = document.getElementById('task-form');
     const incidentId = {{ incident.id }};
-    
-    // Open the modal for adding a task
+
     addTaskButton.addEventListener('click', () => {
-        modal.style.display = 'flex'; // Show modal
+        modal.style.display = 'flex';
         document.getElementById('modal-title').textContent = 'Add Task';
         taskForm.reset();
         document.getElementById('task-id').value = '';
     });
 
-    // Close the modal
     closeModal.addEventListener('click', () => {
-        modal.style.display = 'none'; // Hide modal
+        modal.style.display = 'none';
+    });
+
+    modal.addEventListener('click', function(event) {
+        if (event.target === this) modal.style.display = 'none';
     });
 
 
     taskForm.addEventListener('submit', async (event) => {
-        event.preventDefault();        
-        
+        event.preventDefault();
+
         const tagsElement = document.getElementById('task-tags');
         const tags = tagsElement
             ? Array.from(tagsElement.selectedOptions).map(option => option.value)
-            : []; // Fetch selected tags or return an empty array
+            : [];
+
         const taskData = {
-            id: document.getElementById('task-id').value || null, // null for new tasks
+            id: document.getElementById('task-id').value || null,
             title: document.getElementById('task-title').value,
             description: document.getElementById('task-description').value,
             status: document.getElementById('task-status').value,
@@ -208,9 +259,9 @@
         };
 
         try {
-            const taskUrl = taskData.id 
-                ? `/api/incident/${incidentId}/update-task/`  // If taskData.id exists, use the update-task URL
-                : `/api/incident/${incidentId}/add-task/`;   // If taskData.id doesn't exist, use the add-task URL
+            const taskUrl = taskData.id
+                ? `/api/incident/${incidentId}/update-task/`
+                : `/api/incident/${incidentId}/add-task/`;
             const csrfToken = document.getElementById('csrf-token').value;
             const response = await fetch(taskUrl, {
                 method: 'POST',
@@ -222,8 +273,8 @@
             });
 
             if (response.ok) {
-                modal.style.display = 'none'; // Hide modal on success
-                location.reload(); // Reload to reflect changes
+                modal.style.display = 'none';
+                location.reload();
             } else {
                 const errorData = await response.json();
                 alert('Failed to save task: ' + (errorData.error || 'Unknown error'));
@@ -235,81 +286,66 @@
 
 
     document.querySelectorAll('.kanban-task').forEach(taskElement => {
-    taskElement.addEventListener('click', function() {
-        // Get task details from the clicked task element
-        const taskId = taskElement.getAttribute('data-task-id'); // Assuming task has a data-task-id attribute
-        const taskTitle = taskElement.querySelector('.task-content h3').innerText;
-        const taskDescription = taskElement.querySelector('.task-content p').innerText;
-        const taskAssignee = taskElement.getAttribute('data-assignee');
-        const taskStatus = taskElement.getAttribute('data-status');
-        const taskPriority = taskElement.getAttribute('data-priority');
-        const taskTags = taskElement.getAttribute('data-tags').split(','); // Assuming tags are stored as comma-separated values
-        const taskExternalReference = taskElement.getAttribute('data-external-reference');
+        taskElement.addEventListener('click', function(event) {
+            if (event.target.closest('.task-delete')) return;
 
-        // Populate the modal form
-        document.getElementById('task-id').value = taskId;
-        document.getElementById('task-title').value = taskTitle;
-        document.getElementById('task-description').value = taskDescription;
-        document.getElementById('task-assignee').value = taskAssignee || ''; // If assignee exists, set value
-        document.getElementById('task-status').value = taskStatus;
-        document.getElementById('task-priority').value = taskPriority;
-        
-        // Set tags
-        const tagsElement = document.getElementById('task-tags');
-        Array.from(tagsElement.options).forEach(option => {
-            option.selected = taskTags.includes(option.value); // Mark selected tags
-        });
+            const taskId = taskElement.getAttribute('data-task-id');
+            const taskTitle = taskElement.querySelector('.task-title').innerText;
+            const taskDescEl = taskElement.querySelector('.task-description');
+            const taskDescription = taskDescEl ? taskDescEl.innerText : '';
+            const taskAssignee = taskElement.getAttribute('data-assignee');
+            const taskStatus = taskElement.getAttribute('data-status');
+            const taskPriority = taskElement.getAttribute('data-priority');
+            const taskTags = taskElement.getAttribute('data-tags').split(',');
+            const taskExternalReference = taskElement.getAttribute('data-external-reference');
 
-        document.getElementById('task-external-reference').value = taskExternalReference;
+            document.getElementById('task-id').value = taskId;
+            document.getElementById('task-title').value = taskTitle;
+            document.getElementById('task-description').value = taskDescription;
+            document.getElementById('task-assignee').value = taskAssignee || '';
+            document.getElementById('task-status').value = taskStatus;
+            document.getElementById('task-priority').value = taskPriority;
+            document.getElementById('task-external-reference').value = taskExternalReference;
 
-        // Show the modal
-        document.getElementById('task-modal').style.display = 'block';
-    });
-    });
-
-    // Close modal when clicking outside of it
-    document.getElementById('task-modal').addEventListener('click', function(event) {
-        if (event.target === this) {
-            document.getElementById('task-modal').style.display = 'none';
-        }
-    });
-
-    document.querySelectorAll('.delete-task').forEach(button => {
-    button.addEventListener('click', async function(event) {
-        event.stopPropagation();
-
-        const taskElement = this.closest('.kanban-task'); // Find the parent task element
-
-        const taskId = taskElement.getAttribute('data-task-id'); // Get the task ID
-        const csrfToken = document.getElementById('csrf-token').value;
-
-        
-        try {
-            const response = await fetch(`/api/incident/${incidentId}/delete-task/`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                },
-                body: JSON.stringify({ id: taskId }),
+            const tagsElement = document.getElementById('task-tags');
+            Array.from(tagsElement.options).forEach(option => {
+                option.selected = taskTags.includes(option.value);
             });
 
-            if (response.ok) {
-                taskElement.remove(); // Remove the task element from the DOM
-            } else {
-                const errorData = await response.json();
-                alert(`Failed to delete task: ${errorData.error}`);
+            document.getElementById('modal-title').textContent = 'Edit Task';
+            modal.style.display = 'flex';
+        });
+    });
+
+
+    document.querySelectorAll('.delete-task').forEach(button => {
+        button.addEventListener('click', async function(event) {
+            event.stopPropagation();
+            const taskElement = this.closest('.kanban-task');
+            const taskId = taskElement.getAttribute('data-task-id');
+            const csrfToken = document.getElementById('csrf-token').value;
+
+            try {
+                const response = await fetch(`/api/incident/${incidentId}/delete-task/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({ id: taskId }),
+                });
+
+                if (response.ok) {
+                    taskElement.remove();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Failed to delete task: ${errorData.error}`);
+                }
+            } catch (error) {
+                console.error('Error deleting task:', error);
+                alert('An error occurred while deleting the task.');
             }
-        } catch (error) {
-            console.error('Error deleting task:', error);
-            alert('An error occurred while deleting the task.');
-        }
-        
+        });
     });
-    });
-   
-
-
-    
 </script>
 {% endblock %}

@@ -1,0 +1,279 @@
+/* ============================================
+   IoC / Evidence Page
+   ============================================ */
+
+.ioc-page {
+    padding: 28px 32px;
+    height: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+/* ---- Page header ---- */
+.ioc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.ioc-header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.ioc-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    margin: 0;
+}
+
+.ioc-count {
+    font-size: 0.78rem;
+    color: var(--text-color-2);
+}
+
+.add-ioc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 20px;
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    font-family: inherit;
+}
+.add-ioc-btn:hover { opacity: 0.85; }
+
+/* ---- Two-column body ---- */
+.ioc-body {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+/* ---- Table card ---- */
+.ioc-table-card {
+    background: var(--widget-background-color);
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(15, 43, 58, 0.07), 0 1px 2px rgba(15, 43, 58, 0.04);
+    overflow: hidden;
+}
+
+.ioc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.ioc-table thead th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-color-2);
+    background: var(--background-color);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.ioc-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.12s;
+}
+.ioc-table tbody tr:last-child { border-bottom: none; }
+.ioc-table tbody tr:hover { background: var(--hover-color); }
+
+.ioc-table td {
+    padding: 10px 14px;
+    color: var(--text-color-1);
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* ---- Type badge ---- */
+.ioc-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: rgba(196, 152, 64, 0.12);
+    color: var(--text-color-1);
+    border: 1px solid var(--border-color);
+}
+
+/* ---- Tag chip ---- */
+.ioc-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    margin: 1px;
+    color: var(--text-color-1);
+}
+
+/* ---- Delete button ---- */
+.ioc-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-color-2);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 0.8rem;
+    font-family: inherit;
+}
+.ioc-delete-btn:hover {
+    background: rgba(220, 53, 69, 0.1);
+    border-color: rgba(220, 53, 69, 0.4);
+    color: #dc3545;
+}
+
+/* ---- Side panel ---- */
+.ioc-side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.ioc-metric-card {
+    background: var(--widget-background-color);
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 1px 3px rgba(15, 43, 58, 0.07), 0 1px 2px rgba(15, 43, 58, 0.04);
+}
+
+.ioc-metric-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-color-2);
+    margin-bottom: 6px;
+}
+
+.ioc-metric-value {
+    display: block;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    line-height: 1;
+}
+
+/* ---- Filter bar ---- */
+.ioc-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.ioc-search-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 7px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--widget-background-color);
+    color: var(--text-color-1);
+    font-size: 0.88rem;
+    font-family: inherit;
+}
+.ioc-search-input:focus {
+    outline: none;
+    border-color: var(--main-color-3);
+}
+
+.ioc-type-filter {
+    padding: 7px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--widget-background-color);
+    color: var(--text-color-1);
+    font-size: 0.88rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+.ioc-type-filter:focus {
+    outline: none;
+    border-color: var(--main-color-3);
+}
+
+/* ---- Inline delete confirmation ---- */
+.ioc-delete-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.ioc-delete-confirm {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    color: var(--text-color-2);
+}
+.ioc-delete-confirm.show { display: flex; }
+.ioc-delete-btn.hidden { display: none; }
+
+.ioc-confirm-yes {
+    padding: 3px 10px;
+    background: rgba(220, 53, 69, 0.08);
+    border: 1px solid rgba(220, 53, 69, 0.4);
+    border-radius: 5px;
+    color: #dc3545;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+}
+.ioc-confirm-yes:hover { background: rgba(220, 53, 69, 0.18); }
+
+.ioc-confirm-no {
+    padding: 3px 10px;
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    color: var(--text-color-2);
+    font-size: 0.78rem;
+    cursor: pointer;
+    font-family: inherit;
+}
+.ioc-confirm-no:hover { background: var(--main-color-1); }
+
+/* ---- Validation error ---- */
+.ioc-validation-error {
+    color: #dc3545;
+    font-size: 0.8rem;
+    margin-top: 4px;
+    display: none;
+}
+.ioc-validation-error.show { display: block; }
