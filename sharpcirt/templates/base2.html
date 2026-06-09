@@ -15,47 +15,43 @@
 </head>
 
 <body>
-    <header class="header">
-        <a class="logo" href="/home"><img src="{% static 'logo_phrase_light.png' %}" alt="OpenCIRT"></a>
+    <header class="topbar">
 
-        <nav class="links" id="mainNav">
-            <ul>
-              <li><a href="/incident/create">New incident</a></li>
-              <li><a href="/settings">Settings</a></li>
-              <li><a href="/about">About</a></li>
-            </ul>
+        <a class="topbar-logo" href="/home">
+            <img src="{% static 'logo_phrase_light.png' %}" alt="OpenCIRT">
+        </a>
+
+        <div class="topbar-spacer"></div>
+
+        <a href="/incident/create" class="topbar-new-incident">
+            <i class="fa-solid fa-plus"></i>
+            <span>New Incident</span>
+        </a>
+
+        <div class="topbar-divider"></div>
+
+        <nav class="topbar-nav">
+            <a href="/settings" class="topbar-link">
+                <i class="fa-solid fa-gear"></i>
+                <span>Settings</span>
+            </a>
+            <a href="/about" class="topbar-link">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>About</span>
+            </a>
         </nav>
 
-        {% if user.profile_picture %}
-        <a href="/profile">
-            <div class="profile-pic">
-                <img src="{{ user.profile_picture.url }}" alt="Profile Picture">
-            </div>
-        </a>
-        {% else %}
-        <a href="/profile">
-            <div class="default-picture-base" title="{{ user.username }}">
-                {{ user.username|slice:":1" }}
-            </div>
-        </a>
-        {% endif %}
+        <div class="topbar-divider"></div>
 
-        <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation" aria-expanded="false">
-            <i class="fa-solid fa-bars"></i>
-        </button>
+        <a href="/profile" class="topbar-avatar" title="{{ user.username }}">
+            {% if user.profile_picture %}
+                <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
+            {% else %}
+                <span class="topbar-avatar-initial">{{ user.username|slice:":1" }}</span>
+            {% endif %}
+        </a>
+
     </header>
-    <script>
-    (function() {
-        const btn = document.getElementById('navHamburger');
-        const nav = document.getElementById('mainNav');
-        if (btn && nav) {
-            btn.addEventListener('click', function() {
-                const open = nav.classList.toggle('nav-open');
-                btn.setAttribute('aria-expanded', open);
-            });
-        }
-    })();
-    </script>
 
     {% block content %}{% endblock %}
 
