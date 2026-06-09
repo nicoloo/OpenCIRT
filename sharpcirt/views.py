@@ -692,7 +692,8 @@ def download_incident_json(request, id):
     except Incident.DoesNotExist:
         return JsonResponse({'error': 'Incident not found'}, status=404)
 
-    data = generate_deep_json(incident, request.user.username)
+    tlp = parse_tlp(request.GET)
+    data = generate_deep_json(incident, generated_by=request.user.username, tlp=tlp)
 
     response = HttpResponse(
         json.dumps(data, indent=2, ensure_ascii=False),
@@ -1001,7 +1002,7 @@ def download_incident_word(request, id):
                 author = note.created_by.username if note.created_by else 'Unknown'
                 p = doc.add_paragraph()
                 p.add_run(
-                    f'{author}  ·  {note.created_at.strftime("%d %b %Y %H:%M")}'
+                    f'{author}  ·  {note.created_at.strftime("%d %b %Y %H:%M") if note.created_at else ""}'
                 ).italic = True
                 doc.add_paragraph(note.text)
 

@@ -6,6 +6,8 @@ All functions are pure (no Django request objects) so they're easy to test.
 """
 from django.utils import timezone
 
+_SENTINEL = 'SOME STRING'
+
 # ── Section constants ────────────────────────────────────────────────────────
 
 ALL_SECTIONS = frozenset([
@@ -194,18 +196,20 @@ def generate_markdown(incident, sections, tlp, generated_by):
                 ]
 
     if 'lessons_learned' in sections:
+        ll = incident.lessons_learned
         lines += [
             '## Lessons Learned',
             '',
-            incident.lessons_learned or '_No lessons learned recorded._',
+            ll if ll and ll != _SENTINEL else '_No lessons learned recorded._',
             '',
         ]
 
     if 'technical_details' in sections:
+        td = incident.technical_details
         lines += [
             '## Technical Details',
             '',
-            incident.technical_details or '_No technical details recorded._',
+            td if td and td != _SENTINEL else '_No technical details recorded._',
             '',
         ]
 

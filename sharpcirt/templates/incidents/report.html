@@ -173,7 +173,7 @@ function exportFormat(format) {
 
     // JSON and CSV: GET endpoints, no sections needed
     if (format === 'json') {
-        window.location.href = `/api/incident/${INCIDENT_ID}/download-json/`;
+        window.location.href = `/api/incident/${INCIDENT_ID}/download-json/?tlp=${encodeURIComponent(tlp)}`;
         return;
     }
     if (format === 'csv') {
