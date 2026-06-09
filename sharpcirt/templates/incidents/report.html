@@ -1,83 +1,223 @@
-{% extends 'incidents/base2.html' %}
+{% extends 'incidents/base.html' %}
 {% load static %}
 
 {% block styles %}
-    <link rel="stylesheet" href="{% static 'css/report.css' %}">
+<link rel="stylesheet" href="{% static 'css/report.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="main-content">
+<div class="report-page">
 
-    <div class="report-container">
+    <!-- ── LEFT PANEL: section picker ── -->
+    <div class="report-left-panel">
 
-        <div class="export-boxes">
-            <div class="export-box" id="pdf-box">
-                <img src="/static/icons/pdf-icon.png" alt="PDF Icon">
-                <p>Export as PDF</p>
-            </div>
-            <div class="export-box" id="markdown-box">
-                <img src="/static/icons/markdown-icon.png" alt="Markdown Icon">
-                <p>Export as Markdown</p>
-            </div>
-            <div class="export-box" id="json-box">
-                <img src="/static/icons/json-icon.png" alt="JSON Icon">
-                <p>Export as JSON</p>
-            </div>
-            <div class="export-box" id="word-box" disabled>
-                <img src="/static/icons/word-icon.png" alt="Word Icon">
-                <p>Export as Word</p>
+        <div class="panel-section">
+            <div class="panel-label">Sections</div>
+            <div class="section-list">
+
+                <label class="section-item">
+                    <input type="checkbox" class="section-cb" value="executive_summary" checked>
+                    <span class="section-item-label">Executive Summary</span>
+                </label>
+
+                <label class="section-item">
+                    <input type="checkbox" class="section-cb" value="metadata" checked>
+                    <span class="section-item-label">Incident Metadata</span>
+                </label>
+
+                <label class="section-item">
+                    <input type="checkbox" class="section-cb" value="responders" checked>
+                    <span class="section-item-label">Responders</span>
+                </label>
+
+                <label class="section-item">
+                    <input type="checkbox" class="section-cb" value="timeline" checked>
+                    <span class="section-item-label">Timeline</span>
+                </label>
+
+                <label class="section-item">
+                    <input type="checkbox" class="section-cb" value="iocs" checked>
+                    <span class="section-item-label">IoC / Evidence</span>
+                </label>
+
+                <label class="section-item">
+                    <input type="checkbox" class="section-cb" value="tasks">
+                    <span class="section-item-label">Tasks</span>
+                </label>
+
+                <label class="section-item">
+                    <input type="checkbox" class="section-cb" value="notes">
+                    <span class="section-item-label">Notes</span>
+                </label>
+
+                <label class="section-item">
+                    <input type="checkbox" class="section-cb" value="lessons_learned" checked>
+                    <span class="section-item-label">Lessons Learned</span>
+                </label>
+
+                <label class="section-item">
+                    <input type="checkbox" class="section-cb" value="technical_details" checked>
+                    <span class="section-item-label">Technical Details</span>
+                </label>
+
             </div>
         </div>
 
-        <div class="pdf-generation" id="pdf-fields" style="display: none;">
-            <form method="post" action="{% url 'download_incident_pdf' incident.id %}">{% csrf_token %}
-                <label for="template-select">Select PDF Template:</label>
-                <select id="template-select" name="template">
-                    {% for template in templates %}
-                    {% if template.type == "html" %}
-                        <option value="{{ template.name }}">{{ template.name }}</option>
-                    {% endif %}
-                    {% endfor %}
-                </select>
-                <button type="submit" class="export-button">Generate PDF</button>
-            </form>
+        <div class="panel-section">
+            <div class="panel-label">TLP Classification</div>
+            <div class="tlp-pills">
+                <button class="tlp-pill tlp-white" data-tlp="WHITE">WHITE</button>
+                <button class="tlp-pill tlp-green" data-tlp="GREEN">GREEN</button>
+                <button class="tlp-pill tlp-amber tlp-active" data-tlp="AMBER">AMBER</button>
+                <button class="tlp-pill tlp-red" data-tlp="RED">RED</button>
+            </div>
         </div>
 
-        <div class="markdown-generation" id="markdown-fields" style="display: none;">
-            <form method="post" action="{% url 'download_incident_markdown' incident.id %}">{% csrf_token %}
-                
-                <label for="markdown-template-select">Select Markdown Template:</label>
-                <select id="markdown-template-select" name="template">
-                    {% for template in templates %}
-                    {% if template.type == "markdown" %}
-                        <option value="{{ template.name }}">{{ template.name }}</option>
-                    {% endif %}
-                    {% endfor %}
-                </select>
-                <button type="submit" class="export-button">Generate Markdown</button>
-            </form>
+        <div class="panel-section">
+            <div class="panel-label">Export</div>
+            <div class="export-btn-grid">
+                <button class="export-btn export-primary" onclick="exportFormat('pdf')">
+                    <i class="fa-regular fa-file-pdf"></i> PDF
+                </button>
+                <button class="export-btn" onclick="exportFormat('word')">
+                    <i class="fa-regular fa-file-word"></i> Word
+                </button>
+                <button class="export-btn" onclick="exportFormat('markdown')">
+                    <i class="fa-brands fa-markdown"></i> Markdown
+                </button>
+                <button class="export-btn" onclick="exportFormat('json')">
+                    <i class="fa-solid fa-code"></i> JSON
+                </button>
+                <button class="export-btn" onclick="exportFormat('csv')">
+                    <i class="fa-regular fa-file-lines"></i> CSV IoCs
+                </button>
+                <button class="export-btn" onclick="exportFormat('html')">
+                    <i class="fa-brands fa-html5"></i> HTML
+                </button>
+            </div>
         </div>
-
-        <form method="post" action="{% url 'download_incident_json' incident.id %}" id="json-form">{% csrf_token %}
-            <input type="hidden" name="export" value="json">
-        </form>
 
     </div>
+
+    <!-- ── RIGHT PANEL: live preview ── -->
+    <div class="report-right-panel">
+        <div class="preview-toolbar">
+            <span class="preview-label">
+                <i class="fa-regular fa-eye"></i> Live Preview
+            </span>
+            <span class="preview-loading" id="preview-loading" style="display:none;">
+                <i class="fa-solid fa-spinner fa-spin"></i> Updating…
+            </span>
+        </div>
+        <iframe id="report-preview" class="report-iframe" srcdoc="<p style='padding:24px;font-family:sans-serif;color:#aaa;'>Loading preview…</p>"></iframe>
+    </div>
+
 </div>
 
 <script>
-    document.getElementById('pdf-box').addEventListener('click', function () {
-        document.getElementById('pdf-fields').style.display = 'block';
-        document.getElementById('markdown-fields').style.display = 'none';
-    });
+const INCIDENT_ID = {{ incident.id }};
 
-    document.getElementById('markdown-box').addEventListener('click', function () {
-        document.getElementById('markdown-fields').style.display = 'block';
-        document.getElementById('pdf-fields').style.display = 'none';
-    });
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
-    document.getElementById('json-box').addEventListener('click', function () {
-        document.getElementById('json-form').submit();
+function getSelectedSections() {
+    return Array.from(document.querySelectorAll('.section-cb:checked'))
+        .map(cb => cb.value)
+        .join(',');
+}
+
+function getSelectedTlp() {
+    const active = document.querySelector('.tlp-pill.tlp-active');
+    return active ? active.dataset.tlp : 'AMBER';
+}
+
+function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+}
+
+// ── Preview ──────────────────────────────────────────────────────────────────
+
+let previewTimer = null;
+
+async function refreshPreview() {
+    const sections = getSelectedSections();
+    const tlp = getSelectedTlp();
+    const url = `/api/incident/${INCIDENT_ID}/report-preview/?sections=${encodeURIComponent(sections)}&tlp=${tlp}`;
+
+    document.getElementById('preview-loading').style.display = 'inline-flex';
+    try {
+        const resp = await fetch(url, { credentials: 'same-origin' });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const html = await resp.text();
+        document.getElementById('report-preview').srcdoc = html;
+    } catch (e) {
+        document.getElementById('report-preview').srcdoc =
+            `<p style="padding:20px;color:#dc2626;font-family:sans-serif;">Preview failed: ${e.message}</p>`;
+    } finally {
+        document.getElementById('preview-loading').style.display = 'none';
+    }
+}
+
+function schedulePreview() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(refreshPreview, 400);
+}
+
+// ── Export ───────────────────────────────────────────────────────────────────
+
+function exportFormat(format) {
+    const sections = getSelectedSections();
+    const tlp = getSelectedTlp();
+
+    // JSON and CSV: GET endpoints, no sections needed
+    if (format === 'json') {
+        window.location.href = `/api/incident/${INCIDENT_ID}/download-json/`;
+        return;
+    }
+    if (format === 'csv') {
+        window.location.href = `/api/incident/${INCIDENT_ID}/download-csv/`;
+        return;
+    }
+
+    // PDF, Word, Markdown, HTML: POST with sections + TLP
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/api/incident/${INCIDENT_ID}/download-${format}/`;
+
+    const fields = {
+        csrfmiddlewaretoken: getCsrf(),
+        sections: sections,
+        tlp: tlp,
+    };
+    for (const [name, value] of Object.entries(fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+
+// ── Event listeners ──────────────────────────────────────────────────────────
+
+document.querySelectorAll('.section-cb').forEach(cb => {
+    cb.addEventListener('change', schedulePreview);
+});
+
+document.querySelectorAll('.tlp-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tlp-pill').forEach(b => b.classList.remove('tlp-active'));
+        btn.classList.add('tlp-active');
+        schedulePreview();
     });
+});
+
+// Initial load
+refreshPreview();
 </script>
+
 {% endblock %}
