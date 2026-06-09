@@ -47,6 +47,7 @@
             {% endfor %}
         </select>
         <select id="statusFilter" class="home-filter-select">
+            <option value="__active__" selected>Active (open + in progress)</option>
             <option value="">All statuses</option>
             {% for value, label in INCIDENT_STATUS_CHOICES %}
             <option value="{{ value }}">{{ label }}</option>
@@ -122,18 +123,25 @@ const sevFilter   = document.getElementById('severityFilter');
 const statFilter  = document.getElementById('statusFilter');
 const cards       = document.querySelectorAll('.incident-card');
 
+const ACTIVE_STATUSES = new Set(['OPEN', 'IN_PROGRESS']);
+
 function applyFilters() {
     const q    = searchInput.value.toLowerCase();
-    const sev  = sevFilter.value;   // e.g. 'CRITICAL' or ''
-    const stat = statFilter.value;  // e.g. 'OPEN' or ''
+    const sev  = sevFilter.value;
+    const stat = statFilter.value;
 
     cards.forEach(card => {
         const matchName   = !q    || card.dataset.name.includes(q);
         const matchSev    = !sev  || card.dataset.severity === sev;
-        const matchStatus = !stat || card.dataset.status === stat;
+        const matchStatus = stat === '__active__'
+            ? ACTIVE_STATUSES.has(card.dataset.status)
+            : !stat || card.dataset.status === stat;
         card.style.display = (matchName && matchSev && matchStatus) ? '' : 'none';
     });
 }
+
+// Apply default filter on load
+applyFilters();
 
 searchInput.addEventListener('input', applyFilters);
 sevFilter.addEventListener('change', applyFilters);

@@ -82,7 +82,7 @@ def home(request):
     ]
 
 
-    incidents = user_incidents | public_incidents
+    incidents = (user_incidents | public_incidents).order_by('-created_at')
 
 
     
