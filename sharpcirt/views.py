@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from sharpcirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformSettings
 from . import models
 from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, get_incidents_by_day_and_severity
+from .threat_intel import schedule_lookup, ELIGIBLE_TYPES as THREAT_INTEL_ELIGIBLE_TYPES
 from django.contrib import messages
 import json
 import os
@@ -1272,6 +1273,8 @@ def add_ioc(request, id):
                 description=ioc_description,
                 tag=ioc_tags
             )
+            if ioc_type in THREAT_INTEL_ELIGIBLE_TYPES:
+                schedule_lookup(ioc.id)
             Message.objects.create(
                 incident=incident,
                 sender=request.user,
@@ -1611,6 +1614,7 @@ def get_all_iocs(request, id):
                     "type": ioc.type,
                     "description": ioc.description,
                     "status": ioc.status,
+                    "reputation_score": ioc.reputation_score,
                 }
                 for ioc in iocs
             ]
@@ -1643,6 +1647,7 @@ def get_ioc(request, id, ioc_id):
                 "type": ioc.type,
                 "description": ioc.description,
                 "status": ioc.status,
+                "reputation_score": ioc.reputation_score,
                 "created_at": ioc.created_at.strftime('%Y-%m-%d %H:%M:%S'),
                 "updated_at": ioc.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
                 "created_by": ioc.created_by.username if ioc.created_by else "Unknown",
@@ -2179,6 +2184,158 @@ def ai_rephrase(request, id):
 
     except Exception as exc:
         return JsonResponse({'error': f'AI generation failed: {exc}'}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THREAT INTEL
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+@user_is_incident_responder_orpublic
+def refresh_ioc_reputation(request, id, ioc_id):
+    """POST — re-trigger threat intel lookup for an IoC."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    ioc = get_object_or_404(GenericIoc, pk=ioc_id, incident_id=id)
+    if ioc.type in THREAT_INTEL_ELIGIBLE_TYPES:
+        schedule_lookup(ioc.id)
+        return JsonResponse({'status': 'queued'})
+    return JsonResponse({'status': 'skipped', 'reason': 'type not eligible'})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WAR ROOM
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+@user_is_incident_responder_orpublic
+def warroom(request, id):
+    incident = get_object_or_404(Incident, pk=id)
+    try:
+        user_role = UserRole.objects.get(user=request.user, incident=incident)
+    except UserRole.DoesNotExist:
+        if incident.is_public:
+            user_role = UserRole(user=request.user, incident=incident, role='PUBLIC_VIEWER')
+        else:
+            return HttpResponseForbidden('You do not have permission to access this incident.')
+    return render(request, 'incidents/warroom.html', {
+        'incident': incident,
+        'user': request.user,
+        'current_user_role': user_role,
+    })
+
+
+@login_required(login_url='login')
+@user_is_incident_responder_orpublic
+def warroom_data(request, id):
+    """GET — JSON snapshot for the war room auto-refresh."""
+    incident = get_object_or_404(Incident, pk=id)
+
+    # Timeline — last 10 events
+    actions_qs = (
+        incident.actions.all()
+        .order_by('-observed_at', '-starting_time')
+        .select_related('created_by')[:10]
+    )
+    timeline = []
+    for a in actions_qs:
+        ts = a.observed_at or a.starting_time
+        timeline.append({
+            'id': a.id,
+            'type': a.type,
+            'title': a.title,
+            'description': a.description,
+            'ts': ts.strftime('%d %b %H:%M') if ts else '',
+            'created_by': a.created_by.username if a.created_by else '',
+        })
+
+    # Messages — last 10
+    msgs_qs = (
+        incident.messages.all()
+        .order_by('-created_at')
+        .select_related('sender')[:10]
+    )
+    messages_data = []
+    for m in reversed(list(msgs_qs)):
+        sender = m.sender.displayname or m.sender.username if m.sender else 'System'
+        messages_data.append({
+            'id': m.id,
+            'text': m.text,
+            'sender': sender,
+            'is_bot': m.is_bot,
+            'ts': m.created_at.strftime('%H:%M'),
+        })
+
+    # KPIs
+    total_iocs   = incident.genericiocs.count()
+    tasks_all    = list(incident.tasks.values('id', 'status'))
+    open_tasks   = sum(1 for t in tasks_all if t['status'] in ('OPEN', 'IN_PROGRESS'))
+    total_tasks  = len(tasks_all)
+    responders   = list(
+        incident.incident_roles.select_related('user')
+        .exclude(role='PUBLIC_VIEWER')
+    )
+
+    # Open tasks detail
+    open_tasks_qs = (
+        incident.tasks.filter(status__in=('OPEN', 'IN_PROGRESS'))
+        .select_related('assignee')
+        .order_by('priority', 'created_at')[:20]
+    )
+    open_tasks_list = [
+        {
+            'id': t.id,
+            'title': t.title,
+            'status': t.status,
+            'priority': t.priority,
+            'assignee': t.assignee.username if t.assignee else None,
+        }
+        for t in open_tasks_qs
+    ]
+
+    # Critical IoCs (reputation malicious)
+    critical_iocs = [
+        {
+            'id': ioc.id,
+            'type': ioc.type,
+            'value': ioc.value,
+            'reputation': ioc.reputation_score,
+        }
+        for ioc in incident.genericiocs.all()
+        if ioc.reputation_score and ioc.reputation_score.get('status') == 'malicious'
+    ]
+
+    # Responders list
+    responders_list = [
+        {
+            'username': ur.user.username,
+            'display': ur.user.displayname or ur.user.username,
+            'role': ur.role,
+            'display_role': ur.display_role or ur.get_role_display(),
+        }
+        for ur in responders
+    ]
+
+    return JsonResponse({
+        'incident': {
+            'id': incident.id,
+            'name': incident.name,
+            'severity': incident.severity,
+            'status': incident.status,
+            'starting_time': incident.starting_time.isoformat() if incident.starting_time else None,
+        },
+        'timeline': timeline,
+        'messages': messages_data,
+        'kpis': {
+            'total_iocs': total_iocs,
+            'open_tasks': open_tasks,
+            'total_tasks': total_tasks,
+            'responders': len(responders),
+        },
+        'open_tasks': open_tasks_list,
+        'critical_iocs': critical_iocs,
+        'responders': responders_list,
+    })
 
 
 # ─────────────────────────────────────────────────────────────────────────────

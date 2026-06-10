@@ -41,6 +41,7 @@
                         <th>Type</th>
                         <th>Value</th>
                         <th>Description</th>
+                        <th>Reputation</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -68,6 +69,27 @@
                             </td>
                             <td class="ioc-value-cell" data-raw="{{ ioc.value }}" data-type="{{ ioc.type }}" title="{{ ioc.value }}">{{ ioc.value }}</td>
                             <td>{{ ioc.description }}</td>
+                            <td onclick="event.stopPropagation()">
+                                {% if ioc.reputation_score %}
+                                    {% with rep=ioc.reputation_score %}
+                                    <button class="rep-badge rep-badge-{{ rep.status }}" data-ioc-id="{{ ioc.id }}" title="View reputation details">
+                                        {% if rep.status == 'clean' %}
+                                            <i class="fa-solid fa-circle-check"></i> Clean
+                                        {% elif rep.status == 'suspicious' %}
+                                            <i class="fa-solid fa-triangle-exclamation"></i> Suspicious
+                                        {% elif rep.status == 'malicious' %}
+                                            <i class="fa-solid fa-skull-crossbones"></i> Malicious
+                                        {% else %}
+                                            <i class="fa-solid fa-circle-question"></i> Unknown
+                                        {% endif %}
+                                    </button>
+                                    {% endwith %}
+                                {% elif ioc.type in 'IPADRESS,HASH,URL,EMAIL' %}
+                                    <button class="rep-badge rep-badge-unknown rep-badge-pending" data-ioc-id="{{ ioc.id }}" title="Reputation pending…">
+                                        <i class="fa-solid fa-circle-question"></i> Pending
+                                    </button>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
                                 <div class="ioc-delete-cell" onclick="event.stopPropagation()">
@@ -211,6 +233,19 @@
                 <button type="button" class="btn btn-secondary ioc-modal">Cancel</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal: Reputation Detail -->
+<div id="repModal" class="modal">
+    <div class="modal-content modal-medium">
+        <div class="modal-header">
+            <h2>Threat Intelligence Report</h2>
+            <span class="close rep-modal-close">&times;</span>
+        </div>
+        <div id="repModalBody" class="rep-modal-body">
+            <p class="rep-loading">Loading…</p>
+        </div>
     </div>
 </div>
 

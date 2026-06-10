@@ -339,6 +339,110 @@ document.addEventListener('DOMContentLoaded', function () {
         if (row) row.click();
     }
 
+    // ── Reputation modal ───────────────────────────────────────────────────
+
+    const repModal     = document.getElementById('repModal');
+    const repModalBody = document.getElementById('repModalBody');
+
+    if (repModal) {
+        document.querySelectorAll('.rep-modal-close').forEach(btn => {
+            btn.addEventListener('click', () => { repModal.style.display = 'none'; });
+        });
+        window.addEventListener('click', e => {
+            if (e.target === repModal) repModal.style.display = 'none';
+        });
+    }
+
+    function _repColor(n, threshWarn, threshBad) {
+        if (n >= threshBad) return 'rep-bad';
+        if (n >= threshWarn) return 'rep-warn';
+        return 'rep-ok';
+    }
+
+    function renderRepModal(ioc) {
+        if (!repModal || !repModalBody) return;
+        const rep = ioc.reputation_score;
+        if (!rep) {
+            repModalBody.innerHTML = '<p class="rep-loading">No reputation data available yet. It may still be loading.</p>';
+            repModal.style.display = 'flex';
+            return;
+        }
+
+        const statusLabels = { clean: 'Clean', suspicious: 'Suspicious', malicious: 'Malicious', unknown: 'Unknown' };
+        const statusClass  = { clean: 'rep-badge-clean', suspicious: 'rep-badge-suspicious', malicious: 'rep-badge-malicious', unknown: 'rep-badge-unknown' };
+        const statusIcons  = { clean: 'fa-circle-check', suspicious: 'fa-triangle-exclamation', malicious: 'fa-skull-crossbones', unknown: 'fa-circle-question' };
+
+        const checkedAt = rep.checked_at ? new Date(rep.checked_at).toLocaleString() : '';
+        let html = `
+            <div class="rep-status-row">
+                <span class="rep-badge ${statusClass[rep.status] || 'rep-badge-unknown'} rep-status-label">
+                    <i class="fa-solid ${statusIcons[rep.status] || 'fa-circle-question'}"></i>
+                    ${statusLabels[rep.status] || 'Unknown'}
+                </span>
+                ${checkedAt ? `<span class="rep-checked-at">Checked: ${checkedAt}</span>` : ''}
+            </div>`;
+
+        if (rep.vt) {
+            const vt = rep.vt;
+            const mal = vt.malicious || 0;
+            const sus = vt.suspicious || 0;
+            const total = vt.total || 0;
+            html += `<div class="rep-section">
+                <p class="rep-section-title"><i class="fa-solid fa-virus"></i> VirusTotal</p>
+                <div class="rep-grid">
+                    <div class="rep-kv"><span class="rep-kv-label">Malicious</span><span class="rep-kv-value ${_repColor(mal, 1, 6)}">${mal}</span></div>
+                    <div class="rep-kv"><span class="rep-kv-label">Suspicious</span><span class="rep-kv-value ${_repColor(sus, 1, 6)}">${sus}</span></div>
+                    <div class="rep-kv"><span class="rep-kv-label">Harmless</span><span class="rep-kv-value rep-ok">${vt.harmless || 0}</span></div>
+                    <div class="rep-kv"><span class="rep-kv-label">Undetected</span><span class="rep-kv-value">${vt.undetected || 0}</span></div>
+                    <div class="rep-kv"><span class="rep-kv-label">Total engines</span><span class="rep-kv-value">${total}</span></div>
+                    ${vt.country   ? `<div class="rep-kv"><span class="rep-kv-label">Country</span><span class="rep-kv-value">${vt.country}</span></div>` : ''}
+                    ${vt.asn       ? `<div class="rep-kv"><span class="rep-kv-label">ASN</span><span class="rep-kv-value">${vt.asn}</span></div>` : ''}
+                    ${vt.as_owner  ? `<div class="rep-kv"><span class="rep-kv-label">AS Owner</span><span class="rep-kv-value">${vt.as_owner}</span></div>` : ''}
+                    ${vt.meaningful_name  ? `<div class="rep-kv"><span class="rep-kv-label">File name</span><span class="rep-kv-value">${vt.meaningful_name}</span></div>` : ''}
+                    ${vt.type_description ? `<div class="rep-kv"><span class="rep-kv-label">File type</span><span class="rep-kv-value">${vt.type_description}</span></div>` : ''}
+                </div>
+            </div>`;
+        }
+
+        if (rep.abuseipdb) {
+            const ab = rep.abuseipdb;
+            const score = ab.score || 0;
+            html += `<div class="rep-section">
+                <p class="rep-section-title"><i class="fa-solid fa-shield-halved"></i> AbuseIPDB</p>
+                <div class="rep-grid">
+                    <div class="rep-kv"><span class="rep-kv-label">Abuse Score</span><span class="rep-kv-value ${_repColor(score, 10, 50)}">${score}%</span></div>
+                    <div class="rep-kv"><span class="rep-kv-label">Reports</span><span class="rep-kv-value ${_repColor(ab.reports||0, 1, 5)}">${ab.reports || 0}</span></div>
+                    ${ab.country      ? `<div class="rep-kv"><span class="rep-kv-label">Country</span><span class="rep-kv-value">${ab.country}</span></div>` : ''}
+                    ${ab.isp          ? `<div class="rep-kv"><span class="rep-kv-label">ISP</span><span class="rep-kv-value">${ab.isp}</span></div>` : ''}
+                    ${ab.domain       ? `<div class="rep-kv"><span class="rep-kv-label">Domain</span><span class="rep-kv-value">${ab.domain}</span></div>` : ''}
+                    ${ab.last_reported ? `<div class="rep-kv"><span class="rep-kv-label">Last report</span><span class="rep-kv-value">${new Date(ab.last_reported).toLocaleDateString()}</span></div>` : ''}
+                </div>
+            </div>`;
+        }
+
+        repModalBody.innerHTML = html;
+        repModal.style.display = 'flex';
+    }
+
+    document.querySelectorAll('.rep-badge:not(.rep-badge-pending)').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const iocId = this.dataset.iocId;
+            const incidentId = document.querySelector('[incident-id]').getAttribute('incident-id');
+            repModalBody.innerHTML = '<p class="rep-loading">Loading…</p>';
+            repModal.style.display = 'flex';
+
+            fetch(`/api/incident/${incidentId}/get-ioc/${iocId}/`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') renderRepModal(data.data);
+                })
+                .catch(() => {
+                    repModalBody.innerHTML = '<p class="rep-loading">Failed to load reputation data.</p>';
+                });
+        });
+    });
+
     // ── Save edit ──────────────────────────────────────────────────────────
 
     if (saveEditButton) {
