@@ -64,6 +64,7 @@ urlpatterns = [
     path('api/incident/<int:id>/audit-logs/', views.get_audit_logs, name='get_audit_logs'),
     path('api/incident/<int:id>/audit-logs/export/', views.export_audit_logs, name='export_audit_logs'),
     path('api/incident/<int:id>/ai-rephrase/', views.ai_rephrase, name='ai_rephrase'),
+    path('api/platform-settings/', views.save_platform_settings, name='save_platform_settings'),
 ]
 # Serve media files in development mode
 if settings.DEBUG:

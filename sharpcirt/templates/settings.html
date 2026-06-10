@@ -316,5 +316,144 @@
     </div>
 
 </form>
+
+{% if user.is_admin %}
+<!-- ── AI Configuration (admin only) ── -->
+<div class="settings-page" style="padding-top:0;">
+    <div class="settings-section" id="ai-config-section">
+        <div class="settings-section-header" style="display:flex;align-items:center;gap:8px;">
+            <h2 style="margin:0;"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent-color);margin-right:6px;"></i>AI Configuration</h2>
+            <span style="font-size:0.72rem;font-weight:600;background:rgba(196,152,64,0.15);color:var(--accent-color);padding:2px 8px;border-radius:20px;letter-spacing:0.04em;">ADMIN</span>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <strong>AI provider</strong>
+                <span>Select the AI service used for incident text generation</span>
+            </div>
+            <select class="settings-select" id="ai-provider-select">
+                <option value="NONE"      {% if platform.ai_provider == 'NONE'      %}selected{% endif %}>Disabled</option>
+                <option value="ANTHROPIC" {% if platform.ai_provider == 'ANTHROPIC' %}selected{% endif %}>Anthropic (Claude)</option>
+                <option value="OPENAI"    {% if platform.ai_provider == 'OPENAI'    %}selected{% endif %}>OpenAI (GPT)</option>
+            </select>
+        </div>
+
+        <div class="settings-row" id="ai-key-row" {% if platform.ai_provider == 'NONE' %}style="display:none;"{% endif %}>
+            <div class="settings-row-label">
+                <strong>API key</strong>
+                <span id="ai-key-hint">
+                    {% if platform.ai_api_key %}
+                    Key is configured — enter a new value to replace it
+                    {% else %}
+                    No key set yet
+                    {% endif %}
+                </span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+                <input type="password"
+                       id="ai-api-key-input"
+                       placeholder="{% if platform.ai_api_key %}••••••••••••••••{% else %}Paste API key…{% endif %}"
+                       autocomplete="off"
+                       style="padding:7px 10px;border:1px solid var(--border-color);border-radius:7px;
+                              background:var(--background-color);color:var(--text-color-1);
+                              font-size:0.85rem;font-family:monospace;width:260px;
+                              transition:border-color 0.15s;">
+                {% if platform.ai_api_key %}
+                <button type="button" id="ai-clear-key-btn"
+                        style="padding:6px 12px;border:1px solid var(--border-color);border-radius:7px;
+                               background:transparent;color:var(--text-color-2);font-size:0.8rem;
+                               cursor:pointer;font-family:inherit;white-space:nowrap;">
+                    Clear key
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="settings-row" style="border-top:1px solid var(--border-color);padding-top:14px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button type="button" id="save-ai-config-btn" class="btn-settings-save" style="padding:9px 22px;font-size:0.85rem;">
+                    <i class="fa-solid fa-floppy-disk"></i> Save AI config
+                </button>
+                <span id="ai-save-msg" style="display:none;font-size:0.83rem;font-weight:600;color:var(--accent-color);">
+                    <i class="fa-solid fa-check"></i> Saved
+                </span>
+                <span id="ai-save-err" style="display:none;font-size:0.83rem;font-weight:600;color:#dc3545;"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const providerSelect = document.getElementById('ai-provider-select');
+    const keyRow         = document.getElementById('ai-key-row');
+    const keyInput       = document.getElementById('ai-api-key-input');
+    const clearBtn       = document.getElementById('ai-clear-key-btn');
+    const saveBtn        = document.getElementById('save-ai-config-btn');
+    const saveMsg        = document.getElementById('ai-save-msg');
+    const saveErr        = document.getElementById('ai-save-err');
+    const csrf           = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+
+    // Show/hide key row when provider changes
+    if (providerSelect) {
+        providerSelect.addEventListener('change', () => {
+            keyRow.style.display = providerSelect.value === 'NONE' ? 'none' : '';
+        });
+    }
+
+    // Clear existing key (send empty key + NONE then re-select)
+    if (clearBtn) {
+        clearBtn.addEventListener('click', async () => {
+            if (!confirm('Remove the stored API key?')) return;
+            await postAiConfig('NONE', '');
+            // Reset UI
+            providerSelect.value  = 'NONE';
+            keyRow.style.display  = 'none';
+            clearBtn.style.display = 'none';
+        });
+    }
+
+    // Save
+    if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+            await postAiConfig(providerSelect.value, keyInput ? keyInput.value.trim() : '');
+            if (keyInput) keyInput.value = '';
+        });
+    }
+
+    async function postAiConfig(provider, key) {
+        saveMsg.style.display = 'none';
+        saveErr.style.display = 'none';
+        saveBtn.disabled = true;
+
+        try {
+            const r = await fetch('/api/platform-settings/', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body:    JSON.stringify({ ai_provider: provider, ai_api_key: key }),
+            });
+            const data = await r.json();
+            if (r.ok) {
+                saveMsg.style.display = 'inline-flex';
+                setTimeout(() => { saveMsg.style.display = 'none'; }, 3000);
+                // Update hint text
+                const hint = document.getElementById('ai-key-hint');
+                if (hint) hint.textContent = data.key_set
+                    ? 'Key is configured — enter a new value to replace it'
+                    : 'No key set yet';
+            } else {
+                saveErr.textContent   = data.error || 'Save failed.';
+                saveErr.style.display = 'inline';
+            }
+        } catch(e) {
+            saveErr.textContent   = 'Error: ' + e.message;
+            saveErr.style.display = 'inline';
+        } finally {
+            saveBtn.disabled = false;
+        }
+    }
+})();
+</script>
+{% endif %}
 </main>
 {% endblock %}

@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.contrib.auth import login, logout, authenticate
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
-from sharpcirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog
+from sharpcirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformSettings
 from . import models
 from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, get_incidents_by_day_and_severity
 from django.contrib import messages
@@ -832,9 +832,11 @@ def settings_view(request):
         user.save()
         return redirect('/settings?saved=1')
 
+    platform = PlatformSettings.get()
     return render(request, 'settings.html', {
-        'user': user,
-        'prefs': prefs,
+        'user':     user,
+        'prefs':    prefs,
+        'platform': platform,
     })
 
 
@@ -2058,15 +2060,29 @@ def ai_rephrase(request, id):
             status=400,
         )
 
-    # Resolve API keys
-    from django.conf import settings as _settings
-    anthropic_key = getattr(_settings, 'ANTHROPIC_API_KEY', '') or os.environ.get('ANTHROPIC_API_KEY', '')
-    openai_key    = getattr(_settings, 'OPENAI_API_KEY',    '') or os.environ.get('OPENAI_API_KEY',    '')
+    # Resolve provider and API key — DB takes priority, env vars are fallback
+    anthropic_key = ''
+    openai_key    = ''
+    ps = PlatformSettings.get()
+
+    if ps.ai_provider == 'ANTHROPIC' and ps.ai_api_key:
+        anthropic_key = ps.ai_api_key
+    elif ps.ai_provider == 'OPENAI' and ps.ai_api_key:
+        openai_key = ps.ai_api_key
+    else:
+        # Fallback: environment / settings.py (dev convenience)
+        from django.conf import settings as _settings
+        _ant = getattr(_settings, 'ANTHROPIC_API_KEY', '') or os.environ.get('ANTHROPIC_API_KEY', '')
+        _oai = getattr(_settings, 'OPENAI_API_KEY',    '') or os.environ.get('OPENAI_API_KEY',    '')
+        if _ant:
+            anthropic_key = _ant
+        elif _oai:
+            openai_key = _oai
 
     if not anthropic_key and not openai_key:
         return JsonResponse(
-            {'error': 'No AI API key is configured on the server. '
-                      'Set ANTHROPIC_API_KEY or OPENAI_API_KEY.'},
+            {'error': 'AI is not configured. An administrator must set the AI provider '
+                      'and API key in Platform Settings.'},
             status=503,
         )
 
@@ -2163,3 +2179,48 @@ def ai_rephrase(request, id):
 
     except Exception as exc:
         return JsonResponse({'error': f'AI generation failed: {exc}'}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLATFORM SETTINGS (admin-only)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+def save_platform_settings(request):
+    """
+    POST  /api/platform-settings/
+    Admin-only. Saves platform-wide AI provider / API key.
+    Body: { "ai_provider": "ANTHROPIC"|"OPENAI"|"NONE", "ai_api_key": "..." }
+    Leave ai_api_key empty (or omit) to keep the existing key unchanged.
+    """
+    if not request.user.is_admin:
+        return JsonResponse({'error': 'Admin access required.'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+
+    valid_providers = ('NONE', 'ANTHROPIC', 'OPENAI')
+    provider = body.get('ai_provider', '').upper()
+    if provider not in valid_providers:
+        return JsonResponse({'error': f'Invalid provider. Must be one of: {valid_providers}'}, status=400)
+
+    ps = PlatformSettings.get()
+    ps.ai_provider = provider
+
+    new_key = body.get('ai_api_key', '').strip()
+    if new_key:                # only overwrite if a value was submitted
+        ps.ai_api_key = new_key
+
+    if provider == 'NONE':     # if disabled, clear the stored key too
+        ps.ai_api_key = ''
+
+    ps.save()
+    return JsonResponse({
+        'status':      'saved',
+        'ai_provider': ps.ai_provider,
+        'key_set':     bool(ps.ai_api_key),
+    })

@@ -192,6 +192,29 @@ class Impact(models.Model):
     duration = models.DurationField(null=True)
 
 
+class PlatformSettings(models.Model):
+    """Singleton — platform-wide configuration. Always use PlatformSettings.get()."""
+    AI_PROVIDER_CHOICES = [
+        ('NONE',      'Disabled'),
+        ('ANTHROPIC', 'Anthropic (Claude)'),
+        ('OPENAI',    'OpenAI (GPT)'),
+    ]
+    ai_provider = models.CharField(max_length=20, choices=AI_PROVIDER_CHOICES, default='NONE')
+    ai_api_key  = models.CharField(max_length=512, blank=True, default='')
+
+    class Meta:
+        verbose_name = 'Platform Settings'
+
+    @classmethod
+    def get(cls):
+        """Return the singleton row, creating it with defaults if absent."""
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return f'Platform Settings (AI: {self.ai_provider})'
+
+
 class AuditLog(models.Model):
     """Records every significant action performed within an incident."""
     ACTION_CHOICES = [
