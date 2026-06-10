@@ -1614,7 +1614,7 @@ def get_all_iocs(request, id):
                     "type": ioc.type,
                     "description": ioc.description,
                     "status": ioc.status,
-                    "reputation_score": ioc.reputation_score,
+                    "reputation": ioc.reputation,
                 }
                 for ioc in iocs
             ]
@@ -1647,7 +1647,7 @@ def get_ioc(request, id, ioc_id):
                 "type": ioc.type,
                 "description": ioc.description,
                 "status": ioc.status,
-                "reputation_score": ioc.reputation_score,
+                "reputation": ioc.reputation,
                 "created_at": ioc.created_at.strftime('%Y-%m-%d %H:%M:%S'),
                 "updated_at": ioc.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
                 "created_by": ioc.created_by.username if ioc.created_by else "Unknown",
@@ -2299,10 +2299,10 @@ def warroom_data(request, id):
             'id': ioc.id,
             'type': ioc.type,
             'value': ioc.value,
-            'reputation': ioc.reputation_score,
+            'reputation': ioc.reputation,
         }
         for ioc in incident.genericiocs.all()
-        if ioc.reputation_score and ioc.reputation_score.get('status') == 'malicious'
+        if ioc.reputation and ioc.reputation.get('status') == 'malicious'
     ]
 
     # Responders list

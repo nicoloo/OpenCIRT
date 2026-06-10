@@ -1,0 +1,31 @@
+/* Pastel ochre design variables */
+:root {
+    /* Primary palette */
+    --main-color-1: #f5e8cc; /* very light warm ochre/cream */
+    --main-color-2: #e8cc8e; /* soft golden ochre */
+    --main-color-3: #c49840; /* accent ochre */
+
+    /* Backgrounds & widgets */
+    --background-color: #fdfaf3; /* page background — white with faint golden tint */
+    --widget-background-color: #faf4e5; /* card / widget background */
+    --sidebar-bg: #f5ebd0; /* sidebar background */
+    --topbar-bg: #f5e8cc; /* top bar background */
+
+    /* Text */
+    --text-color-1: #0f2b3a; /* primary text (dark slate) */
+    --text-color-2: #5b6b76; /* secondary text */
+    --muted-color: #9aa6b2;
+
+    /* UI states */
+    --hover-color: #faf3e2;
+    --border-color: #e5d0a0;
+
+    /* Severity colors */
+    --color-severity-critical: rgba(240,102,84,0.85);
+    --color-severity-high: rgba(220,124,115,0.85);
+    --color-severity-medium: rgba(227,207,152,0.95);
+    --color-severity-low: rgba(197,206,174,0.95);
+
+    /* Misc */
+    --accent-color: #c49840;
+}

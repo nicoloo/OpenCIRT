@@ -1,6 +1,6 @@
 [
     {
-        "model": "sharpcirt.user",
+        "model": "opencirt.user",
         "pk": 1,
         "fields": {
             "username": "admin_user",
@@ -13,7 +13,7 @@
         }
     },
     {
-        "model": "sharpcirt.user",
+        "model": "opencirt.user",
         "pk": 2,
         "fields": {
             "username": "responder1",
@@ -26,7 +26,7 @@
         }
     },
     {
-        "model": "sharpcirt.user",
+        "model": "opencirt.user",
         "pk": 3,
         "fields": {
             "username": "responder2",
@@ -39,7 +39,7 @@
         }
     },
     {
-        "model": "sharpcirt.user",
+        "model": "opencirt.user",
         "pk": 4,
         "fields": {
             "username": "alexjohnson",
@@ -52,7 +52,7 @@
         }
     },
     {
-        "model": "sharpcirt.user",
+        "model": "opencirt.user",
         "pk": 5,
         "fields": {
             "username": "mariawilliams",
@@ -65,7 +65,7 @@
         }
     },
     {
-        "model": "sharpcirt.user",
+        "model": "opencirt.user",
         "pk": 6,
         "fields": {
             "username": "robertbrown",
@@ -78,7 +78,7 @@
         }
     },
     {
-        "model": "sharpcirt.user",
+        "model": "opencirt.user",
         "pk": 7,
         "fields": {
             "username": "elizabethdavis",
@@ -91,7 +91,7 @@
         }
     },
     {
-        "model": "sharpcirt.user",
+        "model": "opencirt.user",
         "pk": 8,
         "fields": {
             "username": "jamesmiller",
@@ -104,7 +104,7 @@
         }
     },
     {
-        "model": "sharpcirt.user",
+        "model": "opencirt.user",
         "pk": 9,
         "fields": {
             "username": "patriciawilson",
@@ -117,7 +117,7 @@
         }
     },
     {
-        "model": "sharpcirt.user",
+        "model": "opencirt.user",
         "pk": 10,
         "fields": {
             "username": "michaelmoore",

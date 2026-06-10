@@ -1,0 +1,252 @@
+{% extends 'base_warroom.html' %}
+{% load static %}
+
+{% block title %}{{ incident.name }} — War Room{% endblock %}
+
+{% block body %}
+<!-- ── Top bar ─────────────────────────────────────────────── -->
+<header class="wr-topbar">
+    <div class="wr-topbar-left">
+        <i class="fa-solid fa-shield-halved" style="color:#c49840;font-size:1.1rem;flex-shrink:0;"></i>
+        <span class="wr-incident-name">{{ incident.name }}</span>
+        <span class="wr-severity-badge wr-sev-{{ incident.severity|lower }}">{{ incident.severity }}</span>
+    </div>
+
+    <span class="wr-timer" id="wr-timer" title="Time elapsed since incident start">00:00:00</span>
+
+    <div class="wr-topbar-right">
+        <span class="wr-refresh-badge">
+            <span class="wr-refresh-dot"></span>
+            Auto-refresh 30s
+        </span>
+        <a href="/incident/{{ incident.id }}/overview" class="wr-exit-btn">
+            <i class="fa-solid fa-arrow-left"></i> Exit War Room
+        </a>
+    </div>
+</header>
+
+<!-- ── Two-column body ────────────────────────────────────── -->
+<div class="wr-body">
+
+    <!-- Left column (60%) -->
+    <div class="wr-col" id="wr-col-left">
+
+        <!-- KPI row -->
+        <div class="wr-kpi-row" id="wr-kpis">
+            <div class="wr-kpi">
+                <span class="wr-kpi-label">IoCs</span>
+                <span class="wr-kpi-value" id="kpi-iocs">—</span>
+            </div>
+            <div class="wr-kpi">
+                <span class="wr-kpi-label">Open tasks</span>
+                <span class="wr-kpi-value" id="kpi-open-tasks">—</span>
+                <span class="wr-kpi-sub" id="kpi-tasks-sub"></span>
+            </div>
+            <div class="wr-kpi">
+                <span class="wr-kpi-label">Critical IoCs</span>
+                <span class="wr-kpi-value" id="kpi-critical" style="color:#f87171;">—</span>
+            </div>
+            <div class="wr-kpi">
+                <span class="wr-kpi-label">Responders</span>
+                <span class="wr-kpi-value" id="kpi-responders">—</span>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="wr-card">
+            <div class="wr-card-header">
+                <i class="fa-solid fa-clock"></i> Timeline — last 10 events
+            </div>
+            <ul class="wr-timeline" id="wr-timeline">
+                <li class="wr-empty">Loading…</li>
+            </ul>
+        </div>
+
+        <!-- Activity feed -->
+        <div class="wr-card">
+            <div class="wr-card-header">
+                <i class="fa-solid fa-comments"></i> Activity feed — last 10 messages
+            </div>
+            <ul class="wr-msgs" id="wr-msgs">
+                <li class="wr-empty">Loading…</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- Right column (40%) -->
+    <div class="wr-col wr-col-right" id="wr-col-right">
+
+        <!-- Open tasks -->
+        <div class="wr-card">
+            <div class="wr-card-header">
+                <i class="fa-solid fa-list-check"></i> Open tasks
+            </div>
+            <ul class="wr-tasks" id="wr-tasks">
+                <li class="wr-empty">Loading…</li>
+            </ul>
+        </div>
+
+        <!-- Critical IoCs -->
+        <div class="wr-card">
+            <div class="wr-card-header">
+                <i class="fa-solid fa-skull-crossbones" style="color:#f87171;"></i> Critical IoCs
+            </div>
+            <ul class="wr-iocs" id="wr-critical-iocs">
+                <li class="wr-empty">Loading…</li>
+            </ul>
+        </div>
+
+        <!-- Responders -->
+        <div class="wr-card">
+            <div class="wr-card-header">
+                <i class="fa-solid fa-users"></i> Responders
+            </div>
+            <ul class="wr-responders" id="wr-responders">
+                <li class="wr-empty">Loading…</li>
+            </ul>
+        </div>
+
+    </div>
+</div>
+
+<script>
+(function () {
+    const INCIDENT_ID    = {{ incident.id }};
+    const STARTING_TIME  = new Date("{{ incident.starting_time.isoformat }}");
+    const REFRESH_MS     = 30000;
+
+    // ── Live timer ────────────────────────────────────────────────────────
+    const timerEl = document.getElementById('wr-timer');
+
+    function fmtDuration(ms) {
+        if (ms < 0) ms = 0;
+        const s  = Math.floor(ms / 1000);
+        const h  = Math.floor(s / 3600);
+        const m  = Math.floor((s % 3600) / 60);
+        const sc = s % 60;
+        return [h, m, sc].map(n => String(n).padStart(2, '0')).join(':');
+    }
+
+    function tickTimer() {
+        timerEl.textContent = fmtDuration(Date.now() - STARTING_TIME.getTime());
+    }
+    tickTimer();
+    setInterval(tickTimer, 1000);
+
+    // ── Fetch & render ────────────────────────────────────────────────────
+    function safe(s) {
+        const d = document.createElement('div');
+        d.textContent = s || '';
+        return d.innerHTML;
+    }
+
+    function renderTimeline(items) {
+        const el = document.getElementById('wr-timeline');
+        if (!items || !items.length) {
+            el.innerHTML = '<li class="wr-empty">No timeline events yet.</li>';
+            return;
+        }
+        el.innerHTML = items.map(a => `
+            <li class="wr-tl-item">
+                <span class="wr-tl-dot"></span>
+                <div class="wr-tl-content">
+                    <div class="wr-tl-header">
+                        <span class="wr-tl-type">${safe(a.type)}</span>
+                        <span class="wr-tl-title">${safe(a.title)}</span>
+                        <span class="wr-tl-ts">${safe(a.ts)}</span>
+                    </div>
+                    ${a.description ? `<div class="wr-tl-desc">${safe(a.description)}</div>` : ''}
+                </div>
+            </li>`).join('');
+    }
+
+    function renderMessages(msgs) {
+        const el = document.getElementById('wr-msgs');
+        if (!msgs || !msgs.length) {
+            el.innerHTML = '<li class="wr-empty">No messages yet.</li>';
+            return;
+        }
+        el.innerHTML = msgs.map(m => `
+            <li class="wr-msg-item">
+                <div class="wr-msg-avatar ${m.is_bot ? 'wr-msg-bot-avatar' : ''}">
+                    ${m.is_bot ? '<i class="fa-solid fa-robot"></i>' : safe((m.sender || '?')[0].toUpperCase())}
+                </div>
+                <div class="wr-msg-inner">
+                    <div class="wr-msg-sender">${safe(m.sender)}</div>
+                    <div class="wr-msg-text">${safe(m.text)}</div>
+                    <div class="wr-msg-ts">${safe(m.ts)}</div>
+                </div>
+            </li>`).join('');
+    }
+
+    function renderKpis(kpis, criticalCount) {
+        document.getElementById('kpi-iocs').textContent       = kpis.total_iocs;
+        document.getElementById('kpi-open-tasks').textContent = kpis.open_tasks;
+        document.getElementById('kpi-tasks-sub').textContent  = `of ${kpis.total_tasks} total`;
+        document.getElementById('kpi-critical').textContent   = criticalCount;
+        document.getElementById('kpi-responders').textContent = kpis.responders;
+    }
+
+    function renderTasks(tasks) {
+        const el = document.getElementById('wr-tasks');
+        if (!tasks || !tasks.length) {
+            el.innerHTML = '<li class="wr-empty">No open tasks.</li>';
+            return;
+        }
+        el.innerHTML = tasks.map(t => `
+            <li class="wr-task-item">
+                <span class="wr-task-priority wr-prio-${(t.priority || 'medium').toLowerCase()}" title="${safe(t.priority)}"></span>
+                <span class="wr-task-title">${safe(t.title)}</span>
+                <span class="wr-task-status wr-status-${(t.status || '').toLowerCase()}">${safe(t.status)}</span>
+                ${t.assignee ? `<span class="wr-task-assignee">${safe(t.assignee)}</span>` : ''}
+            </li>`).join('');
+    }
+
+    function renderCriticalIocs(iocs) {
+        const el = document.getElementById('wr-critical-iocs');
+        if (!iocs || !iocs.length) {
+            el.innerHTML = '<li class="wr-empty">No malicious IoCs detected.</li>';
+            return;
+        }
+        el.innerHTML = iocs.map(ioc => `
+            <li class="wr-ioc-item">
+                <span class="wr-ioc-type">${safe(ioc.type)}</span>
+                <span class="wr-ioc-value">${safe(ioc.value)}</span>
+                <span class="wr-ioc-mal-badge"><i class="fa-solid fa-skull-crossbones"></i> Malicious</span>
+            </li>`).join('');
+    }
+
+    function renderResponders(responders) {
+        const el = document.getElementById('wr-responders');
+        if (!responders || !responders.length) {
+            el.innerHTML = '<li class="wr-empty">No responders.</li>';
+            return;
+        }
+        el.innerHTML = responders.map(r => `
+            <li class="wr-responder-item">
+                <div class="wr-resp-avatar">${safe((r.display || r.username || '?')[0])}</div>
+                <span class="wr-resp-name">${safe(r.display || r.username)}</span>
+                <span class="wr-resp-role">${safe(r.display_role || r.role)}</span>
+            </li>`).join('');
+    }
+
+    function fetchData() {
+        fetch(`/api/incident/${INCIDENT_ID}/warroom-data/`)
+            .then(r => r.json())
+            .then(d => {
+                renderKpis(d.kpis, (d.critical_iocs || []).length);
+                renderTimeline(d.timeline);
+                renderMessages(d.messages);
+                renderTasks(d.open_tasks);
+                renderCriticalIocs(d.critical_iocs);
+                renderResponders(d.responders);
+            })
+            .catch(err => console.error('War room data fetch failed:', err));
+    }
+
+    fetchData();
+    setInterval(fetchData, REFRESH_MS);
+})();
+</script>
+{% endblock %}

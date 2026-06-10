@@ -31,7 +31,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const ending_time = document.getElementById('ending_time');
     const saveButton = document.getElementById('saveButton'); // Fix missing variable
 
-    let currentImpact = null; // Track the impact being edited  
+    let currentImpact = null;
+
+    function setDropdownValue(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+    }
 
     // Attach event listeners AFTER ensuring elements exist
     document.querySelectorAll(".impact-item").forEach(row => {

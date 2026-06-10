@@ -2,7 +2,7 @@
 body {
     margin: 0;
     font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #34495E, #1e1f33);
+    background: linear-gradient(135deg, var(--main-color-1), var(--main-color-2));
     color: #ffffff;
     display: flex;
     justify-content: center;
@@ -12,8 +12,8 @@ body {
 
 /* Container */
 .join-container {
-    background: #ffffff;
-    color: #333333;
+    background: var(--widget-background-color);
+    color: var(--text-color-1);
     border-radius: 8px;
     padding: 40px;
     text-align: center;
@@ -39,7 +39,7 @@ body {
 .invitation-message {
     font-size: 1em;
     margin-bottom: 20px;
-    color: #555555;
+    color: var(--text-color-2);
 }
 
 /* Form */
@@ -69,15 +69,15 @@ body {
 }
 
 .form-group input:focus {
-    border-color: #34495E;
+    border-color: var(--main-color-3);
     outline: none;
 }
 
 /* Join Button */
 .btn-join {
     margin-top: 20px;
-    background-color: #34495E;
-    color: white;
+    background-color: var(--main-color-3);
+    color: var(--widget-background-color);
     border: none;
     padding: 10px 15px;
     border-radius: 4px;
@@ -87,5 +87,5 @@ body {
 }
 
 .btn-join:hover {
-    background-color: #005fcc;
+    background-color: var(--main-color-2);
 }

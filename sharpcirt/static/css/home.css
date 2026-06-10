@@ -233,6 +233,31 @@
 .ic-sev-badge.ic-sev-medium   { background: #fef3c7; color: #92400e; }
 .ic-sev-badge.ic-sev-low      { background: #dcfce7; color: #166534; }
 
+/* War Room button on incident card */
+.ic-warroom-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    margin-right: 10px;
+    background: rgba(13, 17, 23, 0.9);
+    color: #c49840;
+    border: 1px solid rgba(196, 152, 64, 0.4);
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+    text-decoration: none;
+}
+.ic-warroom-btn:hover {
+    background: rgba(196, 152, 64, 0.15);
+    border-color: #c49840;
+    text-decoration: none;
+    color: #c49840;
+}
+
 /* Empty state */
 .home-empty {
     text-align: center;

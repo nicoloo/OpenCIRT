@@ -33,13 +33,22 @@ DEFAULT_SECTIONS = frozenset([
     'technical_details',
 ])
 
-VALID_TLP = ('WHITE', 'GREEN', 'AMBER', 'RED')
+VALID_TLP = ('WHITE', 'CLEAR', 'GREEN', 'AMBER', 'RED')
 
 TLP_STYLES = {
     'WHITE': {'bg': '#e8e8e8', 'text': '#333333'},
+    'CLEAR': {'bg': '#e8e8e8', 'text': '#333333'},
     'GREEN': {'bg': '#28a745', 'text': '#ffffff'},
     'AMBER': {'bg': '#fd7e14', 'text': '#ffffff'},
     'RED':   {'bg': '#dc3545', 'text': '#ffffff'},
+}
+
+TLP_DESCRIPTIONS = {
+    'RED':   'Strictly limited to initial recipients. No further distribution outside this group.',
+    'AMBER': 'Restricted sharing on a need-to-know basis within the organization and trusted partners.',
+    'GREEN': 'May be shared within the security community or sector. Do not publish on the open internet.',
+    'WHITE': 'No restrictions. Information may be freely shared and published publicly.',
+    'CLEAR': 'No restrictions. Information may be freely shared and published publicly.',
 }
 
 # ── Parsers ──────────────────────────────────────────────────────────────────
@@ -82,8 +91,9 @@ def generate_markdown(incident, sections, tlp, generated_by):
     lines = []
 
     # Header
+    tlp_desc = TLP_DESCRIPTIONS.get(tlp, '')
     lines += [
-        f'> **TLP:{tlp}**',
+        f'> **TLP:{tlp}** — {tlp_desc}',
         '',
         f'# Incident Report: {incident.name}',
         '',
@@ -235,6 +245,7 @@ def generate_deep_json(incident, generated_by, tlp='AMBER'):
         'exported_at': timezone.now().isoformat(),
         'exported_by': generated_by,
         'tlp': tlp,
+        'tlp_description': TLP_DESCRIPTIONS.get(tlp, ''),
         'incident': {
             'id': incident.id,
             'name': incident.name,

@@ -3,72 +3,76 @@
 {% load custom_filters %}
 {% block content %}
 
-    <main>
-        <div class="widget profile">
-        <form method="POST" enctype="multipart/form-data" action="{% url 'update_profile' %}">
+<main>
+    <div class="widget profile" style="max-width:520px;margin:0 auto;padding:0 0 20px 0;">
+        <h3>Profile</h3>
+        <form method="POST" enctype="multipart/form-data" action="{% url 'update_profile' %}" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
             {% csrf_token %}
-            
+
             <div class="form-group">
-                <label for="user">Username</label>
-                <input type="text" name="username" value="{{ user.username }}" class="form-control">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" value="{{ user.username }}">
             </div>
-            
+
             <div class="form-group">
-                <label for="display_name">Display Name</label>
-                <input type="text" name="displayname" value="{{ user.displayname }}" class="form-control">
+                <label for="displayname">Display Name</label>
+                <input type="text" id="displayname" name="displayname" value="{{ user.displayname }}">
             </div>
-            
+
             <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" name="email" value="{{ user.email }}" class="form-control">
+                <input type="email" id="email" name="email" value="{{ user.email }}">
             </div>
-        
+
             <div class="form-group">
-                <label for="light_mode">Light Mode</label>
-                <select name="light_mode" class="form-control">
+                <label for="light_mode">Theme</label>
+                <select id="light_mode" name="light_mode">
                     <option value="light_mode" {% if user.light_mode == "light_mode" %}selected{% endif %}>Light mode</option>
-                    <option value="dark_mode" {% if user.light_mode == "dark_mode" %}selected{% endif %}>Dark mode (for emo only)</option>
+                    <option value="dark_mode" {% if user.light_mode == "dark_mode" %}selected{% endif %}>Dark mode</option>
                 </select>
             </div>
-        
+
             <div class="form-group">
                 <label for="profile_picture">Profile Picture</label>
-                <input type="file" name="profile_picture" class="form-control">
+                <input type="file" id="profile_picture" name="profile_picture">
             </div>
 
-            <!-- Change Password Button -->
-            <button type="button" class="btn btn-secondary" onclick="togglePasswordForm()">Change Password</button>
+            <div>
+                <button type="button" class="btn btn-secondary" onclick="togglePasswordForm()">
+                    <i class="fa-solid fa-key"></i> Change Password
+                </button>
+            </div>
 
-            <!-- Password Change Form (Initially Hidden) -->
-            <div id="password-form" style="display: none; margin-top: 15px;">
+            <div id="password-form" style="display:none;display:flex;flex-direction:column;gap:16px;">
                 <div class="form-group">
                     <label for="current_password">Current Password</label>
-                    <input type="password" name="current_password" class="form-control">
+                    <input type="password" id="current_password" name="current_password">
                 </div>
-
                 <div class="form-group">
                     <label for="new_password">New Password</label>
-                    <input type="password" name="new_password" class="form-control">
+                    <input type="password" id="new_password" name="new_password">
                 </div>
-
                 <div class="form-group">
                     <label for="confirm_password">Confirm New Password</label>
-                    <input type="password" name="confirm_password" class="form-control">
+                    <input type="password" id="confirm_password" name="confirm_password">
                 </div>
             </div>
 
-        
-            <button type="submit" class="btn btn-primary">Update Profile</button>
+            <div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Profile
+                </button>
+            </div>
         </form>
     </div>
-            
-    </main>
-    <script>
-        function togglePasswordForm() {
-            var form = document.getElementById("password-form");
-            form.style.display = form.style.display === "none" ? "block" : "none";
-        }
-    </script>
+</main>
 
+<script>
+    function togglePasswordForm() {
+        const form = document.getElementById("password-form");
+        form.style.display = form.style.display === "none" ? "flex" : "none";
+    }
+    document.getElementById("password-form").style.display = "none";
+</script>
 
-    {% endblock %}
+{% endblock %}

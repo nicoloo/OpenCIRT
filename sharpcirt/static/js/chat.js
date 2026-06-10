@@ -39,10 +39,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addMessage(type, text) {
-        const message = document.createElement('div');
-        message.className = type;
-        message.textContent = text;
-        chatMessages.appendChild(message);
+        const wrapper = document.createElement('div');
+        wrapper.className = type;
+
+        const time = document.createElement('a');
+        time.className = 'sending_time';
+        const now = new Date();
+        time.textContent = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+        const bubble = document.createElement('a');
+        bubble.className = 'message';
+        bubble.textContent = text;
+
+        wrapper.appendChild(time);
+        wrapper.appendChild(bubble);
+        chatMessages.appendChild(wrapper);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 

@@ -1,11 +1,146 @@
+/* ── Activity/Chat page ─────────────────────────────── */
+.activity-page {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
 .chat-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    width:100%;
-    /* height: 100vh; Full viewport height */
+    flex: 1;
+    width: 100%;
     margin: 0;
     gap: 10px;
+}
+
+/* ── Notes page ─────────────────────────────────────── */
+.notes-page {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.note-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.note-panel {
+    width: 220px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border-color);
+    overflow-y: auto;
+    background: var(--background-color);
+    padding: 10px 0;
+}
+
+.note-panel ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.note-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 0;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.note-item:hover {
+    background: var(--hover-color);
+}
+
+.note-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-color-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.note-name.active {
+    font-weight: 700;
+    color: var(--main-color-3);
+}
+
+.note-author {
+    font-size: 11px;
+    color: var(--muted-color);
+}
+
+.note-delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted-color);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+    font-family: inherit;
+}
+
+.note-item:hover .note-delete-btn {
+    opacity: 1;
+}
+
+.note-delete-btn:hover {
+    color: var(--color-severity-critical);
+}
+
+.note-editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.note-editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--background-color);
+}
+
+.note-title-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color-1);
+    background: var(--widget-background-color);
+    outline: none;
+    font-family: inherit;
+}
+
+.note-title-input:focus {
+    border-color: var(--main-color-3);
+}
+
+.note-textarea {
+    flex: 1;
+    padding: 16px;
+    border: none;
+    resize: none;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-color-1);
+    background: var(--widget-background-color);
+    outline: none;
+    font-family: inherit;
 }
 
 .chat-window, .note-window{
@@ -14,17 +149,17 @@
     max-height: 85vh;
     display: flex;
     flex-direction: column;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     background: var(--widget-background-color);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.06);
 }
 
 .chat-header, .note-header{
     padding: 10px 20px;
     background: var(--main-color-1);
-    color: #fff;
-    border-bottom: 1px solid #ddd;
+    color: var(--text-color-1);
+    border-bottom: 1px solid var(--border-color);
     border-radius: 8px 8px 0 0;
     display: flex;
     justify-content: space-between;
@@ -54,7 +189,7 @@
     flex: 1;
     padding: 10px;
     overflow-y: auto;
-    background: #f9f9f9;
+    background: var(--background-color);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -96,12 +231,12 @@
 
 .user-message .message {
     background: var(--main-color-2);
-    color: #fff;
+    color: var(--widget-background-color);
 }
 
 .bot-message .message{
-    background: #e0e0e0;
-    color: #333;
+    background: var(--hover-color);
+    color: var(--text-color-1);
 }
 
 .incidentlead {
@@ -143,7 +278,7 @@
     display: flex;
     padding: 10px;
     border-top: 1px solid #ddd;
-    background: #f1f1f1;
+    background: var(--background-color);
     border-radius: 0 0 8px 8px;
 }
 
@@ -171,11 +306,11 @@
 
 
 .chat-input button:hover {
-    background: #0056b3;
+    background: var(--main-color-2);
 }
 
 .btn-chat-filter {
-    color: #fff;
+    color: var(--text-color-1);
     background-color: transparent;
     border: transparent;
 }

@@ -76,6 +76,13 @@
                 <i class="fa-solid fa-gear nav-icon"></i>
                 <span class="nav-label">Settings</span>
             </a>
+            <a href="/incident/{{incident.id}}/warroom"
+               class="nav-link {% if '/warroom' in request.path %}active{% endif %}"
+               data-tooltip="War Room"
+               style="margin-top:auto;">
+                <i class="fa-solid fa-tower-broadcast nav-icon"></i>
+                <span class="nav-label">War Room</span>
+            </a>
         </nav>
 
         <div class="sidebar-bottom">

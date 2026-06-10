@@ -1,4 +1,4 @@
-{% extends 'incidents/base2.html' %}
+{% extends 'incidents/base.html' %}
 {% load static %}
 
 {% block styles %}
@@ -6,12 +6,12 @@
 {% endblock %}
 
 {% block content %}
-<script defer src="/static/js/chat.js"></script>
+<script defer src="/static/js/chat.js?v=2"></script>
 
-<main>
+<div class="activity-page">
     <div class="main-frame">
-                
-        <div class="main-content chat-container">
+
+        <div class="chat-container">
             <div class="chat-window">
                 <div class="chat-header">
                     <h2>Chat</h2>
@@ -29,7 +29,7 @@
                     {% else %}
                         <div class="bot-message">
                             <a class="sender" title="{% if message.sender.displayname %}{{ message.sender.displayname }}{% else %}{{ message.sender.username }}{% endif %}">
-                                {{ message.sender.username|slice:":1"|upper }}
+                                {{ message.sender.displayname|default:message.sender.username|slice:":1"|upper }}
                             </a>
                             {% if message.sender in incident_leads %}
                                 <a class="message incidentlead" title="This message is highlighted because it was sent by an incident lead">{{ message.text }}</a>
@@ -53,5 +53,5 @@
         </div>
 
     </div>
-</main>
+</div>
 {% endblock %}

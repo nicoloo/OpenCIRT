@@ -12,4 +12,8 @@
     --color-severity-medium:#e3cf98;
     --color-severity-low:#c5ceae;
     --color-case-closed:#9eb7dc;
+    --color-action-malicious: #ff6b6b;
+    --color-action-defensive: #4da6ff;
+    --color-action-mitigation: #a78bfa;
+    --color-action-alert: #fbbf24;
 }

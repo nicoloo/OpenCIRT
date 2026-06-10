@@ -21,7 +21,7 @@
 .default-picture {
     width: 100px;
     height: 100px;
-    background-color: #add8e6; /* Light blue */
+    background-color: var(--main-color-1);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -46,7 +46,7 @@
     max-width: 300px;
     padding: 8px;
     margin-top: 5px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
 }
 
@@ -56,13 +56,13 @@
     margin-top: 10px;
     border: none;
     border-radius: 4px;
-    background-color: #007bff; /* Blue */
-    color: white;
+    background-color: var(--main-color-3);
+    color: var(--widget-background-color);
     font-size: 14px;
     cursor: pointer;
 }
 
 .btn-save:hover,
 .btn-change-password:hover {
-    background-color: #0056b3; /* Darker Blue */
+    background-color: var(--main-color-2); /* Darker Blue */
 }

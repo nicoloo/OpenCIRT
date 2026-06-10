@@ -81,6 +81,14 @@
                 </div>
             </div>
             <div class="ic-sev-badge ic-sev-{{ inc.severity|lower }}">{{ inc.severity }}</div>
+            {% if inc.status == 'OPEN' or inc.status == 'IN_PROGRESS' %}
+            <a href="/incident/{{ inc.id }}/warroom"
+               class="ic-warroom-btn"
+               title="Open War Room"
+               onclick="event.stopPropagation()">
+                <i class="fa-solid fa-tower-broadcast"></i> War Room
+            </a>
+            {% endif %}
         </div>
         {% empty %}
         <div class="home-empty">

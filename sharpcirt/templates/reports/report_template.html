@@ -16,20 +16,38 @@ body {
 }
 
 /* ── TLP ── */
-.tlp-white { background: #e8e8e8; color: #333; }
-.tlp-green { background: #28a745; color: #fff; }
-.tlp-amber { background: #fd7e14; color: #fff; }
-.tlp-red   { background: #dc3545; color: #fff; }
+.tlp-white, .tlp-clear { background: #e8e8e8; color: #333; }
+.tlp-green  { background: #28a745; color: #fff; }
+.tlp-amber  { background: #fd7e14; color: #fff; }
+.tlp-red    { background: #dc3545; color: #fff; }
 
 /* ── TLP banner (HTML preview / archive only) ── */
 .tlp-banner {
-    padding: 7px 16px;
-    font-size: 9pt;
+    padding: 8px 16px;
+    font-size: 8.5pt;
     font-weight: 700;
     text-align: center;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     margin: -28px -36px 28px -36px;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.tlp-banner-label {
+    font-size: 9pt;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+}
+.tlp-banner-desc {
+    font-size: 7.5pt;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: none;
+    opacity: 0.92;
 }
 
 /* ── PDF footer (xhtml2pdf fixed positioning) ── */
@@ -172,7 +190,15 @@ body {
 <!-- TLP banner shown in HTML preview and archive, not in PDF (footer handles it there) -->
 <div class="tlp-banner tlp-{{ tlp|lower }}"
      style="background:{{ tlp_style.bg }};color:{{ tlp_style.text }};">
-    TLP:{{ tlp }} — Handle according to TLP guidelines
+    <span class="tlp-banner-label">TLP:{{ tlp }}</span>
+    <span>—</span>
+    <span class="tlp-banner-desc">
+        {% if tlp == "RED" %}Strictly limited to initial recipients. No further distribution outside this group.
+        {% elif tlp == "AMBER" %}Restricted sharing on a need-to-know basis within the organization and trusted partners.
+        {% elif tlp == "GREEN" %}May be shared within the security community or sector. Do not publish on the open internet.
+        {% else %}No restrictions. Information may be freely shared and published publicly.
+        {% endif %}
+    </span>
 </div>
 {% endif %}
 
@@ -389,7 +415,13 @@ body {
 {% if is_pdf %}
 <div class="pdf-footer tlp-{{ tlp|lower }}"
      style="background:{{ tlp_style.bg }};color:{{ tlp_style.text }};">
-    TLP:{{ tlp }} &nbsp;|&nbsp; {{ incident.name }} &nbsp;|&nbsp; Generated {{ generated_at }}
+    TLP:{{ tlp }} &nbsp;·&nbsp;
+    {% if tlp == "RED" %}Strictly limited to initial recipients — no further distribution.
+    {% elif tlp == "AMBER" %}Restricted sharing on a need-to-know basis within the org and trusted partners.
+    {% elif tlp == "GREEN" %}May be shared within the security community. Do not publish on the open internet.
+    {% else %}No restrictions — may be freely shared and published publicly.
+    {% endif %}
+    &nbsp;|&nbsp; {{ incident.name }} &nbsp;|&nbsp; Generated {{ generated_at }}
 </div>
 {% endif %}
 

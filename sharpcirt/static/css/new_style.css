@@ -22,7 +22,7 @@ body {
     align-items: center;
     gap: 8px;
     padding: 0 28px;
-    height: 58px;
+    height: 64px;
     background: var(--widget-background-color);
     border-bottom: 1px solid var(--border-color);
     position: sticky;
@@ -38,7 +38,7 @@ body {
     text-decoration: none;
 }
 .topbar-logo img {
-    height: 44px;
+    height: 52px;
     width: auto;
 }
 

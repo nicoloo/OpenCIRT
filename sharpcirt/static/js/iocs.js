@@ -361,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderRepModal(ioc) {
         if (!repModal || !repModalBody) return;
-        const rep = ioc.reputation_score;
+        const rep = ioc.reputation;
         if (!rep) {
             repModalBody.innerHTML = '<p class="rep-loading">No reputation data available yet. It may still be loading.</p>';
             repModal.style.display = 'flex';

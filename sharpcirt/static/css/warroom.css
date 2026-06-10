@@ -1,0 +1,480 @@
+/* =======================================================
+   War Room — full-screen dark dashboard
+   Background: #0d1117  Accents: ochre #c49840
+   ======================================================= */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body.warroom-body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Top bar ── */
+.wr-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 28px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    flex-shrink: 0;
+    gap: 16px;
+}
+
+.wr-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.wr-incident-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #e6edf3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wr-severity-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 11px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    flex-shrink: 0;
+}
+.wr-sev-low      { background: rgba(34,197,94,0.15);  color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+.wr-sev-medium   { background: rgba(234,179,8,0.15);  color: #facc15; border: 1px solid rgba(234,179,8,0.3); }
+.wr-sev-high     { background: rgba(249,115,22,0.15); color: #fb923c; border: 1px solid rgba(249,115,22,0.3); }
+.wr-sev-critical { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+
+.wr-timer {
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #c49840;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.wr-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.wr-refresh-badge {
+    font-size: 0.7rem;
+    color: #8b949e;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.wr-refresh-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #4ade80;
+    flex-shrink: 0;
+    animation: wr-pulse 2s infinite;
+}
+@keyframes wr-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.35; }
+}
+
+.wr-exit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #21262d;
+    color: #8b949e;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.15s, color 0.15s;
+}
+.wr-exit-btn:hover { border-color: #c49840; color: #c49840; text-decoration: none; }
+
+/* ── Main body ── */
+.wr-body {
+    display: grid;
+    grid-template-columns: 60fr 40fr;
+    gap: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.wr-col {
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.wr-col-right {
+    border-left: 1px solid #21262d;
+    background: #0d1117;
+}
+
+/* ── Widget cards ── */
+.wr-card {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.wr-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #1c2128;
+    border-bottom: 1px solid #21262d;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #8b949e;
+}
+.wr-card-header i { color: #c49840; }
+
+/* ── KPI row ── */
+.wr-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.wr-kpi {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 10px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.wr-kpi-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #8b949e;
+    font-weight: 700;
+}
+.wr-kpi-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #c49840;
+    line-height: 1;
+}
+.wr-kpi-sub {
+    font-size: 0.72rem;
+    color: #8b949e;
+}
+
+/* ── Timeline ── */
+.wr-timeline {
+    list-style: none;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wr-tl-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.wr-tl-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #c49840;
+    flex-shrink: 0;
+    margin-top: 6px;
+}
+
+.wr-tl-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.wr-tl-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.wr-tl-type {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #c49840;
+    flex-shrink: 0;
+}
+.wr-tl-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #e6edf3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wr-tl-ts {
+    font-size: 0.72rem;
+    color: #8b949e;
+    margin-left: auto;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.wr-tl-desc {
+    font-size: 0.78rem;
+    color: #8b949e;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wr-empty {
+    padding: 16px;
+    color: #8b949e;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+/* ── Activity messages ── */
+.wr-msgs {
+    list-style: none;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.wr-msg-item {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.wr-msg-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #21262d;
+    border: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #c49840;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.wr-msg-bot-avatar {
+    background: #1c2949;
+    border-color: #2d4b7a;
+    color: #93c5fd;
+}
+
+.wr-msg-inner {
+    flex: 1;
+    min-width: 0;
+}
+.wr-msg-sender {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #c49840;
+    margin-bottom: 2px;
+}
+.wr-msg-text {
+    font-size: 0.82rem;
+    color: #c9d1d9;
+    word-break: break-word;
+    line-height: 1.4;
+}
+.wr-msg-ts {
+    font-size: 0.65rem;
+    color: #8b949e;
+    margin-top: 2px;
+}
+
+/* ── Tasks list ── */
+.wr-tasks {
+    list-style: none;
+    padding: 0 0 4px;
+}
+.wr-task-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    border-bottom: 1px solid #21262d;
+}
+.wr-task-item:last-child { border-bottom: none; }
+
+.wr-task-priority {
+    width: 6px;
+    height: 22px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+.wr-prio-urgent  { background: #f87171; }
+.wr-prio-high    { background: #fb923c; }
+.wr-prio-medium  { background: #facc15; }
+.wr-prio-low     { background: #4ade80; }
+
+.wr-task-title {
+    flex: 1;
+    font-size: 0.84rem;
+    color: #e6edf3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wr-task-status {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 7px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+.wr-status-open        { background: rgba(234,179,8,0.15);  color: #facc15; }
+.wr-status-in_progress { background: rgba(96,165,250,0.15); color: #93c5fd; }
+
+.wr-task-assignee {
+    font-size: 0.72rem;
+    color: #8b949e;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Critical IoC list ── */
+.wr-iocs {
+    list-style: none;
+    padding: 0 0 4px;
+}
+.wr-ioc-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    border-bottom: 1px solid #21262d;
+}
+.wr-ioc-item:last-child { border-bottom: none; }
+
+.wr-ioc-type {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #c49840;
+    flex-shrink: 0;
+    width: 52px;
+}
+.wr-ioc-value {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #f87171;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wr-ioc-mal-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: rgba(239,68,68,0.15);
+    color: #f87171;
+    border: 1px solid rgba(239,68,68,0.3);
+    flex-shrink: 0;
+}
+
+/* ── Responders ── */
+.wr-responders {
+    list-style: none;
+    padding: 0 0 4px;
+}
+.wr-responder-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    border-bottom: 1px solid #21262d;
+}
+.wr-responder-item:last-child { border-bottom: none; }
+
+.wr-resp-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #21262d;
+    border: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #c49840;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+.wr-resp-name {
+    flex: 1;
+    font-size: 0.85rem;
+    color: #e6edf3;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wr-resp-role {
+    font-size: 0.7rem;
+    color: #8b949e;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Scrollbar styling ── */
+.wr-col::-webkit-scrollbar { width: 5px; }
+.wr-col::-webkit-scrollbar-track { background: transparent; }
+.wr-col::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .wr-body { grid-template-columns: 1fr; }
+    .wr-col-right { border-left: none; border-top: 1px solid #21262d; }
+    .wr-kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
