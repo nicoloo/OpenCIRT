@@ -108,15 +108,15 @@
             </div>
         </div>
         <div class="home-chart-card">
-            <h3>Status distribution</h3>
+            <h3>Status distribution <small class="chart-filter-hint">· click to filter</small></h3>
             <div class="hcc-canvas-wrap">
-                <canvas id="statusChart"></canvas>
+                <canvas id="statusChart" style="cursor:pointer;"></canvas>
             </div>
         </div>
         <div class="home-chart-card">
-            <h3>Severity distribution</h3>
+            <h3>Severity distribution <small class="chart-filter-hint">· click to filter</small></h3>
             <div class="hcc-canvas-wrap">
-                <canvas id="severityChart"></canvas>
+                <canvas id="severityChart" style="cursor:pointer;"></canvas>
             </div>
         </div>
     </div>
@@ -190,9 +190,25 @@ new Chart(lineCtx, {
     },
 });
 
+// ── Shared: set a dropdown value and re-apply filters ────────────────────────
+function filterByChart(selectEl, label) {
+    // Toggle off if clicking the already-active segment
+    if (selectEl.value === label) {
+        selectEl.value = '';
+    } else {
+        // Try setting the value; if the option doesn't exist the browser keeps
+        // the previous value, so fall back to empty (show all)
+        const prev = selectEl.value;
+        selectEl.value = label;
+        if (selectEl.value !== label) selectEl.value = '';
+    }
+    applyFilters();
+    document.getElementById('incidentList').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 // Status donut
-const statusCtx = document.getElementById('statusChart').getContext('2d');
-new Chart(statusCtx, {
+const statusCtx   = document.getElementById('statusChart').getContext('2d');
+const statusChart = new Chart(statusCtx, {
     type: 'doughnut',
     data: {
         labels: {{ status_counts.labels|safe }},
@@ -205,12 +221,20 @@ new Chart(statusCtx, {
         plugins: {
             legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
         },
+        onClick(evt, elements) {
+            if (!elements.length) return;
+            const label = statusChart.data.labels[elements[0].index];
+            filterByChart(statFilter, label);
+        },
+        onHover(evt, elements) {
+            evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+        },
     },
 });
 
 // Severity donut
-const sevCtx = document.getElementById('severityChart').getContext('2d');
-new Chart(sevCtx, {
+const sevCtx   = document.getElementById('severityChart').getContext('2d');
+const sevChart = new Chart(sevCtx, {
     type: 'doughnut',
     data: {
         labels: {{ severity_chart_data.labels|safe }},
@@ -226,6 +250,14 @@ new Chart(sevCtx, {
         cutout: '60%',
         plugins: {
             legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        },
+        onClick(evt, elements) {
+            if (!elements.length) return;
+            const label = sevChart.data.labels[elements[0].index];
+            filterByChart(sevFilter, label);
+        },
+        onHover(evt, elements) {
+            evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
         },
     },
 });
