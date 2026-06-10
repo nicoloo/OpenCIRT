@@ -1,158 +1,236 @@
-{% extends 'incidents/base2.html' %}
+{% extends 'incidents/base.html' %}
 {% load static %}
 {% block styles %}
+    <link rel="stylesheet" href="{% static 'css/iocs.css' %}">
     <link rel="stylesheet" href="{% static 'css/modal.css' %}">
 {% endblock %}
 
 {% block content %}
-<!-- Main content -->
-<main>
-<div class="main-frame">
-    <div class="right-container">
-        <div class="info-container">
-            <div class="form-group">
-                <label for="title">Value</label>
-                <input type="text" id="value" name="value" value="" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
-            </div>
-            <div class="selectors">
-                <div class="form-group">
-                    <label for="severity">Type of evidence</label>
-                    <div class="custom-select">
-                        <select id="type" name="type" autocomplete="off" class="{{ioc.type}}" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
-                            {% for choice_value, choice_label in GENERIC_IOC_TYPE_CHOICES %}
-                            <option value="{{ choice_value }}" {% if impact.type_of_impact == choice_value %}selected{% endif %}>
-                                {{ choice_label }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="severity">Status</label>
-                    <div class="custom-select">
-                        <select id="status" name="status" autocomplete="off" class="{{ioc.status}}" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
-                            {% for choice_value, choice_label in GENERIC_IOC_STATUS_CHOICES %}
-                            <option value="{{ choice_value }}" {% if impact.severity == choice_value %}selected{% endif %}>
-                                {{ choice_label }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div> 
-            </div>
-            <div class="form-group">
-                <label for="description">Description</label>
-                <textarea id="description" name="description" {% if current_user_role.role in 'READER, PUBLIC_VIEWER' %}disabled{% endif %}>{{impact.description}}</textarea>
-            </div>
-            <div class="form-group">
-                <label for="external_reference">External reference</label>
-                <input type="text" id="external_reference" name="external_reference" value="{{impact.external_reference}}" {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
-            </div>
-            <div id="ioc-tags" class="tagbox"></div>
+<div class="ioc-page" incident-id="{{ incident.id }}">
 
-            <div id="ioc-actions" class="actions-container"></div>
-
+    <div class="ioc-header">
+        <div class="ioc-header-left">
+            <h1 class="ioc-title">Indicators of Compromise</h1>
+            <span class="ioc-count">{{ incident.genericiocs.count }} indicator{% if incident.genericiocs.count != 1 %}s{% endif %}</span>
         </div>
+        {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+        <button id="addIocBtn" class="add-ioc-btn">
+            <i class="fa-solid fa-plus"></i> Add IoC
+        </button>
+        {% endif %}
     </div>
-    <div class="left-container">
-        <div class="ioc-container">
-        <div class="search-bar">
-                <div class="search-bar-box">
-                    <input type="text" id="search-bar" name="search-bar"></input>
-                    <div class="search-icon">
-                        <img src="{% get_media_prefix %}images/SEARCH-ICON.png" alt="SEARCH ICON">
-                    </div>
-                </div>
-            <div class="filter-button">
-                <img src="{% get_media_prefix %}images/FILTER-ICON.png" alt="FILTER ICON">
-            </div>
-        </div>
-        <div class="ioc-list-container">
-            
-            {% for ioc in incident.genericiocs.all %}
-                <div class="ioc-item" data-ioc-id="{{ ioc.id }}">
-                    <!-- <p>{{  ioc.type }}</p> -->
-                    <img src="{% get_media_prefix %}images/{{ ioc.type }}-ICON.png" alt="{{ ioc.type }} ICON" onerror="this.onerror=null; this.src='{% get_media_prefix %}images/GENERICIOC-ICON.png';">
-                    <p>
-                    {% if ioc.value|length > 20 %}
-                        {{ ioc.value|slice:":20" }}...
-                    {% else %}
-                        {{ ioc.value }}
-                    {% endif %}        
-                    </p>  
-                                                  
-                </div>
 
-               
+    <div class="ioc-filter-bar">
+        <input type="text" id="ioc-search" class="ioc-search-input" placeholder="Search by value or description…">
+        <select id="ioc-type-filter" class="ioc-type-filter">
+            <option value="">All types</option>
+            {% for choice_value, choice_label in GENERIC_IOC_TYPE_CHOICES %}
+                <option value="{{ choice_value }}">{{ choice_label }}</option>
             {% endfor %}
+        </select>
+    </div>
+
+    <div class="ioc-body">
+
+        <!-- Table principale -->
+        <div class="ioc-table-card">
+            <table class="ioc-table" id="iocTable">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Type</th>
+                        <th>Value</th>
+                        <th>Description</th>
+                        <th>Tags</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="iocTableBody">
+                    {% for ioc in incident.genericiocs.all %}
+                        <tr class="ioc-row" data-ioc-id="{{ ioc.id }}" data-ioc-type="{{ ioc.type }}">
+                            <td class="ioc-ts-cell">
+                                <span class="ts-full">{{ ioc.created_at|date:"d.m.Y H:i" }}</span>
+                                <span class="ts-short">{{ ioc.created_at|date:"d.m H:i" }}</span>
+                            </td>
+                            <td>
+                                <span class="ioc-type-badge" title="{{ ioc.get_type_display }}">
+                                    {% if ioc.type == 'IPADRESS' %}<i class="fa-solid fa-network-wired"></i>
+                                    {% elif ioc.type == 'HASH' %}<i class="fa-solid fa-fingerprint"></i>
+                                    {% elif ioc.type == 'EMAIL' %}<i class="fa-solid fa-envelope"></i>
+                                    {% elif ioc.type == 'ACCOUNT' %}<i class="fa-solid fa-user"></i>
+                                    {% elif ioc.type == 'FILE' or ioc.type == 'FILENAME' %}<i class="fa-solid fa-file-code"></i>
+                                    {% elif ioc.type == 'DEVICE' %}<i class="fa-solid fa-laptop"></i>
+                                    {% elif ioc.type == 'PERSON' %}<i class="fa-solid fa-person"></i>
+                                    {% elif ioc.type == 'NETWORK' %}<i class="fa-solid fa-globe"></i>
+                                    {% elif ioc.type == 'URL' %}<i class="fa-solid fa-link"></i>
+                                    {% else %}<i class="fa-solid fa-tag"></i>{% endif %}
+                                    <span class="type-label">{{ ioc.get_type_display }}</span>
+                                </span>
+                            </td>
+                            <td class="ioc-value-cell" data-raw="{{ ioc.value }}" data-type="{{ ioc.type }}" title="{{ ioc.value }}">{{ ioc.value }}</td>
+                            <td>{{ ioc.description }}</td>
+                            <td>
+                                {% for tag in ioc.tags.all %}
+                                    <span class="ioc-tag" style="background-color: {{ tag.color }}">
+                                        #{{ tag.name }}
+                                    </span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                                <div class="ioc-delete-cell" onclick="event.stopPropagation()">
+                                    <button class="ioc-delete-btn delete-ioc-trigger" title="Delete">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                    <span class="ioc-delete-confirm">
+                                        Delete?
+                                        <button class="ioc-confirm-yes">Yes</button>
+                                        <button class="ioc-confirm-no">No</button>
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
+
+        <!-- Panneau latéral -->
+        <div class="ioc-side">
+            <div class="ioc-metric-card">
+                <span class="ioc-metric-label">Total IoCs</span>
+                <strong class="ioc-metric-value">{{ incident.genericiocs.count }}</strong>
+            </div>
+        </div>
+
     </div>
+</div>
+
+<!-- Modal : Ajouter un IoC -->
+<div id="addIocModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Indicator of Compromise</h2>
+            <span class="close add-ioc-modal">&times;</span>
+        </div>
+        <form method="post" action="{% url 'add_ioc' incident.id %}" class="modern-form">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="ioc-type">Type <span class="required">*</span></label>
+                    <select id="ioc-type" name="type" required>
+                        <option value="" disabled selected>Select a type</option>
+                        {% for choice_value, choice_label in GENERIC_IOC_TYPE_CHOICES %}
+                            <option value="{{ choice_value }}">{{ choice_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="ioc-value">Value <span class="required">*</span></label>
+                    <input type="text" id="ioc-value" name="value" placeholder="Enter IOC value" required>
+                    <span id="ioc-value-error" class="ioc-validation-error"></span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="ioc-description">Description</label>
+                    <textarea id="ioc-description" name="description" placeholder="Enter a description"></textarea>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ioc-tag">Tags</label>
+                    <input type="text" id="ioc-tag" name="tag" placeholder="Comma-separated tags">
+                </div>
+                <div class="form-group">
+                    <label for="created_at">Created At</label>
+                    <input type="text" id="created_at" name="created_at" readonly>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save IoC</button>
+                <button type="button" class="btn btn-secondary add-ioc-modal">Cancel</button>
+            </div>
+        </form>
     </div>
+</div>
 
-</div> 
-</main>
+<!-- Modal : Détails / Modifier un IoC -->
+<div id="editIocModal" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>IoC Details</h2>
+            <span class="close ioc-modal">&times;</span>
+        </div>
+        <form id="editIocForm" class="modern-form">
 
-<script>
-    
-// Handle IoC Details Display
-// Handle IoC Details Display
-const ioc_type = document.getElementById('type');
-const ioc_description = document.getElementById('description');
-const ioc_value = document.getElementById('value');
-const ioc_status = document.getElementById('status');
-const ioc_tags = document.getElementById('ioc-tags');
-const ioc_actions = document.getElementById('ioc-actions');
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="modal-ioc-type">Type</label>
+                    <select id="modal-ioc-type">
+                        {% for choice_value, choice_label in GENERIC_IOC_TYPE_CHOICES %}
+                            <option value="{{ choice_value }}">{{ choice_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modal-ioc-status">Status</label>
+                    <select id="modal-ioc-status">
+                        <option value="" selected>None</option>
+                        {% for choice_value, choice_label in GENERIC_IOC_STATUS_CHOICES %}
+                            <option value="{{ choice_value }}">{{ choice_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
 
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="modal-ioc-value">Value</label>
+                    <input type="text" id="modal-ioc-value">
+                </div>
+            </div>
 
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="modal-ioc-description">Description</label>
+                    <textarea id="modal-ioc-description"></textarea>
+                </div>
+            </div>
 
-document.querySelectorAll('.ioc-item').forEach(item => {
-        item.addEventListener('click', function () {
-            event.stopPropagation();
-            const iocId = this.dataset.iocId;
-            const incidentId = '{{ incident.id }}';
+            <div class="form-section">
+                <h3 class="form-section-title">Tags</h3>
+                <div id="modal-ioc-tags" class="tags-container"></div>
+            </div>
 
-            currentIoCId = iocId; // Save the current IoC ID for editing
+            <div class="form-section">
+                <h3 class="form-section-title">Observed in Incident</h3>
+                <div id="modal-ioc-actions" class="actions-container"></div>
+            </div>
 
-            fetch(`/api/incident/${incidentId}/get-ioc/${iocId}/`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === "success") {
-                        const ioc = data.data;
-                        ioc_type.value = ioc.type;
-                        ioc_value.value = ioc.value;
-                        ioc_status.value = ioc.status;
-                        ioc_description.value = ioc.description;
+            <div class="form-section">
+                <h3 class="form-section-title">Audit</h3>
+                <div id="modal-ioc-audit" class="audit-container">
+                    <p>Created by <span id="modal-ioc-createdby"></span> on <span id="modal-ioc-createdat"></span></p>
+                </div>
+            </div>
 
-                        ioc_tags.innerHTML = '';
-                        ioc.tags.forEach(tag => {
-                            const tagElement = document.createElement('div');
-                            tagElement.className = 'tag';
-                            tagElement.style.backgroundColor = tag.color;
-                            tagElement.innerHTML = `<span class="tag-item-value">#${tag.name}</span>`;
-                            ioc_tags.appendChild(tagElement);
-                        });
+            <div class="form-actions">
+                <button type="button" id="saveEditIoC" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-secondary ioc-modal">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-                        ioc_actions.innerHTML = '';
-                        ioc.actions.forEach(action => {
-                            const actionElement = document.createElement('div');
-                            actionElement.className = 'action';
-                            actionElement.innerHTML = `<span>${action.created_at} - ${action.title} </span>`;
-                            ioc_actions.appendChild(actionElement);
-                        });
-
-                    } else {
-                        console.error('Error:', data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching IoC details:', error);
-                });
-        });
-    });
-
-
-</script>
+<script defer src="/static/js/iocs.js"></script>
 
 {% endblock %}
-
-

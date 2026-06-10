@@ -18,6 +18,7 @@ urlpatterns = [
     path('incident/<int:id>/tasks', views.tasks, name='tasks'),
     path('incident/<int:id>/notes', views.notes, name='notes'),
     path('incident/<int:id>/responders', views.responders, name='responders'),
+    path('incident/<int:id>/settings', views.incident_settings, name='incident_settings'),
     path('incident/<int:id>/report', views.report, name='report'),
     path('incident/<int:id>/iocs', views.iocs, name='iocs'),
     path('about', views.about, name='about'),
@@ -47,6 +48,8 @@ urlpatterns = [
     path('api/incident/<int:id>/add-note/', views.add_note, name='add_note'),
     path('api/incident/<int:id>/update-note/', views.update_note, name='update_note'),
     path('api/incident/<int:id>/delete-note/', views.delete_note, name='delete_note'),
+    path('api/incident/<int:id>/upload-file/', views.upload_file, name='upload_file'),
+    path('api/incident/<int:id>/delete-file/', views.delete_file, name='delete_file'),
     path('api/incident/<int:id>/add-task/', views.add_task, name='add_task'),
     path('api/incident/<int:id>/update-task/', views.update_task, name='update_task'),
     path('api/incident/<int:id>/delete-task/', views.delete_task, name='delete_task'),
@@ -58,6 +61,8 @@ urlpatterns = [
     path('api/incident/<int:id>/get-impact/<int:impact_id>/', views.get_impact, name='get_impact'),
     path('api/incident/<int:id>/update-impact/', views.update_impact, name='update_impact'),
     path('api/incident/<int:id>/delete-impact/', views.delete_impact, name='delete_impact'),
+    path('api/incident/<int:id>/audit-logs/', views.get_audit_logs, name='get_audit_logs'),
+    path('api/incident/<int:id>/audit-logs/export/', views.export_audit_logs, name='export_audit_logs'),
 ]
 # Serve media files in development mode
 if settings.DEBUG:

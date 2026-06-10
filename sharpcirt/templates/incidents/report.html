@@ -66,10 +66,10 @@
         <div class="panel-section">
             <div class="panel-label">TLP Classification</div>
             <div class="tlp-pills">
-                <button class="tlp-pill tlp-white" data-tlp="WHITE">WHITE</button>
-                <button class="tlp-pill tlp-green" data-tlp="GREEN">GREEN</button>
-                <button class="tlp-pill tlp-amber tlp-active" data-tlp="AMBER">AMBER</button>
-                <button class="tlp-pill tlp-red" data-tlp="RED">RED</button>
+                <button class="tlp-pill tlp-white {% if incident.tlp == 'CLEAR' %}tlp-active{% endif %}" data-tlp="CLEAR">CLEAR</button>
+                <button class="tlp-pill tlp-green {% if incident.tlp == 'GREEN' %}tlp-active{% endif %}" data-tlp="GREEN">GREEN</button>
+                <button class="tlp-pill tlp-amber {% if incident.tlp == 'AMBER' %}tlp-active{% endif %}" data-tlp="AMBER">AMBER</button>
+                <button class="tlp-pill tlp-red {% if incident.tlp == 'RED' %}tlp-active{% endif %}" data-tlp="RED">RED</button>
             </div>
         </div>
 

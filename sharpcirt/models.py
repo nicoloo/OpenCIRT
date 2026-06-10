@@ -61,6 +61,8 @@ class Incident(models.Model):
     is_public = models.BooleanField(default=False)
     iocs_shared = models.BooleanField(default=False)
     invite_code = models.CharField(max_length=6, blank=True, default='')
+    TLP_CHOICES = [('CLEAR','CLEAR'),('GREEN','GREEN'),('AMBER','AMBER'),('RED','RED')]
+    tlp = models.CharField(max_length=10, choices=TLP_CHOICES, default='CLEAR')
 
     def __str__(self):
         return self.name
@@ -87,6 +89,17 @@ class Message(models.Model):
     sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='messages_sent')
     text = models.TextField()
     incident = models.ForeignKey(Incident, on_delete=models.CASCADE, related_name='messages', null=True,)
+    is_bot = models.BooleanField(default=False)
+    link = models.CharField(max_length=255, null=True, blank=True)
+
+class SharedFile(models.Model):
+    id = models.AutoField(primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='uploaded_files')
+    incident = models.ForeignKey(Incident, on_delete=models.CASCADE, related_name='shared_files')
+    file = models.FileField(upload_to='incident_files/')
+    original_name = models.CharField(max_length=255)
+    size = models.PositiveIntegerField(default=0)
 
 class Tag(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -176,3 +189,27 @@ class Impact(models.Model):
     starting_time = models.DateTimeField(null=True)
     ending_time = models.DateTimeField(null=True)
     duration = models.DurationField(null=True)
+
+
+class AuditLog(models.Model):
+    """Records every significant action performed within an incident."""
+    ACTION_CHOICES = [
+        ('CREATE', 'Create'),
+        ('UPDATE', 'Update'),
+        ('DELETE', 'Delete'),
+        ('EXPORT', 'Export'),
+        ('ACCESS', 'Access'),
+    ]
+    incident    = models.ForeignKey(Incident, on_delete=models.CASCADE, related_name='audit_logs')
+    timestamp   = models.DateTimeField(auto_now_add=True)
+    user        = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    ip_address  = models.CharField(max_length=45, blank=True, default='')
+    action      = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    object_type = models.CharField(max_length=50)   # IoC, Task, Note, File, Timeline, Settings…
+    description = models.TextField()
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"[{self.timestamp:%Y-%m-%d %H:%M}] {self.action} {self.object_type} by {self.user}"

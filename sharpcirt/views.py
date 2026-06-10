@@ -1,12 +1,15 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.contrib.auth import login, logout, authenticate
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
-from sharpcirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact
+from sharpcirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog
 from . import models
 from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, get_incidents_by_day_and_severity
 from django.contrib import messages
 import json
+import os
+import re
 import random
 from datetime import timedelta, datetime
 from django.utils import timezone
@@ -25,6 +28,26 @@ import csv
 from io import StringIO
 from docx import Document as DocxDocument
 from docx.shared import Pt, RGBColor
+
+# ── Audit log helpers ─────────────────────────────────────────────────────────
+
+def _get_client_ip(request):
+    xff = request.META.get('HTTP_X_FORWARDED_FOR')
+    return xff.split(',')[0].strip() if xff else request.META.get('REMOTE_ADDR', '')
+
+def _audit(incident, request, action, object_type, description):
+    """Create an AuditLog entry. Never raises — logs silently on error."""
+    try:
+        AuditLog.objects.create(
+            incident=incident,
+            user=request.user if request.user.is_authenticated else None,
+            ip_address=_get_client_ip(request),
+            action=action,
+            object_type=object_type,
+            description=description,
+        )
+    except Exception:
+        pass
 
 # TLP → python-docx RGBColor mapping (used by download_incident_word)
 TLP_COLORS = {
@@ -151,20 +174,21 @@ def home(request):
 
 def custom_login(request):
     if request.method == 'POST':
-        try:
-            username = request.POST['username']
-            password = request.POST['password']
-            user = User.objects.get(username=username)
-            user = authenticate(request, username=username, password=password)
-
-            if user is not None:
-                login(request, user)
-                next_url = request.GET.get('next') or '/'
-                return redirect(next_url)
-            else:
-                return render(request, 'login.html', {'error': 'Invalid credentials'})
-        except User.DoesNotExist:
-            return render(request, 'login.html', {'error': 'User does not exists'})
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            next_url = request.GET.get('next', '/')
+            # Guard against open-redirect: only allow same-host relative URLs
+            if not url_has_allowed_host_and_scheme(
+                next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                next_url = '/'
+            return redirect(next_url)
+        return render(request, 'login.html', {'error': 'Invalid username or password'})
     return render(request, 'login.html')
 
 def custom_logout(request):
@@ -275,7 +299,12 @@ def notes(request, id):
             return HttpResponseForbidden("You do not have permission to access this incident.")
     except Incident.DoesNotExist:
         my_object = None
-    return render(request,'incidents/notes.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
+    return render(request, 'incidents/notes.html', {
+        'incident': incident,
+        'user': request.user,
+        'current_user_role': user_role,
+        'shared_files': incident.shared_files.all().order_by('-created_at'),
+    })
 
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
@@ -311,8 +340,11 @@ def add_note(request, id):
             Message.objects.create(
                 incident=incident,
                 sender=request.user,
-                text=f"{request.user.username} created note: {new_note.name}"
+                text=f"{request.user.username} created note: {new_note.name}",
+                is_bot=True,
+                link=f"/incident/{incident.id}/notes"
             )
+            _audit(incident, request, 'CREATE', 'Note', f'Created note "{new_note.name}"')
             return JsonResponse({
             'id': new_note.id,
             'name': new_note.name,
@@ -335,6 +367,7 @@ def update_note(request, id):
             note.text = data.get('text', '')
             
             note.save()
+            _audit(Incident.objects.get(pk=id), request, 'UPDATE', 'Note', f'Updated note "{note.name}"')
             return JsonResponse({'status': 'success', 'note_id': note_id})
 
         except Note.DoesNotExist:
@@ -349,18 +382,140 @@ def delete_note(request, id):
             data = json.loads(request.body)
             note_id = data.get('note_id')
             note = Note.objects.get(pk=note_id)
+            note_name = note.name
             note.delete()
+            _audit(Incident.objects.get(pk=id), request, 'DELETE', 'Note', f'Deleted note "{note_name}"')
             return JsonResponse({"status": "success", "message": "Note deleted successfully", "note_id": note_id })
         except Note.DoesNotExist:
             return JsonResponse({'error': 'Note not found'}, status=404)        
 
+# ── File upload security ──────────────────────────────────────────────────────
+# Extensions that could be executed on a server (web scripts, shells, compiled
+# binaries, shortcuts…).  Files with these extensions are NEVER accepted.
+_BLOCKED_EXTENSIONS = frozenset([
+    # Windows executables / installers
+    'exe', 'com', 'scr', 'pif', 'msi', 'msp', 'msc', 'cpl',
+    # Windows batch & scripting
+    'bat', 'cmd', 'vbs', 'vbe', 'js', 'jse', 'ws', 'wsf', 'wsc', 'wsh',
+    'ps1', 'psm1', 'psd1', 'ps1xml', 'lnk', 'url', 'hta',
+    # Unix / Linux shells
+    'sh', 'bash', 'zsh', 'fish', 'ksh', 'csh', 'tcsh',
+    # Interpreted languages
+    'py', 'pyc', 'pyo', 'rb', 'pl', 'lua', 'tcl',
+    # Web-side scripts (dangerous if served by a web server)
+    'php', 'php3', 'php4', 'php5', 'php7', 'php8', 'phtml', 'phar',
+    'asp', 'aspx', 'asa', 'asax', 'ascx', 'ashx', 'asmx',
+    'jsp', 'jspx', 'jws', 'cgi',
+    # Compiled binaries / libraries
+    'dll', 'so', 'dylib', 'jar', 'war', 'ear', 'class', 'elf',
+    # Mobile app packages
+    'apk', 'ipa', 'xap',
+    # Web-server config files that could override behaviour
+    'htaccess', 'htpasswd',
+])
+
+_MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+
+
+def _sanitize_filename(name):
+    """
+    Return a safe filename:
+    - Strip any path components (defence against path traversal)
+    - Remove null bytes and control characters
+    - Truncate to 255 characters
+    - Fall back to 'file' if nothing is left
+    """
+    name = os.path.basename(name.replace('\\', '/'))          # strip path
+    name = re.sub(r'[\x00-\x1f\x7f/<>:"|?*]', '_', name)     # remove control chars & OS-reserved chars
+    name = name.strip('. ')                                    # no leading/trailing dots or spaces
+    return name[:255] or 'file'
+
+
+def _get_extension(name):
+    """Return lowercase extension without leading dot, e.g. 'pdf'."""
+    return os.path.splitext(name)[1].lstrip('.').lower()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+@user_is_incident_responder
+def upload_file(request, id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    incident = get_object_or_404(Incident, pk=id)
+    f = request.FILES.get('file')
+    if not f:
+        return JsonResponse({'error': 'No file provided'}, status=400)
+
+    # Size check
+    if f.size > _MAX_UPLOAD_BYTES:
+        return JsonResponse({'error': 'File too large (max 50 MB)'}, status=400)
+
+    # Sanitize the filename — never trust user input for paths
+    safe_name = _sanitize_filename(f.name)
+    ext = _get_extension(safe_name)
+
+    # Block every extension that could be executed on a web server
+    if ext in _BLOCKED_EXTENSIONS:
+        return JsonResponse(
+            {'error': f'File type ".{ext}" is not permitted. Only passive/data files may be uploaded.'},
+            status=400
+        )
+
+    # Overwrite the in-memory name so Django's FileField stores it safely
+    f.name = safe_name
+
+    shared = SharedFile.objects.create(
+        incident=incident,
+        uploaded_by=request.user,
+        file=f,
+        original_name=safe_name,
+        size=f.size,
+    )
+    _audit(incident, request, 'CREATE', 'File', f'Uploaded file "{safe_name}" ({f.size} bytes)')
+    return JsonResponse({
+        'status': 'success',
+        'id': shared.id,
+        'name': shared.original_name,
+        'size': shared.size,
+        'url': shared.file.url,
+        'uploaded_by': request.user.username,
+        'created_at': shared.created_at.strftime('%d %b %Y, %H:%M'),
+    })
+
+
+@login_required(login_url='login')
+@user_is_incident_responder
+def delete_file(request, id):
+    if request.method != 'DELETE':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        data = json.loads(request.body)
+        file_id = data.get('file_id')
+        incident = get_object_or_404(Incident, pk=id)
+        shared = get_object_or_404(SharedFile, pk=file_id, incident=incident)
+        file_name = shared.original_name
+        shared.file.delete(save=False)
+        shared.delete()
+        _audit(incident, request, 'DELETE', 'File', f'Deleted file "{file_name}"')
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def responders(request, id):
-    # Query all users
+    from django.shortcuts import redirect
+    return redirect('incident_settings', id=id)
+
+@login_required(login_url='login')
+@user_is_incident_responder_orpublic
+def incident_settings(request, id):
     try:
         incident = Incident.objects.get(pk=id)
-        user_roles = UserRole.objects.filter(incident=incident)
         user_role = UserRole.objects.get(user=request.user, incident=incident)
     except UserRole.DoesNotExist:
         if incident.is_public:
@@ -368,9 +523,12 @@ def responders(request, id):
         else:
             return HttpResponseForbidden("You do not have permission to access this incident.")
     except Incident.DoesNotExist:
-        my_object = None
-    return render(request, 'incidents/responders.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
-    # return render(request,'incidents/responders.html')
+        return HttpResponseNotFound("Incident not found.")
+    return render(request, 'incidents/incident_settings.html', {
+        'incident': incident,
+        'user': request.user,
+        'current_user_role': user_role,
+    })
 
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
@@ -1084,6 +1242,8 @@ def get_messages(request, id):
                 'sender_display': display,
                 'sender_initial': initial,
                 'created_at': msg.created_at.strftime('%H:%M'),
+                'is_bot': msg.is_bot,
+                'link': msg.link,
             })
         return JsonResponse({'status': 'success', 'messages': data, 'current_user': request.user.username})
     except Incident.DoesNotExist:
@@ -1113,8 +1273,11 @@ def add_ioc(request, id):
             Message.objects.create(
                 incident=incident,
                 sender=request.user,
-                text=f"{request.user.username} added a new {ioc.get_type_display()} IoC: {ioc.value}"
+                text=f"{request.user.username} added a new {ioc.get_type_display()} IoC: {ioc.value}",
+                is_bot=True,
+                link=f"/incident/{incident.id}/iocs"
             )
+            _audit(incident, request, 'CREATE', 'IoC', f'Added {ioc.get_type_display()} IoC: {ioc.value}')
             return redirect('/incident/' + str(id) + '/iocs')
         
     except Incident.DoesNotExist:
@@ -1167,8 +1330,11 @@ def add_action(request, id):
             Message.objects.create(
                 incident=incident,
                 sender=request.user,
-                text=f"{request.user.username} added timeline action: {action.title}"
+                text=f"{request.user.username} added timeline action: {action.title}",
+                is_bot=True,
+                link=f"/incident/{incident.id}/timeline"
             )
+            _audit(incident, request, 'CREATE', 'Timeline', f'Added timeline event "{action.title}"')
             return JsonResponse({"status": "success", "message": "Action added successfully"})
         else:
             return JsonResponse({'error': 'Invalid method'}, status=400)
@@ -1211,11 +1377,7 @@ def update_action(request, id):
             
             action.save()
             update_first_actions(incident=action.incident)
-
-
-
-
-            
+            _audit(action.incident, request, 'UPDATE', 'Timeline', f'Updated timeline event "{action.title}"')
             return JsonResponse({"status": "success", "message": "Action updated successfully"})
 
         except Action.DoesNotExist:
@@ -1241,8 +1403,11 @@ def delete_action(request, id):
             if action.incident.id != id:
                 return JsonResponse({'error': 'Action is not associated with the specified incident'}, status=403)
 
+            incident = action.incident
+            action_title = action.title
             action.delete()
-            update_first_actions(incident=action.incident)
+            update_first_actions(incident=incident)
+            _audit(incident, request, 'DELETE', 'Timeline', f'Deleted timeline event "{action_title}"')
             return JsonResponse({"status": "success", "message": "Action deleted successfully"})
 
         except Action.DoesNotExist:
@@ -1326,8 +1491,11 @@ def add_task(request, id):
             Message.objects.create(
                 incident=incident,
                 sender=request.user,
-                text=f"{request.user.username} created task: {task.title}"
+                text=f"{request.user.username} created task: {task.title}",
+                is_bot=True,
+                link=f"/incident/{incident.id}/tasks"
             )
+            _audit(incident, request, 'CREATE', 'Task', f'Created task "{task.title}" [{task.priority} / {task.status}]')
             return redirect('/incident/' + str(id) + '/tasks')
         
     except Incident.DoesNotExist:
@@ -1358,14 +1526,14 @@ def update_task(request, id):
             else: 
                 task.assignee = None
             task.save()
-
+            _audit(incident, request, 'UPDATE', 'Task', f'Updated task "{task.title}"')
             return redirect('/incident/' + str(id) + '/tasks')
-        
+
     except Incident.DoesNotExist:
         return JsonResponse({'error': 'Invalid incident'}, status=400)
     except:
         return JsonResponse({'error': 'Invalid method'}, status=400)
-    
+
 @login_required(login_url='login')
 @user_is_incident_responder
 @verify_permissions(['INCIDENT_LEAD', 'RESPONDER'])
@@ -1383,8 +1551,10 @@ def delete_task(request, id):
             if task.incident.id != id:
                 return JsonResponse({'error': 'Task is not associated with the specified incident'}, status=403)
 
+            incident = task.incident
+            task_title = task.title
             task.delete()
-
+            _audit(incident, request, 'DELETE', 'Task', f'Deleted task "{task_title}"')
             return JsonResponse({"status": "success", "message": "Task deleted successfully"})
 
         except Task.DoesNotExist:
@@ -1411,7 +1581,10 @@ def delete_ioc(request, id):
             if ioc.incident.id != id:
                 return JsonResponse({'error': 'IoC is not associated with the specified incident'}, status=403)
 
+            incident = ioc.incident
+            ioc_value = ioc.value
             ioc.delete()
+            _audit(incident, request, 'DELETE', 'IoC', f'Deleted IoC: {ioc_value}')
             return JsonResponse({"status": "success", "message": "IoC deleted successfully"})
 
         except GenericIoc.DoesNotExist:
@@ -1537,6 +1710,7 @@ def update_ioc(request, id):
             ioc.value = body.get('value')
             ioc.description = body.get('description')
             ioc.save()
+            _audit(ioc.incident, request, 'UPDATE', 'IoC', f'Updated IoC: {ioc.value}')
             return JsonResponse({'status': 'success', id: id})
 
         except GenericIoc.DoesNotExist:
@@ -1619,11 +1793,13 @@ def update_role(request, id):
             return JsonResponse({"error": "Invalid role selected"}, status=400)
         user_role.role = new_role
         user_role.save()
+        _audit(incident, request, 'UPDATE', 'Team', f'Changed role of {user.username} to {new_role}')
         return JsonResponse({"success": f"Role of {user.username} updated to {new_role}"}, status=200)
 
     if display_role:
         user_role.display_role = display_role
         user_role.save()
+        _audit(incident, request, 'UPDATE', 'Team', f'Set display role of {user.username} to "{display_role}"')
         return JsonResponse({"success": f"Display Role of {user.username} updated to {display_role}"}, status=200)
 
 @login_required(login_url='login')
@@ -1653,7 +1829,9 @@ def delete_role(request, id):
                     }, status=400)
 
 
+            removed_user = userrole.user.username
             userrole.delete()
+            _audit(incident, request, 'DELETE', 'Team', f'Removed responder {removed_user}')
             return JsonResponse({"status": "success", "message": "Responder deleted successfully"})
         except UserRole.DoesNotExist:
             return JsonResponse({'error': 'Responder not found'}, status=404)    
@@ -1702,9 +1880,23 @@ def update_incident(request, id):
                 incident.export_include_iocs = data['export_include_iocs']
             if 'export_include_attachements' in data:
                 incident.export_include_attachements = data['export_include_attachements']
+            if 'tlp' in data:
+                valid_tlp = ('CLEAR', 'GREEN', 'AMBER', 'RED')
+                if data['tlp'] in valid_tlp:
+                    incident.tlp = data['tlp']
+            if 'is_public' in data and user_role == 'INCIDENT_LEAD':
+                incident.is_public = bool(data['is_public'])
 
             # Save the updated incident
             incident.save()
+
+            # Describe what changed for the audit log
+            changed = [k for k in ('title','status','severity','tlp','is_public',
+                                   'description','executive_summary','lessons_learned',
+                                   'technical_details') if k in data]
+            if changed:
+                _audit(incident, request, 'UPDATE', 'Settings',
+                       f'Updated incident fields: {", ".join(changed)}')
 
             return JsonResponse({'status': 'success', 'message': 'Incident updated successfully'})
         except Incident.DoesNotExist:
@@ -1761,3 +1953,61 @@ def update_profile(request):
 
         except User.DoesNotExist:
             return JsonResponse({'error': 'User not found'}, status=404)
+
+
+# ── Audit log API ─────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+@user_is_incident_responder_orpublic
+def get_audit_logs(request, id):
+    """Return the last 500 audit log entries for an incident as JSON."""
+    incident = get_object_or_404(Incident, pk=id)
+    logs = (
+        AuditLog.objects
+        .filter(incident=incident)
+        .select_related('user')
+        .order_by('-timestamp')[:500]
+    )
+    data = [
+        {
+            'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            'user':      log.user.username if log.user else '—',
+            'ip':        log.ip_address or '—',
+            'action':    log.action,
+            'type':      log.object_type,
+            'description': log.description,
+        }
+        for log in logs
+    ]
+    return JsonResponse({'logs': data})
+
+
+@login_required(login_url='login')
+@user_is_incident_responder_orpublic
+def export_audit_logs(request, id):
+    """Download audit logs as CSV."""
+    incident = get_object_or_404(Incident, pk=id)
+    logs = (
+        AuditLog.objects
+        .filter(incident=incident)
+        .select_related('user')
+        .order_by('-timestamp')
+    )
+    buf = StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['Timestamp (UTC)', 'User', 'IP Address', 'Action', 'Type', 'Description'])
+    for log in logs:
+        writer.writerow([
+            log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            log.user.username if log.user else '',
+            log.ip_address,
+            log.action,
+            log.object_type,
+            log.description,
+        ])
+    _audit(incident, request, 'EXPORT', 'Audit Log', 'Exported audit log as CSV')
+    response = HttpResponse(buf.getvalue(), content_type='text/csv')
+    response['Content-Disposition'] = (
+        f'attachment; filename="audit_log_incident_{id}.csv"'
+    )
+    return response

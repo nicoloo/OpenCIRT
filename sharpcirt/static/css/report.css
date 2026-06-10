@@ -109,7 +109,7 @@
 
 .export-btn {
     padding: 9px 14px;
-    border-radius: 7px;
+    border-radius: 20px;
     border: 1px solid var(--border-color);
     background: var(--background-color);
     color: var(--text-color-1);

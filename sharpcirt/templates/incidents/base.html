@@ -5,58 +5,641 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenCIRT</title>
-    <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}" >
-    <link rel="stylesheet" href="/static/css/style.css">
-    {% block styles %}
-    {% endblock %}
+    <title>OpenCIRT — {{ incident.name }}</title>
+    <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block styles %}{% endblock %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- DataTables CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
-    <!-- jQuery (necessary for DataTables plugin) -->
-    <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- DataTables JS -->
-    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
-
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
 </head>
-<body>
-    <!-- Sidebar -->
-        <div class="sidebar">
-            <a class=logo href="/home"><img  src="{% static 'logo.png' %}" ></a>
-            <h2>{{ incident.name }}</h2>
-            <a href="/incident/{{incident.id}}/overview" class="link">Overview</a>
-            <a href="/incident/{{incident.id}}/timeline" class="link">Timeline</a>
-            <a href="/incident/{{incident.id}}/iocs" class="link">IoC</a>
-            <a href="/incident/{{incident.id}}/activity" class="link">Activity</a>
-            <a href="/incident/{{incident.id}}/notes" class="link">Notes</a>
-            <a href="/incident/{{incident.id}}/tasks" class="link">Tasks</a>
-            <a href="/incident/{{incident.id}}/responders" class="link">Responders</a>
-            <a href="/incident/{{incident.id}}/report" class="link">Reporting</a>
+<body class="incident-layout">
 
-            <div class="bottom-links">
-                
-                <a href="{% url 'logout' %}" class="link">Logout</a>
-                <a href="/about" class="link">About</a>
-                <a href="/about" class="link">Settings</a>
+    <aside class="incident-sidebar" id="sidebar">
 
-                {% if user.profile_pictureurl %}
-                <div class="profile-picture-base">
-                    <img src="{{ user.profile_pictureurl }}" alt="{{ user.username }}'s Profile Picture" class="profile-picture-base">
-                </div>
-                {% else %}
-                <a href="/profile">
-                    <div class="default-picture-base" title="{{ user.username }}" >
-                        
-                        {{ user.username|slice:":1" }}
-                    </div>
-                </a>
-                <p>{{current_user_role.role}}</p> <!-- To remove when done -->
-                {% endif %}
-                
-            </div>
+        <div class="sidebar-header">
+            <a class="sidebar-logo" href="/home">
+                <img src="{% static 'logo.png' %}" alt="OpenCIRT" style="height:48px;width:auto;">
+            </a>
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
+            </button>
         </div>
 
+        <div class="sidebar-incident-name">
+            <i class="fa-solid fa-shield-halved sidebar-incident-icon"></i>
+            <span class="sidebar-incident-title nav-label">{{ incident.name }}</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="/incident/{{incident.id}}/overview"
+               class="nav-link {% if '/overview' in request.path %}active{% endif %}"
+               data-tooltip="Overview">
+                <i class="fa-solid fa-house nav-icon"></i>
+                <span class="nav-label">Overview</span>
+            </a>
+            <a href="/incident/{{incident.id}}/timeline"
+               class="nav-link {% if '/timeline' in request.path %}active{% endif %}"
+               data-tooltip="Timeline">
+                <i class="fa-solid fa-clock nav-icon"></i>
+                <span class="nav-label">Timeline</span>
+            </a>
+            <a href="/incident/{{incident.id}}/iocs"
+               class="nav-link {% if '/iocs' in request.path %}active{% endif %}"
+               data-tooltip="IoC">
+                <i class="fa-solid fa-magnifying-glass nav-icon"></i>
+                <span class="nav-label">IoC</span>
+            </a>
+            <a href="/incident/{{incident.id}}/notes"
+               class="nav-link {% if '/notes' in request.path %}active{% endif %}"
+               data-tooltip="Share">
+                <i class="fa-solid fa-note-sticky nav-icon"></i>
+                <span class="nav-label">Share</span>
+            </a>
+            <a href="/incident/{{incident.id}}/tasks"
+               class="nav-link {% if '/tasks' in request.path %}active{% endif %}"
+               data-tooltip="Tasks">
+                <i class="fa-solid fa-list-check nav-icon"></i>
+                <span class="nav-label">Tasks</span>
+            </a>
+            <a href="/incident/{{incident.id}}/report"
+               class="nav-link {% if '/report' in request.path %}active{% endif %}"
+               data-tooltip="Reporting">
+                <i class="fa-solid fa-file-lines nav-icon"></i>
+                <span class="nav-label">Reporting</span>
+            </a>
+            <a href="/incident/{{incident.id}}/settings"
+               class="nav-link {% if '/settings' in request.path %}active{% endif %}"
+               data-tooltip="Settings">
+                <i class="fa-solid fa-gear nav-icon"></i>
+                <span class="nav-label">Settings</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <a href="/about" class="nav-link" data-tooltip="About">
+                <i class="fa-solid fa-circle-info nav-icon"></i>
+                <span class="nav-label">About</span>
+            </a>
+            <a href="{% url 'logout' %}" class="nav-link" data-tooltip="Logout">
+                <i class="fa-solid fa-arrow-right-from-bracket nav-icon"></i>
+                <span class="nav-label">Logout</span>
+            </a>
+            <a href="/profile" class="nav-link nav-link-profile" data-tooltip="{{ user.displayname|default:user.username }}">
+                <div class="avatar-mini">{{ user.username|slice:":1" }}</div>
+                <span class="nav-label">{{ user.displayname|default:user.username }}</span>
+                {% if current_user_role.role %}
+                <span class="role-badge nav-label">{{ current_user_role.role }}</span>
+                {% endif %}
+            </a>
+        </div>
+
+    </aside>
+
+    <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+
+    <main class="main-content" incident-id="{{ incident.id }}">
         {% block content %}{% endblock %}
+    </main>
 
+    <script>
+    (function () {
+        const sidebar = document.getElementById('sidebar');
+        const icon = document.getElementById('toggleIcon');
+        const KEY = 'sidebar_collapsed';
 
+        function setState(collapsed) {
+            sidebar.classList.toggle('collapsed', collapsed);
+            icon.className = collapsed
+                ? 'fa-solid fa-chevron-right'
+                : 'fa-solid fa-chevron-left';
+        }
+
+        setState(localStorage.getItem(KEY) === '1');
+
+        document.getElementById('sidebarToggle').addEventListener('click', function () {
+            const next = !sidebar.classList.contains('collapsed');
+            setState(next);
+            localStorage.setItem(KEY, next ? '1' : '0');
+        });
+
+    })();
+    </script>
+
+    {% block modals %}{% endblock %}
+
+    <!-- ── Activity Chat Drawer ──────────────────────────────────── -->
+
+    <!-- Tab trigger (always visible on right edge) -->
+    <button id="chat-tab-btn" aria-label="Toggle activity chat">
+        <i class="fa-solid fa-comments"></i>
+        <span class="chat-tab-label">Activity</span>
+        <span id="chat-badge"></span>
+    </button>
+
+    <!-- Dimming backdrop -->
+    <div id="chat-backdrop"></div>
+
+    <!-- Full-height side panel -->
+    <div id="chat-panel" role="complementary" aria-label="Activity Chat">
+        <div id="chat-panel-header">
+            <div class="chat-header-title">
+                <i class="fa-solid fa-comments"></i>
+                Activity
+            </div>
+            <button id="chat-close-btn" aria-label="Close chat">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div id="chat-messages"></div>
+        <div id="chat-input-area">
+            <textarea id="chat-textarea" placeholder="Type a message…" rows="1"></textarea>
+            <button id="chat-send-btn" title="Send">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <style>
+    /* ── Tab trigger ── */
+    #chat-tab-btn {
+        position: fixed;
+        top: 50%;
+        right: 0;
+        transform: translateY(-50%);
+        width: 32px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 7px;
+        padding: 14px 6px;
+        background: var(--accent-color, #c49840);
+        color: #fff;
+        border: none;
+        border-radius: 10px 0 0 10px;
+        cursor: pointer;
+        z-index: 299;
+        box-shadow: -3px 0 12px rgba(0,0,0,0.18);
+        transition: right 0.3s cubic-bezier(0.4,0,0.2,1), background 0.15s;
+        font-family: inherit;
+    }
+    #chat-tab-btn:hover { background: #b38830; }
+    #chat-tab-btn i { font-size: 0.95rem; }
+    .chat-tab-label {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        font-size: 0.6rem;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        line-height: 1;
+    }
+    #chat-badge {
+        background: #ef4444;
+        color: #fff;
+        border-radius: 50%;
+        width: 17px;
+        height: 17px;
+        font-size: 0.6rem;
+        font-weight: 700;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+    body.chat-open #chat-tab-btn { right: 360px; }
+
+    /* ── Backdrop ── */
+    #chat-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.18);
+        z-index: 297;
+        cursor: pointer;
+    }
+    body.chat-open #chat-backdrop { display: block; }
+
+    /* ── Panel ── */
+    #chat-panel {
+        position: fixed;
+        top: 0;
+        right: -360px;
+        width: 360px;
+        height: 100vh;
+        background: var(--widget-background-color, #faf4e5);
+        border-left: 1px solid var(--border-color, #e5d0a0);
+        box-shadow: -4px 0 24px rgba(0,0,0,0.13);
+        z-index: 298;
+        display: flex;
+        flex-direction: column;
+        transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    body.chat-open #chat-panel { right: 0; }
+
+    /* ── Header ── */
+    #chat-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--main-color-2, #e8cc8e);
+        border-bottom: 1px solid var(--border-color, #e5d0a0);
+        flex-shrink: 0;
+    }
+    .chat-header-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 0.92rem;
+        color: var(--text-color-1, #1a1a1a);
+    }
+    .chat-header-title i { color: var(--accent-color, #c49840); }
+    #chat-close-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-color-2, #666);
+        font-size: 1rem;
+        padding: 4px 8px;
+        border-radius: 6px;
+        line-height: 1;
+        transition: background 0.12s;
+    }
+    #chat-close-btn:hover { background: rgba(0,0,0,0.1); }
+
+    /* ── Messages ── */
+    #chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 14px 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    /* user / other / bot rows */
+    .cf-msg-user, .cf-msg-other, .cf-msg-bot {
+        display: flex;
+        align-items: flex-end;
+        gap: 7px;
+    }
+    .cf-msg-user { flex-direction: row-reverse; }
+
+    .cf-msg-inner {
+        display: flex;
+        flex-direction: column;
+        max-width: 80%;
+    }
+    .cf-msg-user .cf-msg-inner { align-items: flex-end; }
+
+    .cf-msg-bubble {
+        padding: 8px 12px;
+        border-radius: 14px;
+        font-size: 0.82rem;
+        line-height: 1.5;
+        word-break: break-word;
+    }
+    .cf-msg-user .cf-msg-bubble {
+        background: var(--accent-color, #c49840);
+        color: #fff;
+        border-bottom-right-radius: 4px;
+    }
+    .cf-msg-other .cf-msg-bubble {
+        background: var(--main-color-1, #f5e8cc);
+        color: var(--text-color-1, #1a1a1a);
+        border-bottom-left-radius: 4px;
+    }
+    .cf-msg-bot .cf-msg-bubble {
+        background: #eff6ff;
+        color: #1e3a8a;
+        border-bottom-left-radius: 4px;
+        font-size: 0.8rem;
+    }
+    .cf-msg-system {
+        text-align: center;
+        font-size: 0.72rem;
+        color: var(--text-color-2, #999);
+        font-style: italic;
+        padding: 2px 0;
+    }
+    .cf-sender-name {
+        font-size: 0.67rem;
+        color: var(--text-color-2, #888);
+        font-weight: 600;
+        margin-bottom: 2px;
+        padding: 0 2px;
+    }
+    .cf-sender-avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--main-color-2, #e8cc8e);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-color-1);
+        flex-shrink: 0;
+    }
+    .cf-bot-avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: #dbeafe;
+        border: 1px solid #bfdbfe;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.78rem;
+        color: #1e40af;
+        flex-shrink: 0;
+    }
+    .cf-msg-time {
+        font-size: 0.63rem;
+        color: var(--text-color-2, #aaa);
+        margin-top: 3px;
+        padding: 0 2px;
+    }
+    .cf-bot-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: #2563eb;
+        font-size: 0.74rem;
+        font-weight: 600;
+        text-decoration: none;
+        margin-top: 5px;
+        padding: 3px 8px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 6px;
+        width: fit-content;
+        transition: background 0.12s;
+    }
+    .cf-bot-link:hover { background: #dbeafe; text-decoration: none; }
+
+    /* ── Input ── */
+    #chat-input-area {
+        display: flex;
+        gap: 8px;
+        padding: 12px 14px;
+        border-top: 1px solid var(--border-color, #e5d0a0);
+        background: var(--background-color, #fdfaf3);
+        flex-shrink: 0;
+    }
+    #chat-textarea {
+        flex: 1;
+        resize: none;
+        border: 1px solid var(--border-color, #e5d0a0);
+        border-radius: 20px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-family: inherit;
+        background: var(--widget-background-color, #faf4e5);
+        color: var(--text-color-1);
+        min-height: 38px;
+        max-height: 120px;
+        overflow-y: auto;
+        line-height: 1.4;
+    }
+    #chat-textarea:focus { outline: none; border-color: var(--accent-color, #c49840); }
+    #chat-send-btn {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+        background: var(--accent-color, #c49840);
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.15s;
+        align-self: flex-end;
+    }
+    #chat-send-btn:hover { opacity: 0.85; }
+    </style>
+
+    <script>
+    (function () {
+        const tabBtn     = document.getElementById('chat-tab-btn');
+        const panel      = document.getElementById('chat-panel');
+        const closeBtn   = document.getElementById('chat-close-btn');
+        const backdrop   = document.getElementById('chat-backdrop');
+        const messagesEl = document.getElementById('chat-messages');
+        const textarea   = document.getElementById('chat-textarea');
+        const sendBtn    = document.getElementById('chat-send-btn');
+        const badge      = document.getElementById('chat-badge');
+        const csrfInput  = document.getElementById('csrf-token');
+        const mainEl     = document.querySelector('[incident-id]');
+
+        if (!mainEl) return;
+        const incidentId = mainEl.getAttribute('incident-id');
+
+        const SEEN_KEY  = 'chat_last_seen_' + incidentId;
+        let lastSeenId  = parseInt(localStorage.getItem(SEEN_KEY) || '0', 10);
+        let currentUser = null;
+        let pollTimer   = null;
+
+        // ── Render ──────────────────────────────────────────────────────
+
+        function renderMessage(msg) {
+            // System message (sender=None, not bot)
+            if (!msg.sender_username && !msg.is_bot) {
+                const el = document.createElement('div');
+                el.className = 'cf-msg-system';
+                el.textContent = msg.text;
+                el.dataset.id = msg.id;
+                return el;
+            }
+
+            const isBot  = !!msg.is_bot;
+            const isUser = !isBot && msg.sender_username === currentUser;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = isBot ? 'cf-msg-bot' : (isUser ? 'cf-msg-user' : 'cf-msg-other');
+            wrapper.dataset.id = msg.id;
+
+            // Avatar (left for bot/other)
+            if (!isUser) {
+                const av = document.createElement('div');
+                if (isBot) {
+                    av.className = 'cf-bot-avatar';
+                    av.innerHTML = '<i class="fa-solid fa-robot"></i>';
+                    av.title = 'OpenCIRT Bot';
+                } else {
+                    av.className = 'cf-sender-avatar';
+                    av.textContent = msg.sender_initial;
+                    av.title = msg.sender_display;
+                }
+                wrapper.appendChild(av);
+            }
+
+            const inner = document.createElement('div');
+            inner.className = 'cf-msg-inner';
+
+            // Sender name (other humans only)
+            if (!isUser && !isBot) {
+                const name = document.createElement('div');
+                name.className = 'cf-sender-name';
+                name.textContent = msg.sender_display;
+                inner.appendChild(name);
+            }
+
+            const bubble = document.createElement('div');
+            bubble.className = 'cf-msg-bubble';
+            bubble.textContent = msg.text;
+            inner.appendChild(bubble);
+
+            // Link button for bot messages
+            if (isBot && msg.link) {
+                const lnk = document.createElement('a');
+                lnk.href = msg.link;
+                lnk.className = 'cf-bot-link';
+                lnk.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i> View';
+                inner.appendChild(lnk);
+            }
+
+            const time = document.createElement('div');
+            time.className = 'cf-msg-time';
+            time.textContent = msg.created_at;
+            inner.appendChild(time);
+
+            wrapper.appendChild(inner);
+            return wrapper;
+        }
+
+        function renderMessages(messages) {
+            const nearBottom = messagesEl.scrollHeight - messagesEl.clientHeight - messagesEl.scrollTop < 60;
+            const existing   = new Set(
+                Array.from(messagesEl.querySelectorAll('[data-id]')).map(el => el.dataset.id)
+            );
+            let added = false;
+            messages.forEach(msg => {
+                if (!existing.has(String(msg.id))) {
+                    messagesEl.appendChild(renderMessage(msg));
+                    added = true;
+                }
+            });
+            if (added && nearBottom) messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        // ── Badge ────────────────────────────────────────────────────────
+
+        function updateBadge(messages) {
+            if (document.body.classList.contains('chat-open')) return;
+            const unread = messages.filter(m => m.id > lastSeenId).length;
+            if (unread > 0) {
+                badge.textContent = unread > 99 ? '99+' : unread;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function markRead(messages) {
+            if (messages.length > 0) {
+                lastSeenId = Math.max.apply(null, messages.map(m => m.id));
+                localStorage.setItem(SEEN_KEY, lastSeenId);
+            }
+            badge.style.display = 'none';
+        }
+
+        // ── Fetch ─────────────────────────────────────────────────────────
+
+        function fetchMessages(opts) {
+            opts = opts || {};
+            fetch('/api/incident/' + incidentId + '/get-messages/')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status !== 'success') return;
+                    currentUser = data.current_user;
+                    if (opts.fullLoad) {
+                        messagesEl.innerHTML = '';
+                        data.messages.forEach(msg => messagesEl.appendChild(renderMessage(msg)));
+                        messagesEl.scrollTop = messagesEl.scrollHeight;
+                        markRead(data.messages);
+                    } else if (document.body.classList.contains('chat-open')) {
+                        renderMessages(data.messages);
+                        markRead(data.messages);
+                    } else {
+                        updateBadge(data.messages);
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // ── Open / Close ──────────────────────────────────────────────────
+
+        function openPanel() {
+            document.body.classList.add('chat-open');
+            fetchMessages({ fullLoad: true });
+            startPolling(10000);
+        }
+
+        function closePanel() {
+            document.body.classList.remove('chat-open');
+            startPolling(30000);
+        }
+
+        tabBtn.addEventListener('click', function () {
+            document.body.classList.contains('chat-open') ? closePanel() : openPanel();
+        });
+        closeBtn.addEventListener('click', closePanel);
+        backdrop.addEventListener('click', closePanel);
+
+        // ── Send ──────────────────────────────────────────────────────────
+
+        function sendMessage() {
+            const text = textarea.value.trim();
+            if (!text) return;
+            const csrf = csrfInput ? csrfInput.value : '';
+            fetch('/api/incident/' + incidentId + '/send-message/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body: JSON.stringify({ message: text })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    textarea.value = '';
+                    textarea.style.height = 'auto';
+                    fetchMessages();
+                }
+            })
+            .catch(() => {});
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        textarea.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        });
+
+        // ── Auto-resize textarea ──────────────────────────────────────────
+        textarea.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // ── Polling ───────────────────────────────────────────────────────
+        function startPolling(ms) {
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(function () { fetchMessages(); }, ms);
+        }
+
+        // Initial load for badge + start background polling
+        fetchMessages();
+        startPolling(30000);
+
+    })();
+    </script>
+
+</body>
 </html>

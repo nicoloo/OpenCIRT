@@ -1,7 +1,6 @@
 from functools import wraps
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse, HttpResponseForbidden, HttpRequest
-from django.core.exceptions import ValidationError
 from .models import UserRole, Incident
 from django.db.models import Min, Max
 from collections import defaultdict
@@ -18,8 +17,6 @@ def verify_permissions(required_role: list):
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
-            print(f"verify_permissions called with args: {args}, kwargs: {kwargs}")
-
             if not request.user.is_authenticated:
                 return JsonResponse({'error': 'User is not authenticated'}, status=401)
 
@@ -76,10 +73,6 @@ def user_is_incident_responder(view_func):
         return view_func(request, id, *args, **kwargs)
     return wrapper
 
-
-def validate_color(value):
-    if not re.match(r'^#[0-9A-Fa-f]{6}$', value):
-        raise ValidationError(f'{value} is not a valid hex color code. Please use the format #RRGGBB.')
 
 
 def update_first_actions(incident: Incident):
