@@ -188,7 +188,7 @@ def run_lookup(ioc_id):
         payload['abuseipdb'] = abuse_data
 
     try:
-        GenericIoc.objects.filter(pk=ioc_id).update(reputation_score=payload)
+        GenericIoc.objects.filter(pk=ioc_id).update(reputation=payload)
     except Exception as e:
         logger.debug('Failed to persist reputation: %s', e)
 

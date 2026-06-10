@@ -3,6 +3,45 @@
 {% block styles %}
     <link rel="stylesheet" href="{% static 'css/iocs.css' %}">
     <link rel="stylesheet" href="{% static 'css/modal.css' %}">
+    <style>
+        .rep-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 7px;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: default;
+            position: relative;
+            white-space: nowrap;
+        }
+        .rep-badge-clean      { background: rgba(22,163,74,.15);   color: #16a34a; }
+        .rep-badge-suspicious { background: rgba(217,119,6,.15);   color: #d97706; }
+        .rep-badge-malicious  { background: rgba(220,38,38,.15);   color: #dc2626; }
+        .rep-badge-unknown,
+        .rep-badge-pending    { background: rgba(107,114,128,.12); color: #6b7280; }
+        .rep-badge[data-tip]::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e2433;
+            color: #e2e8f0;
+            padding: 5px 9px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 400;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity .15s;
+            z-index: 50;
+            box-shadow: 0 2px 8px rgba(0,0,0,.3);
+        }
+        .rep-badge[data-tip]:hover::after { opacity: 1; }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -70,24 +109,20 @@
                             <td class="ioc-value-cell" data-raw="{{ ioc.value }}" data-type="{{ ioc.type }}" title="{{ ioc.value }}">{{ ioc.value }}</td>
                             <td>{{ ioc.description }}</td>
                             <td onclick="event.stopPropagation()">
-                                {% if ioc.reputation_score %}
-                                    {% with rep=ioc.reputation_score %}
-                                    <button class="rep-badge rep-badge-{{ rep.status }}" data-ioc-id="{{ ioc.id }}" title="View reputation details">
-                                        {% if rep.status == 'clean' %}
-                                            <i class="fa-solid fa-circle-check"></i> Clean
-                                        {% elif rep.status == 'suspicious' %}
-                                            <i class="fa-solid fa-triangle-exclamation"></i> Suspicious
-                                        {% elif rep.status == 'malicious' %}
-                                            <i class="fa-solid fa-skull-crossbones"></i> Malicious
-                                        {% else %}
-                                            <i class="fa-solid fa-circle-question"></i> Unknown
-                                        {% endif %}
-                                    </button>
+                                {% if ioc.reputation %}
+                                    {% with rep=ioc.reputation %}
+                                    {% if rep.status == 'clean' %}
+                                        <span class="rep-badge rep-badge-clean" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-circle-check"></i> Clean</span>
+                                    {% elif rep.status == 'suspicious' %}
+                                        <span class="rep-badge rep-badge-suspicious" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-triangle-exclamation"></i> Suspicious</span>
+                                    {% elif rep.status == 'malicious' %}
+                                        <span class="rep-badge rep-badge-malicious" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-skull-crossbones"></i> Malicious</span>
+                                    {% else %}
+                                        <span class="rep-badge rep-badge-unknown" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-circle-question"></i> Unknown</span>
+                                    {% endif %}
                                     {% endwith %}
-                                {% elif ioc.type in 'IPADRESS,HASH,URL,EMAIL' %}
-                                    <button class="rep-badge rep-badge-unknown rep-badge-pending" data-ioc-id="{{ ioc.id }}" title="Reputation pending…">
-                                        <i class="fa-solid fa-circle-question"></i> Pending
-                                    </button>
+                                {% else %}
+                                    <span class="rep-badge rep-badge-unknown" data-tip="No threat intel data">⚪ Unknown</span>
                                 {% endif %}
                             </td>
                             <td>

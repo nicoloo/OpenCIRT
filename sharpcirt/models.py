@@ -130,7 +130,21 @@ class GenericIoc(Ioc):
     type = models.CharField(max_length=20, choices=choices["GENERIC_IOC_TYPE_CHOICES"], default='OTHER')
     incident = models.ForeignKey(Incident, on_delete=models.CASCADE, related_name='genericiocs')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='genericioc_created')
-    reputation_score = models.JSONField(null=True, blank=True, default=None)
+    reputation = models.JSONField(null=True, blank=True)
+
+    @property
+    def reputation_summary(self):
+        rep = self.reputation
+        if not rep:
+            return 'No threat intel data'
+        parts = []
+        vt = rep.get('vt')
+        if vt:
+            parts.append(f"VT: {vt.get('malicious', 0)} malicious, {vt.get('suspicious', 0)} suspicious, {vt.get('harmless', 0)} harmless")
+        abuse = rep.get('abuseipdb')
+        if abuse:
+            parts.append(f"AbuseIPDB: score {abuse.get('score', 0)}% ({abuse.get('country', '?')}, {abuse.get('reports', 0)} reports)")
+        return ' | '.join(parts) if parts else f"Status: {rep.get('status', 'unknown')}"
 
 class Action(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)

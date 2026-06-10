@@ -147,3 +147,8 @@ handler403 = 'myapp.views.custom_403'  # (if you want to handle 403 specifically
 # Anthropic is preferred when both are present.
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 OPENAI_API_KEY    = os.environ.get('OPENAI_API_KEY', '')
+
+# ── Threat intel keys — set via environment variables ────────────────────────
+# Set VIRUSTOTAL_API_KEY and/or ABUSEIPDB_API_KEY in your environment.
+VIRUSTOTAL_API_KEY = os.environ.get('VIRUSTOTAL_API_KEY', '')
+ABUSEIPDB_API_KEY  = os.environ.get('ABUSEIPDB_API_KEY', '')
