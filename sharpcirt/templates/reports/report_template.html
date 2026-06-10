@@ -180,6 +180,13 @@ body {
 .note-meta  { font-size: 8pt; color: #999; margin-top: 2px; }
 .note-body  { padding: 10px 12px; font-size: 9.5pt; white-space: pre-wrap; }
 
+/* ── Threat intel verdict ── */
+.verdict-clean      { color: #16a34a; font-weight: 700; }
+.verdict-suspicious { color: #d97706; font-weight: 700; }
+.verdict-malicious  { color: #dc2626; font-weight: 700; }
+.verdict-unknown    { color: #6b7280; font-weight: 700; }
+.verdict-detail     { display: block; font-size: 7.5pt; font-weight: 400; color: #888; margin-top: 2px; }
+
 /* ── Utilities ── */
 .empty-msg { color: #aaa; font-style: italic; font-size: 9pt; }
 </style>
@@ -313,7 +320,7 @@ body {
     {% if iocs %}
     <table class="report-table">
         <thead>
-            <tr><th>Type</th><th>Value</th><th>Status</th><th>Description</th></tr>
+            <tr><th>Type</th><th>Value</th><th>Status</th><th>Threat Intel</th><th>Description</th></tr>
         </thead>
         <tbody>
             {% for ioc in iocs %}
@@ -321,6 +328,16 @@ body {
                 <td>{{ ioc.get_type_display }}</td>
                 <td class="mono">{{ ioc.value }}</td>
                 <td>{{ ioc.get_status_display }}</td>
+                <td>
+                    {% if ioc.reputation %}
+                        {% with v=ioc.reputation.status %}
+                        <span class="verdict-{{ v }}">{{ v|upper }}</span>
+                        <span class="verdict-detail">{{ ioc.reputation_summary }}</span>
+                        {% endwith %}
+                    {% else %}
+                        <span style="color:#aaa;">—</span>
+                    {% endif %}
+                </td>
                 <td>{{ ioc.description|default:"-" }}</td>
             </tr>
             {% endfor %}

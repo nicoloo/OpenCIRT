@@ -161,17 +161,25 @@ def generate_markdown(incident, sections, tlp, generated_by):
         lines += [
             '## IoC / Evidence',
             '',
-            '| Type | Value | Status | Description |',
-            '|------|-------|--------|-------------|',
+            '| Type | Value | Status | Threat Intel | Description |',
+            '|------|-------|--------|-------------|-------------|',
         ]
         if not incident.genericiocs.exists():
-            lines.append('| — | _No IoCs recorded._ | — | — |')
+            lines.append('| — | _No IoCs recorded._ | — | — | — |')
         else:
             for ioc in incident.genericiocs.all():
-                val = _esc(ioc.value)
+                val  = _esc(ioc.value)
                 desc = _esc(ioc.description)
+                rep  = ioc.reputation
+                if rep:
+                    verdict = rep.get('status', 'unknown').upper()
+                    vt = rep.get('vt') or {}
+                    if vt.get('total'):
+                        verdict += f" ({vt.get('malicious', 0)}/{vt['total']} engines)"
+                else:
+                    verdict = '—'
                 lines.append(
-                    f'| {ioc.get_type_display()} | {val} | {ioc.get_status_display()} | {desc} |'
+                    f'| {ioc.get_type_display()} | {val} | {ioc.get_status_display()} | {verdict} | {desc} |'
                 )
         lines.append('')
 
@@ -285,6 +293,12 @@ def generate_deep_json(incident, generated_by, tlp='AMBER'):
                 'created_at': fmt_dt(ioc.created_at),
                 'created_by': ioc.created_by.username if ioc.created_by else None,
                 'linked_actions': list(ioc.actions.values_list('id', flat=True)),
+                'threat_intel': {
+                    'verdict':     ioc.reputation.get('status'),
+                    'checked_at':  ioc.reputation.get('checked_at'),
+                    'summary':     ioc.reputation_summary,
+                    'details':     ioc.reputation.get('vt'),
+                } if ioc.reputation else None,
             }
             for ioc in (
                 incident.genericiocs.all()

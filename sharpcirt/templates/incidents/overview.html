@@ -69,7 +69,7 @@
                 <div class="section-card">
                     <div class="section-label-row">
                         <label class="section-label" for="description">Description</label>
-                        {% if incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                        {% if ai_configured and incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
                         <button type="button" class="ai-rephrase-btn"
                                 data-field="description" data-target="description"
                                 title="Generate from incident data">
@@ -84,7 +84,7 @@
                 <div class="section-card">
                     <div class="section-label-row">
                         <label class="section-label" for="summary">Executive Summary</label>
-                        {% if incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                        {% if ai_configured and incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
                         <button type="button" class="ai-rephrase-btn"
                                 data-field="executive_summary" data-target="summary"
                                 title="Generate from incident data">
@@ -99,7 +99,7 @@
                 <div class="section-card">
                     <div class="section-label-row">
                         <label class="section-label" for="lessons-learned">Lessons Learned</label>
-                        {% if incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                        {% if ai_configured and incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
                         <button type="button" class="ai-rephrase-btn"
                                 data-field="lessons_learned" data-target="lessons-learned"
                                 title="Generate from incident data">
@@ -114,7 +114,7 @@
                 <div class="section-card">
                     <div class="section-label-row">
                         <label class="section-label" for="technical-details">Technical Details</label>
-                        {% if incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                        {% if ai_configured and incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
                         <button type="button" class="ai-rephrase-btn"
                                 data-field="technical_details" data-target="technical-details"
                                 title="Generate from incident data">

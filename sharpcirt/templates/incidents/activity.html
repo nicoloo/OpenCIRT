@@ -21,7 +21,15 @@
                 </div>
                 <div class="chat-messages" id="chatMessages">
                     {% for message in incident.messages.all %}
-                    {% if message.sender == request.user %}
+                    {% if message.is_bot %}
+                        <div class="bot-message system-message">
+                            <a class="sender system-sender" title="System">
+                                <i class="fa-solid fa-robot"></i>
+                            </a>
+                            <a class="message">{{ message.text }}</a>
+                            <a class="sending_time">{{ message.created_at|date:"H:i" }}</a>
+                        </div>
+                    {% elif message.sender == request.user %}
                         <div class="user-message">
                             <a class="sending_time">{{ message.created_at|date:"H:i" }}</a>
                             <a class="message">{{ message.text }}</a>
@@ -36,7 +44,6 @@
                             {% else %}
                                 <a class="message">{{ message.text }}</a>
                             {% endif %}
-                            
                             <a class="sending_time">{{ message.created_at|date:"H:i" }}</a>
                         </div>
                     {% endif %}

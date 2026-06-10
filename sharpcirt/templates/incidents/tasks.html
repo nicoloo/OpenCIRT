@@ -60,7 +60,12 @@
                                         {% endif %}
                                         {% if task.external_reference %}
                                             <p class="task-ext-ref">
-                                                <i class="fa-solid fa-link"></i> {{ task.external_reference }}
+                                                <i class="fa-solid fa-link"></i>
+                                                {% if task.external_reference|slice:":7" == "http://" or task.external_reference|slice:":8" == "https://" %}
+                                                    <a href="{{ task.external_reference }}" target="_blank" rel="noopener noreferrer" class="task-ext-ref-link" onclick="event.stopPropagation()">{{ task.external_reference }}</a>
+                                                {% else %}
+                                                    {{ task.external_reference }}
+                                                {% endif %}
                                             </p>
                                         {% endif %}
                                     </div>
@@ -284,6 +289,7 @@
     document.querySelectorAll('.kanban-task').forEach(taskElement => {
         taskElement.addEventListener('click', function(event) {
             if (event.target.closest('.task-delete')) return;
+            if (event.target.closest('.task-ext-ref-link')) return;
 
             const taskId = taskElement.getAttribute('data-task-id');
             const taskTitle = taskElement.querySelector('.task-title').innerText;

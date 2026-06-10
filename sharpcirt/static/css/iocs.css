@@ -52,12 +52,9 @@
 }
 .add-ioc-btn:hover { opacity: 0.85; }
 
-/* ---- Two-column body ---- */
+/* ---- Body (full-width table) ---- */
 .ioc-body {
-    display: grid;
-    grid-template-columns: 3fr 1fr;
-    gap: 20px;
-    align-items: start;
+    display: block;
 }
 
 /* ---- Table card ---- */
@@ -440,3 +437,107 @@
     display: none;
 }
 .ioc-validation-error.show { display: block; }
+
+/* ---- Header action group ---- */
+.ioc-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ---- Copy button for non-defanged values ---- */
+.ioc-value-cell { position: relative; }
+.ioc-raw-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.ioc-raw-text {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+/* ---- Reputation column — responsive ---- */
+.rep-cell {
+    min-width: 90px;
+    white-space: nowrap;
+}
+/* On narrow viewports hide badge text, keep icon only */
+@media (max-width: 900px) {
+    .rep-badge .rep-label { display: none; }
+    .rep-cell { min-width: 56px; }
+}
+@media (max-width: 680px) {
+    /* Hide rep column entirely on very small screens */
+    .rep-cell, th:has(+ th:last-child):nth-last-child(2) { display: none; }
+}
+
+/* ---- Table horizontal scroll ---- */
+.ioc-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ---- Page padding — reduce on smaller viewports ---- */
+@media (max-width: 960px) {
+    .ioc-page { padding: 20px 18px; }
+}
+@media (max-width: 768px) {
+    .ioc-page { padding: 14px 12px; }
+}
+
+/* ---- Header wrapping on narrow screens ---- */
+@media (max-width: 580px) {
+    .ioc-header { flex-wrap: wrap; gap: 10px; }
+    .ioc-header-actions { width: 100%; justify-content: flex-end; }
+    .add-ioc-btn { padding: 7px 14px; font-size: 0.82rem; }
+}
+
+/* ---- Description column — hide on very small screens ---- */
+@media (max-width: 540px) {
+    .ioc-desc-col { display: none; }
+}
+
+/* ---- Floating badge tooltip (JS-driven, body-level) ---- */
+.rep-float-tip {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    background: #1e2433;
+    color: #e2e8f0;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 400;
+    box-shadow: 0 2px 10px rgba(0,0,0,.35);
+    max-width: 280px;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+/* ---- VirusTotal link in reputation modal ---- */
+.rep-vt-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 5px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-color-1);
+    text-decoration: none;
+    background: var(--background-color);
+    transition: border-color 0.15s, color 0.15s;
+}
+.rep-vt-link:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}

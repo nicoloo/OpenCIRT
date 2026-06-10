@@ -168,12 +168,12 @@
             return;
         }
         el.innerHTML = msgs.map(m => `
-            <li class="wr-msg-item">
+            <li class="wr-msg-item ${m.is_bot ? 'wr-msg-bot-item' : ''}">
                 <div class="wr-msg-avatar ${m.is_bot ? 'wr-msg-bot-avatar' : ''}">
                     ${m.is_bot ? '<i class="fa-solid fa-robot"></i>' : safe((m.sender || '?')[0].toUpperCase())}
                 </div>
                 <div class="wr-msg-inner">
-                    <div class="wr-msg-sender">${safe(m.sender)}</div>
+                    <div class="wr-msg-sender">${m.is_bot ? 'System' : safe(m.sender)}</div>
                     <div class="wr-msg-text">${safe(m.text)}</div>
                     <div class="wr-msg-ts">${safe(m.ts)}</div>
                 </div>

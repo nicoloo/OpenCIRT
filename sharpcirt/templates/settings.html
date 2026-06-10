@@ -303,23 +303,176 @@
         </div>
     </div>
 
-    <!-- ── Save ── -->
-    <div class="settings-save-row">
-        <button type="submit" class="btn-settings-save">
-            <i class="fa-solid fa-floppy-disk"></i> Save settings
-        </button>
-        {% if request.GET.saved %}
-        <span class="settings-saved-msg">
-            <i class="fa-solid fa-check"></i> Settings saved
-        </span>
+{% if user.is_admin %}
+    <!-- ── CTI Integration (admin only) ── -->
+    <div class="settings-section" id="cti-config-section">
+        <div class="settings-section-header" style="display:flex;align-items:center;gap:8px;">
+            <h2 style="margin:0;"><i class="fa-solid fa-shield-halved" style="color:var(--accent-color);margin-right:6px;"></i>CTI Integration</h2>
+            <span style="font-size:0.72rem;font-weight:600;background:rgba(196,152,64,0.15);color:var(--accent-color);padding:2px 8px;border-radius:20px;letter-spacing:0.04em;">ADMIN</span>
+        </div>
+
+        <!-- Configured providers table -->
+        {% if cti_providers %}
+        <div style="overflow-x:auto;border-bottom:1px solid var(--border-color);">
+            <table style="width:100%;border-collapse:collapse;font-size:0.86rem;">
+                <thead>
+                    <tr>
+                        <th style="padding:9px 14px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-color-2);background:var(--background-color);">Provider</th>
+                        <th style="padding:9px 14px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-color-2);background:var(--background-color);">Key</th>
+                        <th style="padding:9px 14px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-color-2);background:var(--background-color);">Enabled</th>
+                        <th style="padding:9px 14px;background:var(--background-color);"></th>
+                    </tr>
+                </thead>
+                <tbody id="cti-provider-tbody">
+                    {% for p in cti_providers %}
+                    <tr data-provider="{{ p.name }}">
+                        <td style="padding:10px 14px;color:var(--text-color-1);font-weight:600;">{{ p.get_name_display }}</td>
+                        <td style="padding:10px 14px;color:var(--text-color-2);font-size:0.8rem;">
+                            {% if p.api_key %}
+                            <span style="color:#28a745;"><i class="fa-solid fa-check-circle"></i> Configured</span>
+                            {% else %}
+                            <span style="color:#dc3545;"><i class="fa-solid fa-circle-xmark"></i> Not set</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:10px 14px;">
+                            <button type="button"
+                                    class="cti-enable-toggle"
+                                    data-name="{{ p.name }}"
+                                    data-enabled="{{ p.enabled|yesno:'true,false' }}"
+                                    style="padding:4px 12px;border-radius:20px;border:none;
+                                           font-size:0.75rem;font-weight:700;cursor:pointer;
+                                           font-family:inherit;letter-spacing:0.03em;
+                                           background:{% if p.enabled %}rgba(22,163,74,0.15){% else %}rgba(107,114,128,0.15){% endif %};
+                                           color:{% if p.enabled %}#16a34a{% else %}#6b7280{% endif %};">
+                                {% if p.enabled %}● Enabled{% else %}○ Disabled{% endif %}
+                            </button>
+                        </td>
+                        <td style="padding:10px 14px;text-align:right;">
+                            <button type="button" class="cti-delete-btn"
+                                    data-name="{{ p.name }}"
+                                    style="padding:5px 12px;border:1px solid #dc3545;border-radius:7px;background:transparent;color:#dc3545;font-size:0.8rem;cursor:pointer;font-family:inherit;">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="padding:14px 20px;color:var(--text-color-2);font-size:0.85rem;margin:0;">No providers configured yet.</p>
         {% endif %}
+
+        <!-- Add provider form -->
+        <div style="padding:18px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:0.72rem;font-weight:600;color:var(--text-color-2);text-transform:uppercase;letter-spacing:0.06em;">Provider</label>
+                <select id="cti-new-name" class="settings-select" style="min-width:180px;">
+                    <option value="VIRUSTOTAL">VirusTotal</option>
+                    <option value="ABUSEIPDB">AbuseIPDB</option>
+                    <option value="SHODAN">Shodan</option>
+                    <option value="OTXALIENVAULT">OTX AlienVault</option>
+                    <option value="MISP">MISP</option>
+                </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:200px;">
+                <label style="font-size:0.72rem;font-weight:600;color:var(--text-color-2);text-transform:uppercase;letter-spacing:0.06em;">API key</label>
+                <input type="password" id="cti-new-key" autocomplete="off"
+                       placeholder="Paste API key…"
+                       style="padding:7px 10px;border:1px solid var(--border-color);border-radius:7px;
+                              background:var(--background-color);color:var(--text-color-1);
+                              font-size:0.85rem;font-family:monospace;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;" id="cti-base-url-wrap" style="display:none;">
+                <label style="font-size:0.72rem;font-weight:600;color:var(--text-color-2);text-transform:uppercase;letter-spacing:0.06em;">Base URL (MISP)</label>
+                <input type="text" id="cti-new-base-url" placeholder="https://misp.example.com"
+                       style="padding:7px 10px;border:1px solid var(--border-color);border-radius:7px;
+                              background:var(--background-color);color:var(--text-color-1);font-size:0.85rem;">
+            </div>
+            <button type="button" id="cti-add-btn" class="btn-settings-save" style="padding:9px 20px;font-size:0.85rem;white-space:nowrap;">
+                <i class="fa-solid fa-plus"></i> Add provider
+            </button>
+        </div>
+
+        <div style="padding:0 20px 14px;">
+            <span id="cti-save-msg" style="display:none;font-size:0.83rem;font-weight:600;color:var(--accent-color);"><i class="fa-solid fa-check"></i> Saved</span>
+            <span id="cti-save-err" style="display:none;font-size:0.83rem;font-weight:600;color:#dc3545;"></span>
+        </div>
     </div>
 
-</form>
+<script>
+(function () {
+    const csrf      = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+    const saveMsg   = document.getElementById('cti-save-msg');
+    const saveErr   = document.getElementById('cti-save-err');
 
-{% if user.is_admin %}
-<!-- ── AI Configuration (admin only) ── -->
-<div class="settings-page" style="padding-top:0;">
+    function flash(ok, msg) {
+        saveMsg.style.display = 'none';
+        saveErr.style.display = 'none';
+        if (ok) { saveMsg.style.display = 'inline'; setTimeout(() => saveMsg.style.display = 'none', 3000); }
+        else    { saveErr.textContent = msg; saveErr.style.display = 'inline'; }
+    }
+
+    async function apiPost(url, body) {
+        const r = await fetch(url, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body:    JSON.stringify(body),
+        });
+        return { ok: r.ok, data: await r.json() };
+    }
+
+    // Show base-url field for MISP only
+    const nameSelect = document.getElementById('cti-new-name');
+    const baseWrap   = document.getElementById('cti-base-url-wrap');
+    nameSelect.addEventListener('change', () => {
+        baseWrap.style.display = nameSelect.value === 'MISP' ? 'flex' : 'none';
+    });
+
+    // Add provider
+    document.getElementById('cti-add-btn').addEventListener('click', async () => {
+        const name    = nameSelect.value;
+        const api_key = document.getElementById('cti-new-key').value.trim();
+        const base_url = document.getElementById('cti-new-base-url')?.value.trim() || '';
+        if (!api_key) { flash(false, 'API key is required.'); return; }
+
+        const { ok, data } = await apiPost('/api/cti-providers/', { name, api_key, base_url, enabled: true });
+        if (ok) { flash(true); location.reload(); }
+        else    { flash(false, data.error || 'Save failed.'); }
+    });
+
+    // Enable/disable toggle pill
+    document.querySelectorAll('.cti-enable-toggle').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const newEnabled = btn.dataset.enabled !== 'true';
+            const { ok, data } = await apiPost('/api/cti-providers/', {
+                name: btn.dataset.name, enabled: newEnabled,
+            });
+            if (ok) {
+                btn.dataset.enabled = newEnabled ? 'true' : 'false';
+                btn.textContent     = newEnabled ? '● Enabled' : '○ Disabled';
+                btn.style.background = newEnabled ? 'rgba(22,163,74,0.15)' : 'rgba(107,114,128,0.15)';
+                btn.style.color      = newEnabled ? '#16a34a'               : '#6b7280';
+                flash(true);
+            } else {
+                flash(false, data.error || 'Failed.');
+            }
+        });
+    });
+
+    // Delete provider
+    document.querySelectorAll('.cti-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!confirm(`Remove ${btn.dataset.name}?`)) return;
+            const { ok, data } = await apiPost('/api/cti-providers/delete/', { name: btn.dataset.name });
+            if (ok) btn.closest('tr').remove();
+            else    flash(false, data.error || 'Delete failed.');
+        });
+    });
+})();
+</script>
+
+    <!-- ── AI Configuration (admin only) ── -->
     <div class="settings-section" id="ai-config-section">
         <div class="settings-section-header" style="display:flex;align-items:center;gap:8px;">
             <h2 style="margin:0;"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent-color);margin-right:6px;"></i>AI Configuration</h2>
@@ -381,7 +534,6 @@
             </div>
         </div>
     </div>
-</div>
 
 <script>
 (function () {
@@ -455,5 +607,19 @@
 })();
 </script>
 {% endif %}
+
+    <!-- ── Save ── -->
+    <div class="settings-save-row">
+        <button type="submit" class="btn-settings-save">
+            <i class="fa-solid fa-floppy-disk"></i> Save settings
+        </button>
+        {% if request.GET.saved %}
+        <span class="settings-saved-msg">
+            <i class="fa-solid fa-check"></i> Settings saved
+        </span>
+        {% endif %}
+    </div>
+
+</form>
 </main>
 {% endblock %}

@@ -313,6 +313,9 @@ body.warroom-body {
     color: #c49840;
     margin-bottom: 2px;
 }
+.wr-msg-bot-item .wr-msg-sender {
+    color: #93c5fd;
+}
 .wr-msg-text {
     font-size: 0.82rem;
     color: #c9d1d9;

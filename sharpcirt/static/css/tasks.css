@@ -119,6 +119,14 @@
     color: var(--muted-color);
     margin: 0 !important;
 }
+.task-ext-ref-link {
+    color: var(--accent-color);
+    text-decoration: none;
+    word-break: break-all;
+}
+.task-ext-ref-link:hover {
+    text-decoration: underline;
+}
 
 .task-meta {
     display: flex;

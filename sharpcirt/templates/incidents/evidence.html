@@ -21,42 +21,71 @@
         .rep-badge-malicious  { background: rgba(220,38,38,.15);   color: #dc2626; }
         .rep-badge-unknown,
         .rep-badge-pending    { background: rgba(107,114,128,.12); color: #6b7280; }
-        .rep-badge[data-tip]::after {
-            content: attr(data-tip);
-            position: absolute;
-            bottom: calc(100% + 6px);
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1e2433;
-            color: #e2e8f0;
-            padding: 5px 9px;
-            border-radius: 6px;
-            font-size: 0.7rem;
-            font-weight: 400;
+        /* Tooltip handled by JS floating element — see iocs.js */
+        .rep-cell { min-width: 110px; }
+        .rep-check-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border: 1px solid var(--accent-color);
+            border-radius: 10px;
+            background: transparent;
+            color: var(--accent-color);
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background .15s, color .15s;
             white-space: nowrap;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity .15s;
-            z-index: 50;
-            box-shadow: 0 2px 8px rgba(0,0,0,.3);
         }
-        .rep-badge[data-tip]:hover::after { opacity: 1; }
+        .rep-check-btn:hover { background: var(--accent-color); color: #fff; }
+        .rep-check-btn.loading { opacity: .5; pointer-events: none; }
+        .rep-refresh-btn {
+            padding: 3px 6px;
+            font-size: 0.7rem;
+            border-radius: 8px;
+            vertical-align: middle;
+        }
+        /* Reputation detail modal */
+        .rep-modal-body { padding: 16px 20px; }
+        .rep-status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+        .rep-status-label { font-size: 0.9rem !important; padding: 4px 12px !important; }
+        .rep-checked-at { font-size: 0.75rem; color: var(--text-color-2); }
+        .rep-section { margin-bottom: 14px; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; }
+        .rep-section-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-color-2); margin: 0 0 8px; }
+        .rep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 6px; }
+        .rep-kv { display: flex; flex-direction: column; gap: 1px; }
+        .rep-kv-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-color-2); }
+        .rep-kv-value { font-size: 0.82rem; font-weight: 600; color: var(--text-color-1); }
+        .rep-ok  { color: #16a34a; }
+        .rep-warn { color: #d97706; }
+        .rep-bad  { color: #dc2626; }
+        .rep-loading { color: var(--text-color-2); font-size: 0.85rem; padding: 8px 0; }
+        .modal-medium { max-width: 520px; width: 95%; }
     </style>
 {% endblock %}
 
 {% block content %}
-<div class="ioc-page" incident-id="{{ incident.id }}">
+<div class="ioc-page" incident-id="{{ incident.id }}" data-cti="{% if cti_configured %}true{% else %}false{% endif %}">
 
     <div class="ioc-header">
         <div class="ioc-header-left">
             <h1 class="ioc-title">Indicators of Compromise</h1>
             <span class="ioc-count">{{ incident.genericiocs.count }} indicator{% if incident.genericiocs.count != 1 %}s{% endif %}</span>
         </div>
-        {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
-        <button id="addIocBtn" class="add-ioc-btn">
-            <i class="fa-solid fa-plus"></i> Add IoC
-        </button>
-        {% endif %}
+        <div class="ioc-header-actions">
+            {% if cti_configured %}
+            <button id="checkAllBtn" class="add-ioc-btn" style="background:transparent;border:1px solid var(--accent-color);color:var(--accent-color);">
+                <i class="fa-solid fa-shield-halved"></i> Run Threat Intel on all IoCs
+            </button>
+            {% endif %}
+            {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+            <button id="addIocBtn" class="add-ioc-btn">
+                <i class="fa-solid fa-plus"></i> Add IoC
+            </button>
+            {% endif %}
+        </div>
     </div>
 
     <div class="ioc-filter-bar">
@@ -70,17 +99,16 @@
     </div>
 
     <div class="ioc-body">
-
-        <!-- Table principale -->
         <div class="ioc-table-card">
+          <div class="ioc-table-wrap">
             <table class="ioc-table" id="iocTable">
                 <thead>
                     <tr>
                         <th>Timestamp</th>
                         <th>Type</th>
                         <th>Value</th>
-                        <th>Description</th>
-                        <th>Reputation</th>
+                        <th class="ioc-desc-col">Description</th>
+                        {% if cti_configured %}<th>Reputation</th>{% endif %}
                         <th></th>
                     </tr>
                 </thead>
@@ -107,24 +135,29 @@
                                 </span>
                             </td>
                             <td class="ioc-value-cell" data-raw="{{ ioc.value }}" data-type="{{ ioc.type }}" title="{{ ioc.value }}">{{ ioc.value }}</td>
-                            <td>{{ ioc.description }}</td>
-                            <td onclick="event.stopPropagation()">
-                                {% if ioc.reputation %}
-                                    {% with rep=ioc.reputation %}
-                                    {% if rep.status == 'clean' %}
-                                        <span class="rep-badge rep-badge-clean" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-circle-check"></i> Clean</span>
-                                    {% elif rep.status == 'suspicious' %}
-                                        <span class="rep-badge rep-badge-suspicious" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-triangle-exclamation"></i> Suspicious</span>
-                                    {% elif rep.status == 'malicious' %}
-                                        <span class="rep-badge rep-badge-malicious" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-skull-crossbones"></i> Malicious</span>
+                            <td class="ioc-desc-col">{{ ioc.description }}</td>
+                            {% if cti_configured %}
+                            <td class="rep-cell">
+                                {% if ioc.type in supported_ioc_types %}
+                                    {% if ioc.reputation %}
+                                        {% with rep=ioc.reputation %}
+                                        {% if rep.status == 'clean' %}
+                                            <span class="rep-badge rep-badge-clean" data-ioc-id="{{ ioc.id }}" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-circle-check"></i><span class="rep-label"> Clean</span></span>
+                                        {% elif rep.status == 'suspicious' %}
+                                            <span class="rep-badge rep-badge-suspicious" data-ioc-id="{{ ioc.id }}" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-triangle-exclamation"></i><span class="rep-label"> Suspicious</span></span>
+                                        {% elif rep.status == 'malicious' %}
+                                            <span class="rep-badge rep-badge-malicious" data-ioc-id="{{ ioc.id }}" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-skull-crossbones"></i><span class="rep-label"> Malicious</span></span>
+                                        {% else %}
+                                            <span class="rep-badge rep-badge-unknown" data-ioc-id="{{ ioc.id }}" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-circle-question"></i><span class="rep-label"> Unknown</span></span>
+                                        {% endif %}
+                                        <button class="rep-check-btn rep-refresh-btn" data-ioc-id="{{ ioc.id }}" title="Refresh reputation" style="margin-left:4px;"><i class="fa-solid fa-arrows-rotate"></i></button>
+                                        {% endwith %}
                                     {% else %}
-                                        <span class="rep-badge rep-badge-unknown" data-tip="{{ ioc.reputation_summary }}"><i class="fa-solid fa-circle-question"></i> Unknown</span>
+                                        <button class="rep-check-btn" data-ioc-id="{{ ioc.id }}"><i class="fa-solid fa-shield-halved"></i> Check</button>
                                     {% endif %}
-                                    {% endwith %}
-                                {% else %}
-                                    <span class="rep-badge rep-badge-unknown" data-tip="No threat intel data">⚪ Unknown</span>
                                 {% endif %}
                             </td>
+                            {% endif %}
                             <td>
                                 {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
                                 <div class="ioc-delete-cell" onclick="event.stopPropagation()">
@@ -143,16 +176,8 @@
                     {% endfor %}
                 </tbody>
             </table>
+          </div><!-- /.ioc-table-wrap -->
         </div>
-
-        <!-- Panneau latéral -->
-        <div class="ioc-side">
-            <div class="ioc-metric-card">
-                <span class="ioc-metric-label">Total IoCs</span>
-                <strong class="ioc-metric-value">{{ incident.genericiocs.count }}</strong>
-            </div>
-        </div>
-
     </div>
 </div>
 

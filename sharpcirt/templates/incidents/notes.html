@@ -181,6 +181,92 @@
     }
     .file-del-btn:hover { color: #dc3545; border-color: #dc3545; background: #fff5f5; }
 
+    /* Executable file warning badge */
+    .file-exe-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 1px 7px;
+        background: rgba(217,119,6,.12);
+        color: #d97706;
+        border: 1px solid rgba(217,119,6,.3);
+        border-radius: 10px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        margin-left: 6px;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    /* Executable download warning overlay */
+    .exe-warn-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: rgba(0,0,0,.55);
+        align-items: center;
+        justify-content: center;
+    }
+    .exe-warn-overlay.active { display: flex; }
+    .exe-warn-box {
+        background: var(--widget-background-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px 28px;
+        max-width: 440px;
+        width: 92%;
+        box-shadow: 0 8px 32px rgba(0,0,0,.35);
+    }
+    .exe-warn-icon {
+        font-size: 2rem;
+        color: #d97706;
+        margin-bottom: 10px;
+    }
+    .exe-warn-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-color-1);
+        margin: 0 0 10px;
+    }
+    .exe-warn-body {
+        font-size: 0.85rem;
+        color: var(--text-color-2);
+        margin: 0 0 18px;
+        line-height: 1.55;
+    }
+    .exe-warn-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+    .exe-warn-cancel {
+        padding: 7px 18px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-color-1);
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        transition: border-color 0.12s, color 0.12s;
+    }
+    .exe-warn-cancel:hover { border-color: var(--accent-color); color: var(--accent-color); }
+    .exe-warn-confirm {
+        padding: 7px 18px;
+        border: none;
+        border-radius: 8px;
+        background: #d97706;
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.12s;
+    }
+    .exe-warn-confirm:hover { background: #b45309; }
+
     /* Upload progress */
     .upload-progress {
         margin: 0 20px 12px;
@@ -294,7 +380,7 @@
                     <input type="file" id="file-input" multiple>
                     <i class="fa-solid fa-cloud-arrow-up"></i>
                     <p>Drop files here or <strong style="color:var(--accent-color);cursor:pointer;" onclick="document.getElementById('file-input').click()">click to browse</strong></p>
-                    <span class="drop-hint">Max 50 MB per file · Executable files (.exe, .sh, .php, .py…) are not allowed</span>
+                    <span class="drop-hint">Max 50 MB per file · Server-side scripts (.php, .py, .sh…) are not allowed</span>
                 </div>
 
                 <!-- Upload progress / error -->
@@ -312,9 +398,16 @@
                 <div class="files-list" id="files-list">
                     {% for sf in shared_files %}
                     <div class="file-item" data-file-id="{{ sf.id }}">
-                        <div class="file-icon"><i class="fa-solid fa-file"></i></div>
+                        <div class="file-icon">
+                            <i class="fa-solid {% if sf.is_executable %}fa-file-code{% else %}fa-file{% endif %}"></i>
+                        </div>
                         <div class="file-info">
-                            <div class="file-name" title="{{ sf.original_name }}">{{ sf.original_name }}</div>
+                            <div class="file-name" title="{{ sf.original_name }}">
+                                {{ sf.original_name }}
+                                {% if sf.is_executable %}
+                                <span class="file-exe-badge"><i class="fa-solid fa-triangle-exclamation"></i> Executable</span>
+                                {% endif %}
+                            </div>
                             <div class="file-meta">
                                 {{ sf.size|filesizeformat }} &nbsp;·&nbsp;
                                 Uploaded by {{ sf.uploaded_by.username|default:"unknown" }} &nbsp;·&nbsp;
@@ -322,7 +415,7 @@
                             </div>
                         </div>
                         <div class="file-actions">
-                            <a href="{{ sf.file.url }}" download="{{ sf.original_name }}" class="file-dl-btn">
+                            <a href="{{ sf.file.url }}" download="{{ sf.original_name }}" class="file-dl-btn"{% if sf.is_executable %} data-executable="true"{% endif %}>
                                 <i class="fa-solid fa-download"></i> Download
                             </a>
                             <button class="file-del-btn" title="Delete" data-file-id="{{ sf.id }}">
@@ -338,6 +431,23 @@
             </div>
         </div>
 
+    </div>
+</div>
+
+<!-- Executable download warning modal -->
+<div class="exe-warn-overlay" id="exeWarnOverlay">
+    <div class="exe-warn-box">
+        <div class="exe-warn-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <p class="exe-warn-title">Potentially Dangerous File</p>
+        <p class="exe-warn-body">
+            This file is an executable or script. Files shared on this platform may have been
+            uploaded as part of a security incident and <strong>could be malicious</strong>.
+            Only download and run files you fully trust from a safe, isolated environment.
+        </p>
+        <div class="exe-warn-actions">
+            <button class="exe-warn-cancel" id="exeWarnCancel">Cancel</button>
+            <button class="exe-warn-confirm" id="exeWarnConfirm"><i class="fa-solid fa-download"></i> Download anyway</button>
+        </div>
     </div>
 </div>
 
@@ -520,6 +630,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
+    const _EXE_EXTENSIONS = new Set([
+        'exe','com','scr','pif','msi','msp','msc','cpl',
+        'bat','cmd','vbs','vbe','js','jse','ws','wsf','wsc','wsh',
+        'ps1','psm1','psd1','ps1xml','lnk','url','hta',
+        'dll','so','dylib','elf',
+        'jar','war','ear','class',
+        'apk','ipa','xap',
+    ]);
+
+    function isExecutable(name) {
+        const ext = (name.split('.').pop() || '').toLowerCase();
+        return _EXE_EXTENSIONS.has(ext);
+    }
+
     function fileIcon(name) {
         const ext = (name.split('.').pop() || '').toLowerCase();
         if (['jpg','jpeg','png','gif','svg','webp'].includes(ext)) return 'fa-file-image';
@@ -528,6 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (['xls','xlsx','csv'].includes(ext))                     return 'fa-file-excel';
         if (['zip','tar','gz','7z','rar'].includes(ext))            return 'fa-file-zipper';
         if (['txt','log','md'].includes(ext))                       return 'fa-file-lines';
+        if (_EXE_EXTENSIONS.has(ext))                               return 'fa-file-code';
         return 'fa-file';
     }
 
@@ -535,17 +660,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const emptyEl = document.getElementById('files-empty');
         if (emptyEl) emptyEl.remove();
 
+        const exe = isExecutable(file.name);
         const item = document.createElement('div');
         item.className = 'file-item';
         item.dataset.fileId = file.id;
         item.innerHTML = `
             <div class="file-icon"><i class="fa-solid ${fileIcon(file.name)}"></i></div>
             <div class="file-info">
-                <div class="file-name" title="${file.name}">${file.name}</div>
+                <div class="file-name" title="${file.name}">
+                    ${file.name}
+                    ${exe ? '<span class="file-exe-badge"><i class="fa-solid fa-triangle-exclamation"></i> Executable</span>' : ''}
+                </div>
                 <div class="file-meta">${formatBytes(file.size)} &nbsp;·&nbsp; Uploaded by ${file.uploaded_by} &nbsp;·&nbsp; ${file.created_at}</div>
             </div>
             <div class="file-actions">
-                <a href="${file.url}" download="${file.name}" class="file-dl-btn">
+                <a href="${file.url}" download="${file.name}" class="file-dl-btn"${exe ? ' data-executable="true"' : ''}>
                     <i class="fa-solid fa-download"></i> Download
                 </a>
                 <button class="file-del-btn" title="Delete" data-file-id="${file.id}">
@@ -615,6 +744,47 @@ document.addEventListener('DOMContentLoaded', () => {
     fileInput.addEventListener('change', () => {
         Array.from(fileInput.files).forEach(uploadFile);
         fileInput.value = '';
+    });
+
+    // ── Executable download warning ─────────────────────────────────────
+
+    const exeOverlay  = document.getElementById('exeWarnOverlay');
+    const exeCancel   = document.getElementById('exeWarnCancel');
+    const exeConfirm  = document.getElementById('exeWarnConfirm');
+    let   _pendingDlHref = null;
+    let   _pendingDlName = null;
+
+    filesList.addEventListener('click', (e) => {
+        const link = e.target.closest('a[data-executable="true"]');
+        if (!link) return;
+        e.preventDefault();
+        _pendingDlHref = link.href;
+        _pendingDlName = link.download || link.href.split('/').pop();
+        exeOverlay.classList.add('active');
+    });
+
+    exeCancel.addEventListener('click', () => {
+        exeOverlay.classList.remove('active');
+        _pendingDlHref = null;
+        _pendingDlName = null;
+    });
+
+    exeConfirm.addEventListener('click', () => {
+        exeOverlay.classList.remove('active');
+        if (_pendingDlHref) {
+            const a = document.createElement('a');
+            a.href     = _pendingDlHref;
+            a.download = _pendingDlName || '';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        _pendingDlHref = null;
+        _pendingDlName = null;
+    });
+
+    exeOverlay.addEventListener('click', (e) => {
+        if (e.target === exeOverlay) exeCancel.click();
     });
 
     // ── File delete ─────────────────────────────────────────────────────

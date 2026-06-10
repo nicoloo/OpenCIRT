@@ -207,6 +207,25 @@ class Impact(models.Model):
     duration = models.DurationField(null=True)
 
 
+class CtiProvider(models.Model):
+    """One row per enabled threat-intelligence source."""
+    PROVIDER_CHOICES = [
+        ('VIRUSTOTAL',    'VirusTotal'),
+        ('ABUSEIPDB',     'AbuseIPDB'),
+        ('SHODAN',        'Shodan'),
+        ('OTXALIENVAULT', 'OTX AlienVault'),
+        ('MISP',          'MISP'),
+    ]
+    name     = models.CharField(max_length=30, choices=PROVIDER_CHOICES, unique=True)
+    api_key  = models.CharField(max_length=512, blank=True, default='')
+    base_url = models.CharField(max_length=255, blank=True, default='',
+                                help_text='Required for self-hosted sources (e.g. MISP).')
+    enabled  = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f'{self.get_name_display()} ({"on" if self.enabled else "off"})'
+
+
 class PlatformSettings(models.Model):
     """Singleton — platform-wide configuration. Always use PlatformSettings.get()."""
     AI_PROVIDER_CHOICES = [

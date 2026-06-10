@@ -59,49 +59,80 @@ document.addEventListener('DOMContentLoaded', function () {
         return null; // nothing to defang
     }
 
-    // Apply defanging to all value cells
-    document.querySelectorAll('.ioc-value-cell').forEach(cell => {
-        const raw     = cell.dataset.raw  || '';
-        const type    = cell.dataset.type || '';
-        const defanged = defang(type, raw);
+    // ── Copy helper ───────────────────────────────────────────────────────
 
-        if (!defanged) return; // no defang needed for this type
+    function makeCopyBtn(valueToCopy, label) {
+        const btn = document.createElement('button');
+        btn.className = 'ioc-copy-raw';
+        btn.title = label || 'Copy';
+        btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(valueToCopy).then(() => {
+                btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                    btn.classList.remove('copied');
+                }, 1500);
+            });
+        });
+        return btn;
+    }
+
+    // Apply defanging AND copy button to all value cells
+    document.querySelectorAll('.ioc-value-cell').forEach(cell => {
+        const raw      = cell.dataset.raw  || '';
+        const type     = cell.dataset.type || '';
+        const defanged = defang(type, raw);
+        // What gets copied: the defanged form when it exists, raw otherwise
+        const copyValue = defanged || raw;
 
         cell.innerHTML = '';
 
         const wrap = document.createElement('span');
-        wrap.className = 'ioc-value-wrap';
 
-        const span = document.createElement('span');
-        span.className = 'ioc-defanged';
-        span.textContent = defanged;
-        span.title = 'Defanged — raw: ' + raw;
-        wrap.appendChild(span);
+        if (defanged) {
+            // Defanged display
+            wrap.className = 'ioc-value-wrap';
 
-        const badge = document.createElement('span');
-        badge.className = 'defang-badge';
-        badge.textContent = 'defanged';
-        badge.title = 'Value is displayed in defanged format for safe sharing';
-        wrap.appendChild(badge);
+            const span = document.createElement('span');
+            span.className = 'ioc-defanged';
+            span.textContent = defanged;
+            span.title = 'Defanged — raw: ' + raw;
+            wrap.appendChild(span);
 
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'ioc-copy-raw';
-        copyBtn.title = 'Copy raw value';
-        copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
-        copyBtn.addEventListener('click', function (e) {
+            const badge = document.createElement('span');
+            badge.className = 'defang-badge';
+            badge.textContent = 'defanged';
+            badge.title = 'Value is displayed in defanged format for safe sharing';
+            wrap.appendChild(badge);
+        } else {
+            // Plain display
+            wrap.className = 'ioc-raw-wrap';
+
+            const span = document.createElement('span');
+            span.className = 'ioc-raw-text';
+            span.textContent = raw;
+            span.title = raw;
+            wrap.appendChild(span);
+        }
+
+        wrap.appendChild(makeCopyBtn(copyValue, defanged ? 'Copy defanged value' : 'Copy value'));
+        cell.appendChild(wrap);
+
+        // Clicking anywhere on the value cell also copies
+        cell.style.cursor = 'copy';
+        cell.addEventListener('click', e => {
             e.stopPropagation();
-            navigator.clipboard.writeText(raw).then(() => {
-                copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                copyBtn.classList.add('copied');
-                setTimeout(() => {
-                    copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
-                    copyBtn.classList.remove('copied');
-                }, 1500);
+            navigator.clipboard.writeText(copyValue).then(() => {
+                const prev = cell.title;
+                cell.title = 'Copied!';
+                const orig = cell.style.opacity;
+                cell.style.opacity = '0.6';
+                setTimeout(() => { cell.title = prev; cell.style.opacity = orig; }, 800);
             });
         });
-        wrap.appendChild(copyBtn);
-
-        cell.appendChild(wrap);
     });
 
     // ── Modal open/close ─────────────────────────────────────────────────
@@ -298,6 +329,8 @@ document.addEventListener('DOMContentLoaded', function () {
         item.addEventListener('click', function (event) {
             if (event.target.closest('.ioc-delete-cell')) return;
             if (event.target.closest('.ioc-copy-raw')) return;
+            if (event.target.closest('.rep-cell')) return;
+            if (event.target.closest('.ioc-value-cell')) return;
             const iocId = this.dataset.iocId;
             const incidentId = document.querySelector('[incident-id]').getAttribute('incident-id');
             currentIoCId = iocId;
@@ -338,6 +371,39 @@ document.addEventListener('DOMContentLoaded', function () {
         const row = document.querySelector(`.ioc-row[data-ioc-id="${openParam}"]`);
         if (row) row.click();
     }
+
+    // ── Floating tooltip (body-level — immune to table overflow clipping) ───
+
+    const _tipEl = document.createElement('div');
+    _tipEl.className = 'rep-float-tip';
+    document.body.appendChild(_tipEl);
+
+    function _showTip(el) {
+        const text = el.dataset.tip;
+        if (!text) return;
+        _tipEl.textContent = text;
+        _tipEl.style.display = 'block';
+        const r  = el.getBoundingClientRect();
+        const tw = _tipEl.offsetWidth;
+        const th = _tipEl.offsetHeight;
+        // Prefer above, flip to below if not enough room
+        let top  = r.top - th - 8;
+        if (top < 6) top = r.bottom + 6;
+        let left = r.left + r.width / 2 - tw / 2;
+        left = Math.max(6, Math.min(left, window.innerWidth - tw - 6));
+        _tipEl.style.top  = top  + 'px';
+        _tipEl.style.left = left + 'px';
+    }
+
+    function _hideTip() { _tipEl.style.display = 'none'; }
+
+    document.addEventListener('mouseover', e => {
+        const el = e.target.closest('[data-tip]');
+        if (el) _showTip(el);
+    });
+    document.addEventListener('mouseout', e => {
+        if (e.target.closest('[data-tip]')) _hideTip();
+    });
 
     // ── Reputation modal ───────────────────────────────────────────────────
 
@@ -401,6 +467,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     ${vt.meaningful_name  ? `<div class="rep-kv"><span class="rep-kv-label">File name</span><span class="rep-kv-value">${vt.meaningful_name}</span></div>` : ''}
                     ${vt.type_description ? `<div class="rep-kv"><span class="rep-kv-label">File type</span><span class="rep-kv-value">${vt.type_description}</span></div>` : ''}
                 </div>
+                ${vt.link ? `<a href="${vt.link}" target="_blank" rel="noopener noreferrer" class="rep-vt-link">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> View full report on VirusTotal
+                </a>` : ''}
             </div>`;
         }
 
@@ -424,23 +493,157 @@ document.addEventListener('DOMContentLoaded', function () {
         repModal.style.display = 'flex';
     }
 
-    document.querySelectorAll('.rep-badge:not(.rep-badge-pending)').forEach(btn => {
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            const iocId = this.dataset.iocId;
-            const incidentId = document.querySelector('[incident-id]').getAttribute('incident-id');
-            repModalBody.innerHTML = '<p class="rep-loading">Loading…</p>';
-            repModal.style.display = 'flex';
+    // ── Check All (rate-limited: VT free tier = 4 req/min → 1 per 15 s) ────
+    //    Click again while running to cancel.
 
-            fetch(`/api/incident/${incidentId}/get-ioc/${iocId}/`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === 'success') renderRepModal(data.data);
-                })
-                .catch(() => {
-                    repModalBody.innerHTML = '<p class="rep-loading">Failed to load reputation data.</p>';
-                });
+    let _checkAllRunning = false;
+    let _checkAllStop    = false;
+
+    const checkAllBtn = document.getElementById('checkAllBtn');
+    if (checkAllBtn) {
+        checkAllBtn.addEventListener('click', async () => {
+            // Second click while running → request cancellation
+            if (_checkAllRunning) {
+                _checkAllStop = true;
+                checkAllBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Stopping…';
+                return;
+            }
+
+            const buttons = Array.from(document.querySelectorAll('.rep-cell .rep-check-btn'));
+            if (!buttons.length) return;
+
+            _checkAllRunning = true;
+            _checkAllStop    = false;
+            const total   = buttons.length;
+            const WAIT_MS = 15000; // VT free: 4 lookups / min
+
+            for (let i = 0; i < total; i++) {
+                if (_checkAllStop) break;
+
+                checkAllBtn.innerHTML =
+                    `<i class="fa-solid fa-spinner fa-spin"></i> ${i + 1}/${total} · click to stop`;
+
+                await doRepCheck(buttons[i]);
+
+                // No wait after the last check, or if cancelled
+                if (_checkAllStop || i === total - 1) break;
+
+                // Live countdown so the user knows how long to wait
+                const deadline = Date.now() + WAIT_MS;
+                while (Date.now() < deadline) {
+                    if (_checkAllStop) break;
+                    const secsLeft  = Math.ceil((deadline - Date.now()) / 1000);
+                    const secsTotal = (total - i - 1) * (WAIT_MS / 1000) + secsLeft;
+                    const eta = secsTotal >= 60
+                        ? `~${Math.ceil(secsTotal / 60)} min`
+                        : `~${Math.ceil(secsTotal)} s`;
+                    checkAllBtn.innerHTML =
+                        `<i class="fa-solid fa-hourglass-half"></i> ` +
+                        `${i + 1}/${total} · next in ${secsLeft}s · ${eta} left · click to stop`;
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
+
+            _checkAllRunning = false;
+            _checkAllStop    = false;
+            checkAllBtn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Run Threat Intel on all IoCs';
         });
+    }
+
+    // ── Auto-check newly added IoC (?check_new=<id>) ──────────────────────
+
+    const checkNewId = new URLSearchParams(window.location.search).get('check_new');
+    if (checkNewId) {
+        history.replaceState(null, '', window.location.pathname);
+        // Wait one tick for rep-cell listeners to be attached, then check
+        setTimeout(() => {
+            const row = document.querySelector(`.ioc-row[data-ioc-id="${checkNewId}"]`);
+            if (row) {
+                const btn = row.querySelector('.rep-check-btn');
+                if (btn) doRepCheck(btn);
+            }
+        }, 100);
+    }
+
+    // ── Reputation check / refresh ────────────────────────────────────────
+
+    const VERDICT_CFG = {
+        clean:      { cls: 'rep-badge-clean',      icon: 'fa-circle-check',         label: 'Clean' },
+        suspicious: { cls: 'rep-badge-suspicious', icon: 'fa-triangle-exclamation', label: 'Suspicious' },
+        malicious:  { cls: 'rep-badge-malicious',  icon: 'fa-skull-crossbones',     label: 'Malicious' },
+        unknown:    { cls: 'rep-badge-unknown',     icon: 'fa-circle-question',      label: 'Unknown' },
+    };
+
+    function repBadgeHtml(rep, iocId) {
+        const cfg = VERDICT_CFG[rep.status] || VERDICT_CFG.unknown;
+        return `<span class="rep-badge ${cfg.cls}" data-ioc-id="${iocId}">` +
+               `<i class="fa-solid ${cfg.icon}"></i><span class="rep-label"> ${cfg.label}</span></span>` +
+               `<button class="rep-check-btn rep-refresh-btn" data-ioc-id="${iocId}" title="Refresh reputation" style="margin-left:4px;">` +
+               `<i class="fa-solid fa-arrows-rotate"></i></button>`;
+    }
+
+    async function doRepCheck(btn) {
+        const iocId      = btn.dataset.iocId;
+        const incidentId = document.querySelector('[incident-id]').getAttribute('incident-id');
+        const cell       = btn.closest('.rep-cell');
+
+        // Show loading state immediately
+        btn.disabled  = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking…';
+
+        try {
+            const r    = await fetch(`/api/incident/${incidentId}/ioc/${iocId}/reputation/`);
+            const data = await r.json();
+
+            if (r.ok && data.status === 'ok' && cell) {
+                cell.innerHTML = repBadgeHtml(data.reputation, iocId);
+                attachRepListeners(cell);
+            } else {
+                const msg = (data && data.error) ? data.error : `HTTP ${r.status}`;
+                if (cell) {
+                    cell.innerHTML =
+                        `<span class="rep-badge rep-badge-unknown" style="gap:5px;">` +
+                        `<i class="fa-solid fa-circle-exclamation"></i> ${msg}</span>` +
+                        `<button class="rep-check-btn rep-refresh-btn" data-ioc-id="${iocId}" title="Retry" style="margin-left:4px;">` +
+                        `<i class="fa-solid fa-arrows-rotate"></i></button>`;
+                    attachRepListeners(cell);
+                }
+            }
+        } catch (err) {
+            console.error('[RepCheck] fetch error:', err);
+            if (cell) {
+                btn.disabled  = false;
+                btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Check';
+            }
+        }
+    }
+
+    function attachRepListeners(cell) {
+        cell.querySelectorAll('.rep-check-btn').forEach(b => {
+            b.addEventListener('click', e => { e.stopPropagation(); doRepCheck(b); });
+        });
+        cell.querySelectorAll('.rep-badge[data-ioc-id]').forEach(b => {
+            b.addEventListener('click', e => { e.stopPropagation(); openRepModal(b.dataset.iocId); });
+        });
+    }
+
+    async function openRepModal(iocId) {
+        const incidentId = document.querySelector('[incident-id]').getAttribute('incident-id');
+        if (!repModal || !repModalBody) return;
+        repModalBody.innerHTML = '<p class="rep-loading">Loading…</p>';
+        repModal.style.display = 'flex';
+        try {
+            const r    = await fetch(`/api/incident/${incidentId}/get-ioc/${iocId}/`);
+            const data = await r.json();
+            if (data.status === 'success') renderRepModal(data.data);
+        } catch {
+            repModalBody.innerHTML = '<p class="rep-loading">Failed to load reputation data.</p>';
+        }
+    }
+
+    // Attach reputation listeners on initial page load
+    document.querySelectorAll('.rep-cell').forEach(cell => {
+        attachRepListeners(cell);
     });
 
     // ── Save edit ──────────────────────────────────────────────────────────

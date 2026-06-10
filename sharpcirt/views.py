@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.contrib.auth import login, logout, authenticate
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
-from sharpcirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformSettings
+from sharpcirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformSettings, CtiProvider
 from . import models
 from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, get_incidents_by_day_and_severity
 from .threat_intel import schedule_lookup, ELIGIBLE_TYPES as THREAT_INTEL_ELIGIBLE_TYPES
@@ -242,10 +242,12 @@ def overview(request, id):
         else:
             return HttpResponseForbidden("You do not have permission to access this incident.")
 
+    platform = PlatformSettings.get()
     return render(request, 'incidents/overview.html', {
-        'incident': incident,
-        'user': request.user,
-        'current_user_role': user_role
+        'incident':          incident,
+        'user':              request.user,
+        'current_user_role': user_role,
+        'ai_configured':     platform.ai_provider != 'NONE' and bool(platform.ai_api_key),
     })
 
 @login_required(login_url='login')
@@ -300,11 +302,14 @@ def notes(request, id):
             return HttpResponseForbidden("You do not have permission to access this incident.")
     except Incident.DoesNotExist:
         my_object = None
+    shared_files = list(incident.shared_files.all().order_by('-created_at'))
+    for sf in shared_files:
+        sf.is_executable = _get_extension(sf.original_name) in _EXECUTABLE_EXTENSIONS
     return render(request, 'incidents/notes.html', {
-        'incident': incident,
-        'user': request.user,
+        'incident':     incident,
+        'user':         request.user,
         'current_user_role': user_role,
-        'shared_files': incident.shared_files.all().order_by('-created_at'),
+        'shared_files': shared_files,
     })
 
 @login_required(login_url='login')
@@ -391,28 +396,36 @@ def delete_note(request, id):
             return JsonResponse({'error': 'Note not found'}, status=404)        
 
 # ── File upload security ──────────────────────────────────────────────────────
-# Extensions that could be executed on a server (web scripts, shells, compiled
-# binaries, shortcuts…).  Files with these extensions are NEVER accepted.
+# Extensions that can be executed server-side (PHP, ASP, CGI, shell scripts…).
+# These are NEVER accepted — an attacker could trigger server-side execution if
+# the web server ever serves them directly.
 _BLOCKED_EXTENSIONS = frozenset([
-    # Windows executables / installers
-    'exe', 'com', 'scr', 'pif', 'msi', 'msp', 'msc', 'cpl',
-    # Windows batch & scripting
-    'bat', 'cmd', 'vbs', 'vbe', 'js', 'jse', 'ws', 'wsf', 'wsc', 'wsh',
-    'ps1', 'psm1', 'psd1', 'ps1xml', 'lnk', 'url', 'hta',
-    # Unix / Linux shells
-    'sh', 'bash', 'zsh', 'fish', 'ksh', 'csh', 'tcsh',
-    # Interpreted languages
-    'py', 'pyc', 'pyo', 'rb', 'pl', 'lua', 'tcl',
-    # Web-side scripts (dangerous if served by a web server)
+    # Web-side scripts
     'php', 'php3', 'php4', 'php5', 'php7', 'php8', 'phtml', 'phar',
     'asp', 'aspx', 'asa', 'asax', 'ascx', 'ashx', 'asmx',
     'jsp', 'jspx', 'jws', 'cgi',
-    # Compiled binaries / libraries
-    'dll', 'so', 'dylib', 'jar', 'war', 'ear', 'class', 'elf',
-    # Mobile app packages
-    'apk', 'ipa', 'xap',
-    # Web-server config files that could override behaviour
+    # Unix/Linux shells (could run via CGI or misconfigured handler)
+    'sh', 'bash', 'zsh', 'fish', 'ksh', 'csh', 'tcsh',
+    # Interpreted languages runnable server-side
+    'py', 'pyc', 'pyo', 'rb', 'pl', 'lua', 'tcl',
+    # Web-server config overrides
     'htaccess', 'htpasswd',
+])
+
+# Client-side executables / binaries — safe for the server to store, but may
+# be malicious in content.  Uploads are accepted; downloads require confirmation.
+_EXECUTABLE_EXTENSIONS = frozenset([
+    # Windows executables & installers
+    'exe', 'com', 'scr', 'pif', 'msi', 'msp', 'msc', 'cpl',
+    # Windows scripting
+    'bat', 'cmd', 'vbs', 'vbe', 'js', 'jse', 'ws', 'wsf', 'wsc', 'wsh',
+    'ps1', 'psm1', 'psd1', 'ps1xml', 'lnk', 'url', 'hta',
+    # Compiled binaries / libraries
+    'dll', 'so', 'dylib', 'elf',
+    # JVM bytecode / packages
+    'jar', 'war', 'ear', 'class',
+    # Mobile packages
+    'apk', 'ipa', 'xap',
 ])
 
 _MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
@@ -458,10 +471,10 @@ def upload_file(request, id):
     safe_name = _sanitize_filename(f.name)
     ext = _get_extension(safe_name)
 
-    # Block every extension that could be executed on a web server
+    # Block server-side-executable scripts (PHP, ASP, shell, etc.)
     if ext in _BLOCKED_EXTENSIONS:
         return JsonResponse(
-            {'error': f'File type ".{ext}" is not permitted. Only passive/data files may be uploaded.'},
+            {'error': f'File type ".{ext}" cannot be uploaded — server-side scripts are not permitted.'},
             status=400
         )
 
@@ -596,7 +609,15 @@ def iocs(request, id):
             return HttpResponseForbidden("You do not have permission to access this incident.")
     except Incident.DoesNotExist:
         my_object = None
-    return render(request,'incidents/evidence.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
+    cti_configured      = CtiProvider.objects.filter(enabled=True).exclude(api_key='').exists()
+    supported_ioc_types = _cti_supported_types()
+    return render(request, 'incidents/evidence.html', {
+        'incident':            incident,
+        'user':                request.user,
+        'current_user_role':   user_role,
+        'cti_configured':      cti_configured,
+        'supported_ioc_types': supported_ioc_types,
+    })
 
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
@@ -835,11 +856,13 @@ def settings_view(request):
         user.save()
         return redirect('/settings?saved=1')
 
-    platform = PlatformSettings.get()
+    platform      = PlatformSettings.get()
+    cti_providers = CtiProvider.objects.all().order_by('name')
     return render(request, 'settings.html', {
-        'user':     user,
-        'prefs':    prefs,
-        'platform': platform,
+        'user':          user,
+        'prefs':         prefs,
+        'platform':      platform,
+        'cti_providers': cti_providers,
     })
 
 
@@ -883,7 +906,7 @@ def download_incident_csv(request, id):
 
     output = StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Type', 'Value', 'Status', 'Description', 'Created At', 'Linked Actions'])
+    writer.writerow(['Type', 'Value', 'Status', 'Threat Intel Verdict', 'Description', 'Created At', 'Linked Actions'])
 
     for ioc in (
         incident.genericiocs.all()
@@ -891,10 +914,19 @@ def download_incident_csv(request, id):
         .select_related('created_by')
     ):
         linked = ', '.join(str(a.title) for a in ioc.actions.all())
+        rep = ioc.reputation
+        if rep:
+            verdict = rep.get('status', 'unknown').upper()
+            vt = rep.get('vt') or {}
+            if vt.get('total'):
+                verdict += f" ({vt.get('malicious', 0)}/{vt['total']} engines)"
+        else:
+            verdict = ''
         writer.writerow([
             ioc.get_type_display(),
             ioc.value,
             ioc.get_status_display(),
+            verdict,
             ioc.description or '',
             ioc.created_at.strftime('%Y-%m-%d %H:%M') if ioc.created_at else '',
             linked,
@@ -1123,16 +1155,25 @@ def download_incident_word(request, id):
         if not iocs_qs.exists():
             doc.add_paragraph('No IoCs recorded.')
         else:
-            table = doc.add_table(rows=1, cols=4)
+            table = doc.add_table(rows=1, cols=5)
             table.style = 'Table Grid'
-            for i, h in enumerate(['Type', 'Value', 'Status', 'Description']):
+            for i, h in enumerate(['Type', 'Value', 'Status', 'Threat Intel Verdict', 'Description']):
                 table.rows[0].cells[i].text = h
             for ioc in iocs_qs:
+                rep = ioc.reputation
+                if rep:
+                    verdict = rep.get('status', 'unknown').upper()
+                    vt = rep.get('vt') or {}
+                    if vt.get('total'):
+                        verdict += f" ({vt.get('malicious', 0)}/{vt['total']} engines)"
+                else:
+                    verdict = '—'
                 row = table.add_row().cells
                 row[0].text = ioc.get_type_display()
                 row[1].text = ioc.value
                 row[2].text = ioc.get_status_display()
-                row[3].text = ioc.description or '-'
+                row[3].text = verdict
+                row[4].text = ioc.description or '-'
 
     # ── Tasks ──
     if 'tasks' in sections:
@@ -1233,7 +1274,9 @@ def get_messages(request, id):
         msgs = incident.messages.all().order_by('created_at').select_related('sender')
         data = []
         for msg in msgs:
-            if msg.sender:
+            if msg.is_bot:
+                display, initial, username = 'System', 'S', None
+            elif msg.sender:
                 display = (msg.sender.displayname if hasattr(msg.sender, 'displayname') and msg.sender.displayname
                            else msg.sender.username)
                 initial = display[0].upper() if display else '?'
@@ -1285,6 +1328,9 @@ def add_ioc(request, id):
                 link=f"/incident/{incident.id}/iocs"
             )
             _audit(incident, request, 'CREATE', 'IoC', f'Added {ioc.get_type_display()} IoC: {ioc.value}')
+            supported = _cti_supported_types()
+            if supported and ioc.type in supported:
+                return redirect(f'/incident/{id}/iocs?check_new={ioc.id}')
             return redirect('/incident/' + str(id) + '/iocs')
         
     except Incident.DoesNotExist:
@@ -2259,7 +2305,12 @@ def warroom_data(request, id):
     )
     messages_data = []
     for m in reversed(list(msgs_qs)):
-        sender = m.sender.displayname or m.sender.username if m.sender else 'System'
+        if m.is_bot:
+            sender = 'System'
+        elif m.sender:
+            sender = m.sender.displayname or m.sender.username
+        else:
+            sender = 'System'
         messages_data.append({
             'id': m.id,
             'text': m.text,
@@ -2383,3 +2434,217 @@ def save_platform_settings(request):
         'ai_provider': ps.ai_provider,
         'key_set':     bool(ps.ai_api_key),
     })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CTI PROVIDERS (admin-only management)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+def save_cti_provider(request):
+    """
+    POST /api/cti-providers/
+    Upsert (create or update) a CTI provider for the platform.
+    Body: { name, api_key, base_url, enabled }
+    Leaving api_key blank keeps the existing key.
+    """
+    if not request.user.is_admin:
+        return JsonResponse({'error': 'Admin access required.'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+
+    name = body.get('name', '').upper()
+    valid = [c[0] for c in CtiProvider.PROVIDER_CHOICES]
+    if name not in valid:
+        return JsonResponse({'error': f'Unknown provider. Valid: {valid}'}, status=400)
+
+    provider, _ = CtiProvider.objects.get_or_create(name=name)
+
+    new_key = body.get('api_key', '').strip()
+    if new_key:
+        provider.api_key = new_key
+
+    base_url = body.get('base_url', '').strip()
+    if base_url:
+        provider.base_url = base_url
+
+    if 'enabled' in body:
+        provider.enabled = bool(body['enabled'])
+
+    provider.save()
+    return JsonResponse({
+        'status':  'saved',
+        'name':    provider.name,
+        'enabled': provider.enabled,
+        'key_set': bool(provider.api_key),
+    })
+
+
+@login_required(login_url='login')
+def delete_cti_provider(request):
+    """POST /api/cti-providers/delete/  Body: { name }"""
+    if not request.user.is_admin:
+        return JsonResponse({'error': 'Admin access required.'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+
+    name = body.get('name', '').upper()
+    CtiProvider.objects.filter(name=name).delete()
+    return JsonResponse({'status': 'deleted', 'name': name})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IOC REPUTATION LOOKUP
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _cti_supported_types():
+    """Return the set of GenericIoc.type values that have at least one enabled CTI integration."""
+    types = set()
+    if CtiProvider.objects.filter(name='VIRUSTOTAL', enabled=True).exclude(api_key='').exists():
+        types.update({'IPADRESS', 'DOMAIN', 'HASH', 'FILE', 'URL'})
+    # Future: AbuseIPDB / Shodan → 'IPADRESS'
+    return types
+
+
+def _vt_lookup(ioc, api_key):
+    """Query VirusTotal v3 for a GenericIoc. Returns a result dict or None."""
+    import httpx, base64
+
+    base    = 'https://www.virustotal.com/api/v3'
+    headers = {'x-apikey': api_key}
+    itype   = ioc.type
+    value   = ioc.value.strip()
+
+    if itype == 'IPADRESS':
+        endpoint = f'{base}/ip_addresses/{value}'
+        gui_path = f'ip-address/{value}'
+    elif itype == 'DOMAIN':
+        endpoint = f'{base}/domains/{value}'
+        gui_path = f'domain/{value}'
+    elif itype in ('HASH', 'FILE'):
+        endpoint = f'{base}/files/{value}'
+        gui_path = f'file/{value}'
+    elif itype == 'URL':
+        url_id   = base64.urlsafe_b64encode(value.encode()).decode().rstrip('=')
+        endpoint = f'{base}/urls/{url_id}'
+        gui_path = f'url/{url_id}'
+    else:
+        return None   # type not supported by VT
+
+    try:
+        resp = httpx.get(endpoint, headers=headers, timeout=10)
+    except Exception as exc:
+        return {'provider': 'VirusTotal', 'verdict': 'error', 'detail': str(exc), 'link': None}
+
+    if resp.status_code == 404:
+        return {'provider': 'VirusTotal', 'verdict': 'unknown',
+                'detail': 'Not found in VirusTotal database', 'link': None}
+    if resp.status_code == 401:
+        return {'provider': 'VirusTotal', 'verdict': 'error',
+                'detail': 'Invalid API key', 'link': None}
+    if resp.status_code != 200:
+        return {'provider': 'VirusTotal', 'verdict': 'error',
+                'detail': f'HTTP {resp.status_code}', 'link': None}
+
+    attrs      = resp.json().get('data', {}).get('attributes', {})
+    stats      = attrs.get('last_analysis_stats', {})
+    malicious  = stats.get('malicious',  0)
+    suspicious = stats.get('suspicious', 0)
+    harmless   = stats.get('harmless',   0)
+    undetected = stats.get('undetected', 0)
+    total      = sum(stats.values())
+
+    if malicious > 0:
+        verdict = 'malicious'
+    elif suspicious > 0:
+        verdict = 'suspicious'
+    elif total == 0:
+        verdict = 'unknown'
+    else:
+        verdict = 'clean'
+
+    result = {
+        'provider':   'VirusTotal',
+        'verdict':    verdict,
+        'score':      f'{malicious}/{total}',
+        'malicious':  malicious,
+        'suspicious': suspicious,
+        'harmless':   harmless,
+        'undetected': undetected,
+        'total':      total,
+        'link':       f'https://www.virustotal.com/gui/{gui_path}',
+    }
+    # Extra contextual fields (IP/domain/file)
+    for field in ('country', 'asn', 'as_owner', 'meaningful_name', 'type_description',
+                  'network', 'last_analysis_date'):
+        val = attrs.get(field)
+        if val is not None:
+            result[field] = val
+    return result
+
+
+@login_required(login_url='login')
+@user_is_incident_responder_orpublic
+def ioc_reputation(request, id, ioc_id):
+    """
+    GET /api/incident/<id>/ioc/<ioc_id>/reputation/
+    Query all enabled CTI providers, persist results, return JSON for the UI.
+    Response: { status: 'ok', reputation: { status, checked_at, vt: {...} } }
+    """
+    from django.utils import timezone as tz
+    incident = get_object_or_404(Incident, pk=id)
+    ioc      = get_object_or_404(GenericIoc, pk=ioc_id, incident=incident)
+
+    providers = CtiProvider.objects.filter(enabled=True).exclude(api_key='')
+    if not providers.exists():
+        return JsonResponse({'status': 'error', 'error': 'No CTI providers configured.'}, status=503)
+
+    raw_results = []
+    for p in providers:
+        if p.name == 'VIRUSTOTAL':
+            r = _vt_lookup(ioc, p.api_key)
+            if r:
+                raw_results.append(r)
+        # Future providers: ABUSEIPDB, SHODAN, OTXALIENVAULT, MISP …
+
+    if not raw_results:
+        return JsonResponse({
+            'status': 'error',
+            'error':  'No configured provider supports this IoC type.',
+        }, status=422)
+
+    # Determine worst verdict across all providers
+    SEVERITY = {'malicious': 3, 'suspicious': 2, 'unknown': 1, 'clean': 0, 'error': -1}
+    worst_verdict = max(
+        (r.get('verdict', 'error') for r in raw_results),
+        key=lambda v: SEVERITY.get(v, -1),
+    )
+    # Map 'error' → 'unknown' for display
+    status = worst_verdict if worst_verdict in SEVERITY and worst_verdict != 'error' else 'unknown'
+
+    # Build reputation object in the shape renderRepModal expects
+    reputation = {
+        'status':     status,
+        'checked_at': tz.now().isoformat(),
+    }
+    for r in raw_results:
+        if r.get('provider') == 'VirusTotal':
+            reputation['vt'] = {k: v for k, v in r.items()
+                                if k not in ('provider', 'verdict', 'score')}
+
+    # Persist to the ioc record
+    ioc.reputation = reputation
+    ioc.save(update_fields=['reputation'])
+    _audit(incident, request, 'UPDATE', 'IoC', f'Reputation checked for IoC #{ioc.id} ({ioc.value}) — verdict: {status}')
+
+    return JsonResponse({'status': 'ok', 'reputation': reputation})
