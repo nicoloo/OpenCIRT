@@ -26,13 +26,13 @@ SECRET_KEY = 'django-insecure-nsc+0)*z!9m50@3*lp&1(sq6&%9zk(9r*=q=$j=g*9*-_7h3jn
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 MEDIA_URL = '/media/'
 
 # Directory to store media files
 # MEDIA_ROOT = "C:\\Users\\Nicolas\\crud\\sharpcirt\\media
-MEDIA_ROOT = os.path.join(BASE_DIR, 'sharpcirt/media/')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'opencirt/media/')
 
 # Application definition
 
@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'sharpcirt',
+    'opencirt',
 ]
 
 MIDDLEWARE = [
@@ -69,7 +69,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'sharpcirt.choices_processor.choices_context',
+                'opencirt.choices_processor.choices_context',
             ],
         },
     },
@@ -138,6 +138,12 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-AUTH_USER_MODEL = 'sharpcirt.User' 
+AUTH_USER_MODEL = 'opencirt.User'
 
 handler403 = 'myapp.views.custom_403'  # (if you want to handle 403 specifically in a custom view)
+
+# ── AI rephrase keys — set via environment variables ─────────────────────────
+# Set ANTHROPIC_API_KEY and/or OPENAI_API_KEY in your environment.
+# Anthropic is preferred when both are present.
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+OPENAI_API_KEY    = os.environ.get('OPENAI_API_KEY', '')

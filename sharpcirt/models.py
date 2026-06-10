@@ -63,6 +63,7 @@ class Incident(models.Model):
     invite_code = models.CharField(max_length=6, blank=True, default='')
     TLP_CHOICES = [('CLEAR','CLEAR'),('GREEN','GREEN'),('AMBER','AMBER'),('RED','RED')]
     tlp = models.CharField(max_length=10, choices=TLP_CHOICES, default='CLEAR')
+    ai_rephrase_enabled = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name

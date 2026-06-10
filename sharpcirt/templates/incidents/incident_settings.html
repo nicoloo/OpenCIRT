@@ -479,7 +479,34 @@
         </div>
     </div>
 
-    <!-- ── Section 3: Team / Responders ─────────────────────────── -->
+    <!-- ── Section 3: AI Features ───────────────────────────────── -->
+    <div class="settings-section" id="section-ai">
+        <h2 class="settings-section-title">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> AI Features
+        </h2>
+
+        <div class="settings-toggle-row">
+            <label class="toggle-switch">
+                <input type="checkbox" id="field-ai-rephrase"
+                    {% if incident.ai_rephrase_enabled %}checked{% endif %}
+                    {% if current_user_role.role != 'INCIDENT_LEAD' %}disabled{% endif %}>
+                <span class="toggle-slider"></span>
+            </label>
+            <div>
+                <div class="toggle-label">AI-assisted text generation</div>
+                <div class="toggle-hint">
+                    When enabled, sparkle buttons appear on the Overview page for Description,
+                    Executive Summary, Technical Details, and Lessons Learned.
+                    Each click generates text from the incident's timeline, IoCs, and tasks.
+                    Requires <code style="font-size:0.75rem;background:var(--hover-color);padding:1px 4px;border-radius:4px;">ANTHROPIC_API_KEY</code>
+                    or <code style="font-size:0.75rem;background:var(--hover-color);padding:1px 4px;border-radius:4px;">OPENAI_API_KEY</code>
+                    on the server.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Section 4: Team / Responders ─────────────────────────── -->
     <div class="settings-section" id="section-team">
         <h2 class="settings-section-title">
             <i class="fa-solid fa-users"></i> Team
@@ -694,6 +721,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 if (r.ok) flashSaved();
                 else alert('Failed to save settings.');
+            } catch(e) { console.error(e); }
+        });
+    }
+
+    // ── AI rephrase toggle — auto-save ────────────────────────────
+    const aiRephraseToggle = document.getElementById('field-ai-rephrase');
+    if (aiRephraseToggle && !aiRephraseToggle.disabled) {
+        aiRephraseToggle.addEventListener('change', async () => {
+            try {
+                const r = await fetch(`/api/incident/${incidentId}/update/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body: JSON.stringify({ ai_rephrase_enabled: aiRephraseToggle.checked }),
+                });
+                if (r.ok) flashSaved();
             } catch(e) { console.error(e); }
         });
     }

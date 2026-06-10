@@ -1886,6 +1886,8 @@ def update_incident(request, id):
                     incident.tlp = data['tlp']
             if 'is_public' in data and user_role == 'INCIDENT_LEAD':
                 incident.is_public = bool(data['is_public'])
+            if 'ai_rephrase_enabled' in data and user_role == 'INCIDENT_LEAD':
+                incident.ai_rephrase_enabled = bool(data['ai_rephrase_enabled'])
 
             # Save the updated incident
             incident.save()
@@ -2011,3 +2013,153 @@ def export_audit_logs(request, id):
         f'attachment; filename="audit_log_incident_{id}.csv"'
     )
     return response
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AI REPHRASE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+@user_is_incident_responder_orpublic
+def ai_rephrase(request, id):
+    """
+    POST  /api/incident/<id>/ai-rephrase/
+    Body: { "field": "description" | "executive_summary" | "technical_details" | "lessons_learned" }
+
+    Generates text for the requested field using Anthropic Claude (preferred)
+    or OpenAI GPT depending on which API key is configured on the server.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    incident = get_object_or_404(Incident, pk=id)
+
+    if not incident.ai_rephrase_enabled:
+        return JsonResponse({'error': 'AI rephrase is not enabled for this incident.'}, status=403)
+
+    # Restrict to write-capable roles
+    try:
+        user_role = UserRole.objects.get(user=request.user, incident_id=id).role
+        if user_role in ('READER', 'PUBLIC_VIEWER'):
+            return JsonResponse({'error': 'Permission denied: read-only role.'}, status=403)
+    except UserRole.DoesNotExist:
+        pass  # Public incident — logged-in non-responder; allow (already passed decorator)
+
+    try:
+        body = json.loads(request.body)
+        field = body.get('field', '').strip()
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({'error': 'Invalid JSON body.'}, status=400)
+
+    valid_fields = ('description', 'executive_summary', 'technical_details', 'lessons_learned')
+    if field not in valid_fields:
+        return JsonResponse(
+            {'error': f'Invalid field. Must be one of: {", ".join(valid_fields)}'},
+            status=400,
+        )
+
+    # Resolve API keys
+    from django.conf import settings as _settings
+    anthropic_key = getattr(_settings, 'ANTHROPIC_API_KEY', '') or os.environ.get('ANTHROPIC_API_KEY', '')
+    openai_key    = getattr(_settings, 'OPENAI_API_KEY',    '') or os.environ.get('OPENAI_API_KEY',    '')
+
+    if not anthropic_key and not openai_key:
+        return JsonResponse(
+            {'error': 'No AI API key is configured on the server. '
+                      'Set ANTHROPIC_API_KEY or OPENAI_API_KEY.'},
+            status=503,
+        )
+
+    # ── Build incident context ────────────────────────────────────────────
+    actions = incident.actions.all().order_by('observed_at', 'starting_time')
+    iocs    = incident.genericiocs.all()
+    tasks   = incident.tasks.all()
+
+    def _fmt(dt):
+        return dt.strftime('%Y-%m-%d %H:%M') if dt else 'unknown'
+
+    action_lines = [
+        f"  [{_fmt(a.observed_at or a.starting_time)}] {a.type}: {a.title} — {a.description or '(no description)'}"
+        for a in actions
+    ] or ['  (no events recorded)']
+
+    ioc_lines = [
+        f"  {ioc.type}: {ioc.value} — {ioc.description or '(no description)'}"
+        for ioc in iocs
+    ] or ['  (no IoCs recorded)']
+
+    task_lines = [
+        f"  [{t.status}] {t.title}: {t.description or '(no description)'}"
+        for t in tasks
+    ] or ['  (no tasks recorded)']
+
+    FIELD_INSTRUCTIONS = {
+        'description': (
+            'Write a concise incident description (2–4 sentences). '
+            'Summarise what happened: incident type, initial vector if known, affected systems, and scope. '
+            'Use factual, neutral language. Plain text only — no markdown, no headings.'
+        ),
+        'executive_summary': (
+            'Write a professional executive summary (3–5 sentences) for a non-technical audience. '
+            'Focus on business impact, what was affected, the response taken, and current status. '
+            'Avoid technical jargon. Plain text only — no markdown, no headings.'
+        ),
+        'technical_details': (
+            'Write a detailed technical analysis. '
+            'Cover the attack vector, techniques observed (reference specific IoCs and timeline events), '
+            'affected systems, and containment actions taken. '
+            'Be precise and technical. Plain text only — no markdown, no headings.'
+        ),
+        'lessons_learned': (
+            'Write a lessons learned section covering: what detection gaps existed, what response actions worked well, '
+            'what could have been improved, and 3–5 concrete recommendations to prevent recurrence. '
+            'Be actionable. Plain text only — no markdown, no headings.'
+        ),
+    }
+
+    field_display = field.replace('_', ' ').title()
+
+    prompt = (
+        f'You are a senior incident response analyst writing a professional security incident report.\n\n'
+        f'Based on the incident data below, write ONLY the "{field_display}" section.\n'
+        f'Do NOT include a heading or section title. Output plain prose only — no markdown, '
+        f'no bullet points, no bold/italic formatting.\n\n'
+        f'INCIDENT: {incident.name}\n'
+        f'STATUS: {incident.status} | SEVERITY: {incident.severity} | TLP: {incident.tlp}\n'
+        f'STARTED: {_fmt(incident.starting_time)} | '
+        f'ENDED: {_fmt(incident.ending_time) if incident.ending_time else "ongoing"}\n\n'
+        f'TIMELINE ({actions.count()} events):\n' + '\n'.join(action_lines) + '\n\n'
+        f'INDICATORS OF COMPROMISE ({iocs.count()} IoCs):\n' + '\n'.join(ioc_lines) + '\n\n'
+        f'TASKS ({tasks.count()} tasks):\n' + '\n'.join(task_lines) + '\n\n'
+        f'INSTRUCTION: {FIELD_INSTRUCTIONS[field]}'
+    )
+
+    # ── Call AI provider ──────────────────────────────────────────────────
+    try:
+        if anthropic_key:
+            import anthropic as _anthropic_sdk
+            client  = _anthropic_sdk.Anthropic(api_key=anthropic_key)
+            message = client.messages.create(
+                model='claude-3-5-haiku-20241022',
+                max_tokens=1024,
+                messages=[{'role': 'user', 'content': prompt}],
+            )
+            generated = message.content[0].text.strip()
+            provider  = 'Anthropic'
+        else:
+            from openai import OpenAI as _OpenAI
+            client   = _OpenAI(api_key=openai_key)
+            response = client.chat.completions.create(
+                model='gpt-4o-mini',
+                max_tokens=1024,
+                messages=[{'role': 'user', 'content': prompt}],
+            )
+            generated = response.choices[0].message.content.strip()
+            provider  = 'OpenAI'
+
+        _audit(incident, request, 'UPDATE', 'AI Rephrase',
+               f'AI-generated "{field_display}" via {provider}')
+        return JsonResponse({'text': generated, 'field': field, 'provider': provider})
+
+    except Exception as exc:
+        return JsonResponse({'error': f'AI generation failed: {exc}'}, status=500)
