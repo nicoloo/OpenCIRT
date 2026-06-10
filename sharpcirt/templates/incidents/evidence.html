@@ -41,7 +41,6 @@
                         <th>Type</th>
                         <th>Value</th>
                         <th>Description</th>
-                        <th>Tags</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -69,13 +68,6 @@
                             </td>
                             <td class="ioc-value-cell" data-raw="{{ ioc.value }}" data-type="{{ ioc.type }}" title="{{ ioc.value }}">{{ ioc.value }}</td>
                             <td>{{ ioc.description }}</td>
-                            <td>
-                                {% for tag in ioc.tags.all %}
-                                    <span class="ioc-tag" style="background-color: {{ tag.color }}">
-                                        #{{ tag.name }}
-                                    </span>
-                                {% endfor %}
-                            </td>
                             <td>
                                 {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
                                 <div class="ioc-delete-cell" onclick="event.stopPropagation()">
@@ -145,11 +137,7 @@
             </div>
 
             <div class="form-row">
-                <div class="form-group">
-                    <label for="ioc-tag">Tags</label>
-                    <input type="text" id="ioc-tag" name="tag" placeholder="Comma-separated tags">
-                </div>
-                <div class="form-group">
+                <div class="form-group form-group-full">
                     <label for="created_at">Created At</label>
                     <input type="text" id="created_at" name="created_at" readonly>
                 </div>
@@ -204,11 +192,6 @@
                     <label for="modal-ioc-description">Description</label>
                     <textarea id="modal-ioc-description"></textarea>
                 </div>
-            </div>
-
-            <div class="form-section">
-                <h3 class="form-section-title">Tags</h3>
-                <div id="modal-ioc-tags" class="tags-container"></div>
             </div>
 
             <div class="form-section">
