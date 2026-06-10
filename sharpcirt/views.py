@@ -525,10 +525,12 @@ def incident_settings(request, id):
             return HttpResponseForbidden("You do not have permission to access this incident.")
     except Incident.DoesNotExist:
         return HttpResponseNotFound("Incident not found.")
+    platform = PlatformSettings.get()
     return render(request, 'incidents/incident_settings.html', {
-        'incident': incident,
-        'user': request.user,
+        'incident':         incident,
+        'user':             request.user,
         'current_user_role': user_role,
+        'ai_configured':    platform.ai_provider != 'NONE' and bool(platform.ai_api_key),
     })
 
 @login_required(login_url='login')

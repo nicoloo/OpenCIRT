@@ -485,6 +485,7 @@
             <i class="fa-solid fa-wand-magic-sparkles"></i> AI Features
         </h2>
 
+        {% if ai_configured %}
         <div class="settings-toggle-row">
             <label class="toggle-switch">
                 <input type="checkbox" id="field-ai-rephrase"
@@ -498,10 +499,29 @@
                     When enabled, sparkle buttons appear on the Overview page for Description,
                     Executive Summary, Technical Details, and Lessons Learned.
                     Each click generates text from the incident's timeline, IoCs, and tasks.
-                    The AI provider is configured by your platform administrator in Platform Settings.
                 </div>
             </div>
         </div>
+        {% else %}
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:4px 0;">
+            <label class="toggle-switch" style="flex-shrink:0;margin-top:2px;">
+                <input type="checkbox" disabled>
+                <span class="toggle-slider"></span>
+            </label>
+            <div>
+                <div class="toggle-label" style="color:var(--text-color-2);">AI-assisted text generation</div>
+                <div class="toggle-hint" style="margin-top:4px;">
+                    <i class="fa-solid fa-triangle-exclamation" style="color:#fd7e14;margin-right:4px;"></i>
+                    No AI provider is configured for this platform.
+                    {% if user.is_admin %}
+                    Go to <a href="/settings" style="color:var(--accent-color);font-weight:600;">Platform Settings</a> to add an API key.
+                    {% else %}
+                    Ask your administrator to configure an AI provider in Platform Settings.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- ── Section 4: Team / Responders ─────────────────────────── -->
