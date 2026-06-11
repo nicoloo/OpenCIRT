@@ -1,78 +1,372 @@
 {% extends 'base2.html' %}
 {% load static %}
 {% load custom_filters %}
+
+{% block styles %}
+<style>
+.profile-page {
+    padding: 32px 28px;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.profile-page h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    margin: 0 0 24px 0;
+}
+
+/* ── Avatar card ── */
+.profile-avatar-card {
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 22px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 16px;
+}
+
+.profile-avatar-big {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--main-color-2);
+    color: var(--text-color-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.9rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    border: 2px solid var(--border-color);
+    overflow: hidden;
+}
+
+.profile-avatar-big img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-avatar-info strong {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    margin-bottom: 2px;
+}
+
+.profile-avatar-info small {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-color-2);
+    margin-bottom: 10px;
+}
+
+/* ── Sections (reuse settings pattern) ── */
+.settings-section {
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+
+.settings-section-header {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--main-color-1);
+}
+
+.settings-section-header h2 {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-1);
+    margin: 0;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 20px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 20px;
+}
+
+.settings-row:last-child {
+    border-bottom: none;
+}
+
+.settings-row-label {
+    flex: 1;
+    min-width: 0;
+}
+
+.settings-row-label strong {
+    display: block;
+    font-size: 0.86rem;
+    color: var(--text-color-1);
+    margin-bottom: 2px;
+}
+
+.settings-row-label span {
+    font-size: 0.75rem;
+    color: var(--text-color-2);
+}
+
+.settings-input {
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--background-color);
+    color: var(--text-color-1);
+    font-size: 0.85rem;
+    font-family: inherit;
+    min-width: 200px;
+    transition: border-color 0.15s;
+}
+
+.settings-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.settings-select {
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--background-color);
+    color: var(--text-color-1);
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.settings-select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+/* ── Password inline section ── */
+.password-rows {
+    display: none;
+}
+
+.password-rows.open {
+    display: contents;
+}
+
+/* ── Buttons ── */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 20px;
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.15s;
+}
+
+.btn-primary:hover { opacity: 0.87; }
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    background: transparent;
+    color: var(--text-color-2);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.83rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-secondary:hover {
+    background: var(--main-color-1);
+    color: var(--text-color-1);
+}
+
+.profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+/* Error / success feedback */
+.profile-msg {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.83rem;
+    margin-bottom: 14px;
+}
+.profile-msg.error {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+}
+.profile-msg.success {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    color: #166534;
+}
+
+/* ── File input hidden ── */
+#profile_picture { display: none; }
+</style>
+{% endblock %}
+
 {% block content %}
-
 <main>
-    <div class="widget profile" style="max-width:520px;margin:0 auto;padding:0 0 20px 0;">
-        <h3>Profile</h3>
-        <form method="POST" enctype="multipart/form-data" action="{% url 'update_profile' %}" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
-            {% csrf_token %}
+<div class="profile-page">
+    <h1>Profile</h1>
 
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" value="{{ user.username }}">
+    {% if error %}
+    <div class="profile-msg error"><i class="fa-solid fa-circle-exclamation"></i> {{ error }}</div>
+    {% endif %}
+    {% if success %}
+    <div class="profile-msg success"><i class="fa-solid fa-circle-check"></i> {{ success }}</div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" action="{% url 'update_profile' %}">
+        {% csrf_token %}
+
+        <!-- Avatar card -->
+        <div class="profile-avatar-card">
+            <div class="profile-avatar-big" id="avatarPreview">
+                {% if user.profile_picture and user.profile_picture.name != 'profile_pics/default.jpg' %}
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" id="avatarImg">
+                {% else %}
+                    <span id="avatarInitial">{{ user.username|slice:":1"|upper }}</span>
+                {% endif %}
             </div>
-
-            <div class="form-group">
-                <label for="displayname">Display Name</label>
-                <input type="text" id="displayname" name="displayname" value="{{ user.displayname }}">
+            <div class="profile-avatar-info">
+                <strong>{{ user.displayname|default:user.username }}</strong>
+                <small>{{ user.username }}{% if user.email %} &nbsp;·&nbsp; {{ user.email }}{% endif %}</small>
+                <button type="button" class="btn-secondary" onclick="document.getElementById('profile_picture').click()">
+                    <i class="fa-solid fa-camera"></i> Change photo
+                </button>
+                <input type="file" id="profile_picture" name="profile_picture" accept=".jpg,.jpeg,.png">
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" value="{{ user.email }}">
+        <!-- Account -->
+        <div class="settings-section">
+            <div class="settings-section-header"><h2>Account</h2></div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <strong>Username</strong>
+                </div>
+                <input class="settings-input" type="text" name="username" value="{{ user.username }}">
             </div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <strong>Display name</strong>
+                    <span>Shown to other responders</span>
+                </div>
+                <input class="settings-input" type="text" name="displayname" value="{{ user.displayname }}">
+            </div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <strong>Email</strong>
+                </div>
+                <input class="settings-input" type="email" name="email" value="{{ user.email }}">
+            </div>
+        </div>
 
-            <div class="form-group">
-                <label for="light_mode">Theme</label>
-                <select id="light_mode" name="light_mode">
+        <!-- Appearance -->
+        <div class="settings-section">
+            <div class="settings-section-header"><h2>Appearance</h2></div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <strong>Theme</strong>
+                    <span>Applies to your account only</span>
+                </div>
+                <select class="settings-select" name="light_mode">
                     <option value="light_mode" {% if user.light_mode == "light_mode" %}selected{% endif %}>Light mode</option>
                     <option value="dark_mode" {% if user.light_mode == "dark_mode" %}selected{% endif %}>Dark mode</option>
                 </select>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="profile_picture">Profile Picture</label>
-                <input type="file" id="profile_picture" name="profile_picture">
-            </div>
-
-            <div>
-                <button type="button" class="btn btn-secondary" onclick="togglePasswordForm()">
-                    <i class="fa-solid fa-key"></i> Change Password
+        <!-- Security -->
+        <div class="settings-section">
+            <div class="settings-section-header"><h2>Security</h2></div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <strong>Password</strong>
+                    <span>Change your login password</span>
+                </div>
+                <button type="button" class="btn-secondary" id="togglePasswordBtn" onclick="togglePassword()">
+                    <i class="fa-solid fa-key"></i> Change
                 </button>
             </div>
-
-            <div id="password-form" style="display:none;display:flex;flex-direction:column;gap:16px;">
-                <div class="form-group">
-                    <label for="current_password">Current Password</label>
-                    <input type="password" id="current_password" name="current_password">
+            <div class="password-rows" id="passwordRows">
+                <div class="settings-row">
+                    <div class="settings-row-label"><strong>Current password</strong></div>
+                    <input class="settings-input" type="password" name="current_password" id="current_password" autocomplete="current-password">
                 </div>
-                <div class="form-group">
-                    <label for="new_password">New Password</label>
-                    <input type="password" id="new_password" name="new_password">
+                <div class="settings-row">
+                    <div class="settings-row-label"><strong>New password</strong></div>
+                    <input class="settings-input" type="password" name="new_password" id="new_password" autocomplete="new-password">
                 </div>
-                <div class="form-group">
-                    <label for="confirm_password">Confirm New Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password">
+                <div class="settings-row">
+                    <div class="settings-row-label"><strong>Confirm new password</strong></div>
+                    <input class="settings-input" type="password" name="confirm_password" id="confirm_password" autocomplete="new-password">
                 </div>
             </div>
+        </div>
 
-            <div>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-floppy-disk"></i> Save Profile
-                </button>
-            </div>
-        </form>
-    </div>
+        <div class="profile-actions">
+            <button type="submit" class="btn-primary">
+                <i class="fa-solid fa-floppy-disk"></i> Save changes
+            </button>
+        </div>
+
+    </form>
+</div>
 </main>
 
 <script>
-    function togglePasswordForm() {
-        const form = document.getElementById("password-form");
-        form.style.display = form.style.display === "none" ? "flex" : "none";
+function togglePassword() {
+    const rows = document.getElementById('passwordRows');
+    const btn  = document.getElementById('togglePasswordBtn');
+    const open = rows.classList.toggle('open');
+    btn.innerHTML = open
+        ? '<i class="fa-solid fa-xmark"></i> Cancel'
+        : '<i class="fa-solid fa-key"></i> Change';
+    if (!open) {
+        document.getElementById('current_password').value = '';
+        document.getElementById('new_password').value = '';
+        document.getElementById('confirm_password').value = '';
     }
-    document.getElementById("password-form").style.display = "none";
-</script>
+}
 
+// Live avatar preview when a photo is selected
+document.getElementById('profile_picture').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const preview = document.getElementById('avatarPreview');
+        preview.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;" alt="preview">';
+    };
+    reader.readAsDataURL(file);
+});
+</script>
 {% endblock %}

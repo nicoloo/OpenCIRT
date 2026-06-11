@@ -2,97 +2,165 @@
 
 {% block styles %}
 <style>
-.about-wrap {
-    max-width: 800px;
+.roadmap-page {
+    padding: 32px 28px;
+    max-width: 680px;
     margin: 0 auto;
-    width: 100%;
 }
-@media (max-width: 640px) {
-    .about-wrap { padding: 0 2px; }
-    main { padding: 14px 12px; }
+
+.roadmap-page h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    margin: 0 0 24px 0;
+}
+
+.roadmap-section {
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.roadmap-section-header {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--main-color-1);
+}
+
+.roadmap-section-header h2 {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-1);
+    margin: 0;
+}
+
+.roadmap-group-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--accent-color);
+    padding: 12px 20px 4px;
+}
+
+.roadmap-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 9px 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.roadmap-item:first-of-type {
+    border-top: none;
+}
+
+.roadmap-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    margin-top: 7px;
+    flex-shrink: 0;
+}
+
+.roadmap-dot.future {
+    background: var(--muted-color);
+}
+
+.roadmap-item p {
+    font-size: 0.84rem;
+    color: var(--text-color-1);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.roadmap-item small {
+    display: block;
+    font-size: 0.73rem;
+    color: var(--text-color-2);
+    margin-top: 2px;
 }
 </style>
 {% endblock %}
 
 {% block content %}
 <main>
-    <div class="about-wrap">
-    <div class="main-frame-vertical">
+<div class="roadmap-page">
+    <h1>Roadmap</h1>
 
-        <div class="widget" style="padding:0 0 20px 0;">
-            <h3>In progress / Next up</h3>
-            <div style="padding:0 24px;">
+    <!-- In progress -->
+    <div class="roadmap-section">
+        <div class="roadmap-section-header"><h2>In progress</h2></div>
 
-                <p class="h4" style="margin-top:16px;">Platform</p>
-                <ul>
-                    <li>Proper RBAC (role-based access control)</li>
-                    <li>Audit trail — full history of changes to an incident</li>
-                    <li>Export and import incident as JSON</li>
-                    <li>Download all IoCs in MISP-importable format</li>
-                    <li>MISP / Jira / Microsoft Defender integration stubs</li>
-
-                    <li>Error when i try to login using responder1 account : not enough values to unpack (expected 4, got 3)</li>
-                    <li>Remove the former / page, and directly redirect to the /home page </li>
-                    <li>Implement DARK/LIGHT mode. the toggle already exists in the user settings but does not do anything. this will be stored as a user preference</li>
-                    <li>move the password reset and last login and the theme from the settings page to the user profile page</li>
-                    <li>For email notifications, you  need to configure the email settings in the platform (smtp server etc)</li>
-                    <li>On the incident, you can add "tags", for example "Reputation Risk" or "Fraud" or "Supply Chain attack", or "Insider Threat" or Data breaches etc. You will also provide the ability to create a new tag like this. You will display it on the incident as well as on the home page</li>
-                    <li>Refactor the profile page to make it match the new design</li>
-                    <li>On the homepage timechart about incidents, put a toggle to choose the timeframe, and regroup by date when relevant (for example when you choose 1 year, the span has to be month, not days) </li>
-                    <li>Create fixtures for 3 security incidents scenarios that have been reported. you will add iocs, notes, actions etc etc. make it look real</li>
-                    <li>Proper RBAC (role-based access control)</li>
-                    <li>Write github workflows for CI/CD tests</li>
-                    <li>Rename everything from "SharpCIRT" to "OpenCIRT"</li>
-                    <li>Operationalize the platform through docker and docker compose. Write the documentation and the readme on how to use it</li>
-
-
-                </ul>
-
+        <div class="roadmap-group-title">Access &amp; Security</div>
+        <div class="roadmap-item">
+            <div class="roadmap-dot"></div>
+            <div><p>Proper RBAC (role-based access control)</p></div>
+        </div>
+        <div class="roadmap-item">
+            <div class="roadmap-dot"></div>
+            <div>
+                <p>Dark / Light mode</p>
+                <small>Toggle exists in user settings but not yet active</small>
+            </div>
+        </div>
+        <div class="roadmap-item">
+            <div class="roadmap-dot"></div>
+            <div>
+                <p>Email notifications</p>
+                <small>Requires SMTP configuration in platform settings</small>
             </div>
         </div>
 
-        <div class="widget" style="padding:0 0 20px 0;">
-            <h3>Done ✓</h3>
-            <div style="padding:0 24px;">
-                <ul>
-                    <li><s>Modify / Add / Delete IoC feature</s></li>
-                    <li><s>Frontend refactor — sidebar design, ochre palette, CSS variables</s></li>
-                    <li><s>Refactor all templates to new design</s></li>
-                    <li><s>Profile picture fallback (letter avatar)</s></li>
-                    <li><s>Fix IoC modal display bug</s></li>
-                    <li><s>Fix chat message rendering</s></li>
-                    <li><s>Fix 403 on note save (CSRF)</s></li>
-                    <li><s>Observed time visible on each timeline action</s></li>
-                    <li><s>Role select styling in Responders</s></li>
-                    <li><s>IoC filter — search bar + type dropdown (client-side, instant)</s></li>
-                    <li><s>Delete confirmation without JS confirm() — IoC page + Timeline</s></li>
-                    <li><s>IoC format validation (IP, email, hash, network, ports)</s></li>
-                    <li><s>Tasks page — spacing between toolbar and kanban board</s></li>
-                    <li><s>Activity page — auto-post chat message on IoC / task / note / action add</s></li>
-                    <li><s>Floating chat tab — accessible from any incident page</s></li>
-                    <li><s>Timeline — IoC picker in Add Action modal</s></li>
-                    <li><s>Modify action feature (edit in timeline)</s></li>
-                    <li><s>Home page redesign — stats bar, search/filter toolbar, incident cards, 3 charts</s></li>
-                    <li><s>Create incident page — minimal form, auto-assigns creator as Incident Lead</s></li>
-                    <li><s>Invite flow — join link + 6-digit code + QR code, post-creation invite screen</s></li>
-                    <li><s>Settings page — theme, notifications, platform defaults, security</s></li>
-                </ul>
+        <div class="roadmap-group-title">Incidents &amp; Data</div>
+        <div class="roadmap-item">
+            <div class="roadmap-dot"></div>
+            <div>
+                <p>Tags on incidents</p>
+                <small>e.g. Fraud, Insider Threat, Supply Chain, Data Breach — with custom tag creation</small>
             </div>
         </div>
-
-        <div class="widget" style="padding:0 0 20px 0;">
-            <h3>Future</h3>
-            <div style="padding:0 24px;">
-                <ul>
-                    <li>Share IOCs between incidents</li>
-                    <li>Word report export</li>
-                    <li>Import tasks playbook (pre-created tasks)</li>
-                    <li>Documentation and README for integrations</li>
-                </ul>
+        <div class="roadmap-item">
+            <div class="roadmap-dot"></div>
+            <div>
+                <p>Homepage timechart — timeframe toggle</p>
+                <small>With smart date grouping (days → months when zooming out)</small>
             </div>
         </div>
+        <div class="roadmap-item">
+            <div class="roadmap-dot"></div>
+            <div><p>Download all IoCs in MISP-importable format</p></div>
+        </div>
 
+        <div class="roadmap-group-title">Integrations</div>
+        <div class="roadmap-item">
+            <div class="roadmap-dot"></div>
+            <div><p>Jira / Microsoft Defender integration stubs</p></div>
+        </div>
     </div>
+
+    <!-- Future -->
+    <div class="roadmap-section">
+        <div class="roadmap-section-header"><h2>Future</h2></div>
+        <div class="roadmap-item">
+            <div class="roadmap-dot future"></div>
+            <div><p>Share IoCs between incidents</p></div>
+        </div>
+        <div class="roadmap-item">
+            <div class="roadmap-dot future"></div>
+            <div><p>Import tasks playbook (pre-created task templates)</p></div>
+        </div>
+        <div class="roadmap-item">
+            <div class="roadmap-dot future"></div>
+            <div><p>Documentation and README for integrations</p></div>
+        </div>
     </div>
+
+</div>
 </main>
 {% endblock %}
