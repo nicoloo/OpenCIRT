@@ -59,22 +59,6 @@ TLP_COLORS = {
 }
 
 @login_required(login_url='login')
-def index(request):
-    # Get incidents where the user has a role OR the incident is public
-    user_roles = UserRole.objects.filter(user=request.user).select_related('incident')
-    user_incidents = Incident.objects.filter(
-        id__in=[user_role.incident.id for user_role in user_roles]
-    )
-    public_incidents = Incident.objects.filter(is_public=True)
-
-    # Combine both sets of incidents
-    incidents = user_incidents | public_incidents
-    return render(request, 'index.html', {
-        'incidents': incidents,
-        'user': request.user,
-    })
-
-@login_required(login_url='login')
 def home(request):
     # Get incidents where the user has a role OR the incident is public
     user_roles = UserRole.objects.filter(user=request.user).select_related('incident')
@@ -183,14 +167,14 @@ def custom_login(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            next_url = request.GET.get('next', '/')
+            next_url = request.GET.get('next', '/home')
             # Guard against open-redirect: only allow same-host relative URLs
             if not url_has_allowed_host_and_scheme(
                 next_url,
                 allowed_hosts={request.get_host()},
                 require_https=request.is_secure(),
             ):
-                next_url = '/'
+                next_url = '/home'
             return redirect(next_url)
         return render(request, 'login.html', {'error': 'Invalid username or password'})
     return render(request, 'login.html')

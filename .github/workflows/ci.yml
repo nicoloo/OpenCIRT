@@ -39,8 +39,21 @@ jobs:
       - name: Start stack
         run: docker compose up -d
 
-      - name: Wait for services
-        run: docker compose ps
+      - name: Wait for backend to be healthy
+        run: |
+          echo "Waiting for backend to become healthy..."
+          for i in $(seq 1 40); do
+            status=$(docker inspect --format='{{.State.Health.Status}}' $(docker compose ps -q backend) 2>/dev/null || echo "unknown")
+            echo "  attempt $i/40 — $status"
+            if [ "$status" = "healthy" ]; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Backend did not become healthy in time"
+          docker compose logs backend
+          exit 1
 
       - name: Run Django system checks
         run: docker compose exec -T backend python manage.py check

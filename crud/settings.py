@@ -147,7 +147,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
 
-LOGIN_REDIRECT_URL = '/index/'
+LOGIN_REDIRECT_URL = '/home'
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
