@@ -2018,7 +2018,7 @@ def update_role(request, id):
     user = get_object_or_404(User, id=user_id)
     user_role, created = UserRole.objects.get_or_create(user=user, incident=incident)
     if new_role:
-        if new_role not in dict(USER_ROLES_CHOICES):
+        if new_role not in dict(UserRole._meta.get_field('role').choices):
             return JsonResponse({"error": "Invalid role selected"}, status=400)
         user_role.role = new_role
         user_role.save()
