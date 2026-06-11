@@ -195,8 +195,10 @@ def profile(request):
     except:
         return JsonResponse({'error': 'La galere'}, status=404)
  
+    prefs = request.user.preferences if request.user.preferences else {}
     return render(request, 'profile.html', {
-        'user': request.user
+        'user': request.user,
+        'prefs': prefs,
     })
 
 @login_required
@@ -837,13 +839,9 @@ def settings_view(request):
     prefs = user.preferences if user.preferences else {}
 
     if request.method == 'POST':
-        prefs['theme'] = request.POST.get('theme', 'light_mode')
         prefs['default_severity'] = request.POST.get('default_severity', 'MEDIUM')
-        prefs['notify_assignment'] = 'notify_assignment' in request.POST
-        prefs['notify_mention'] = 'notify_mention' in request.POST
         prefs['chart_period'] = request.POST.get('chart_period', '30d')
         user.preferences = prefs
-        user.light_mode = prefs['theme']
         user.save()
         return redirect('/settings?saved=1')
 
@@ -2180,11 +2178,20 @@ def update_profile(request):
                 user.set_password(new_password)  # Securely update password
                 update_session_auth_hash(request, user)  # Keep the user logged in
 
+            # Save notification preferences
+            prefs = user.preferences if user.preferences else {}
+            prefs['notify_assignment'] = 'notify_assignment' in request.POST
+            prefs['notify_mention'] = 'notify_mention' in request.POST
+            user.preferences = prefs
+
             # Save the updated user profile
             user.save()
-            messages.success(request, "Profile updated successfully!")
 
-            return render(request, 'profile.html')
+            return render(request, 'profile.html', {
+                'user': request.user,
+                'prefs': prefs,
+                'success': 'Profile updated successfully!',
+            })
 
         except User.DoesNotExist:
             return JsonResponse({'error': 'User not found'}, status=404)

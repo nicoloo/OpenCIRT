@@ -226,6 +226,58 @@
     color: #166534;
 }
 
+/* ── Toggle switch ── */
+.settings-toggle {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.settings-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border-color);
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    left: 3px;
+    top: 3px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.settings-toggle input:checked + .toggle-slider {
+    background: var(--accent-color);
+}
+
+.settings-toggle input:checked + .toggle-slider:before {
+    transform: translateX(18px);
+}
+
+.settings-meta {
+    font-size: 0.8rem;
+    color: var(--text-color-2);
+    font-family: monospace;
+    flex-shrink: 0;
+}
+
 /* ── File input hidden ── */
 #profile_picture { display: none; }
 </style>
@@ -329,6 +381,40 @@
                     <div class="settings-row-label"><strong>Confirm new password</strong></div>
                     <input class="settings-input" type="password" name="confirm_password" id="confirm_password" autocomplete="new-password">
                 </div>
+            </div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <strong>Last login</strong>
+                    <span>Your most recent login time</span>
+                </div>
+                <span class="settings-meta">{{ user.last_connection_time|default:"Never recorded" }}</span>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="settings-section">
+            <div class="settings-section-header"><h2>Notifications</h2></div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <strong>Email on new assignment</strong>
+                    <span>Receive an email when assigned to a new incident</span>
+                </div>
+                <label class="settings-toggle">
+                    <input type="checkbox" name="notify_assignment"
+                           {% if prefs.notify_assignment %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <strong>Email on @mention</strong>
+                    <span>Receive an email when mentioned in incident chat</span>
+                </div>
+                <label class="settings-toggle">
+                    <input type="checkbox" name="notify_mention"
+                           {% if prefs.notify_mention %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
             </div>
         </div>
 
