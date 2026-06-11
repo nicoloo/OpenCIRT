@@ -527,6 +527,9 @@ def incident_settings(request, id):
             return HttpResponseForbidden("You do not have permission to access this incident.")
     except Incident.DoesNotExist:
         return HttpResponseNotFound("Incident not found.")
+    if user_role.role not in ('INCIDENT_LEAD',) and not request.user.is_admin:
+        return HttpResponseForbidden("You do not have permission to access incident settings.")
+
     platform = PlatformSettings.get()
     return render(request, 'incidents/incident_settings.html', {
         'incident':         incident,

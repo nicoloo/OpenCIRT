@@ -70,12 +70,14 @@
                 <i class="fa-solid fa-file-lines nav-icon"></i>
                 <span class="nav-label">Reporting</span>
             </a>
+            {% if current_user_role.role == 'INCIDENT_LEAD' or user.is_admin %}
             <a href="/incident/{{incident.id}}/settings"
                class="nav-link {% if '/settings' in request.path %}active{% endif %}"
                data-tooltip="Settings">
                 <i class="fa-solid fa-gear nav-icon"></i>
                 <span class="nav-label">Settings</span>
             </a>
+            {% endif %}
             <a href="/incident/{{incident.id}}/warroom"
                class="nav-link {% if '/warroom' in request.path %}active{% endif %}"
                data-tooltip="War Room"
