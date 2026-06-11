@@ -51,10 +51,12 @@
                 
 
                 </div>
+                {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
                 <div class="chat-input">
                     <textarea id="chatInput" placeholder="Type a message..."></textarea>
                     <button id="sendButton">Send</button>
                 </div>
+                {% endif %}
             </div>
 
         </div>
