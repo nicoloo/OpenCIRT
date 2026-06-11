@@ -16,13 +16,13 @@
 
 | File | Action | Responsibility |
 |---|---|---|
-| `sharpcirt/report_generators.py` | **Create** | Constants, `parse_sections`, `parse_tlp`, `generate_markdown`, `generate_deep_json` |
-| `sharpcirt/tests/test_report_generators.py` | **Create** | Unit tests for generator helpers |
-| `sharpcirt/templates/reports/report_template.html` | **Create** | Self-contained HTML report (no external CSS). Used by preview, PDF, HTML archive |
-| `sharpcirt/views.py` | **Modify** | Remove pdfkit import; replace pdf/md/json views; add report_preview, download_word, download_csv, download_html |
-| `sharpcirt/urls.py` | **Modify** | Add 4 new endpoints (preview, word, csv, html) |
-| `sharpcirt/templates/incidents/report.html` | **Rewrite** | Two-panel page: section picker left, iframe preview right |
-| `sharpcirt/static/css/report.css` | **Rewrite** | Two-panel layout, export buttons, section picker styles |
+| `opencirt/report_generators.py` | **Create** | Constants, `parse_sections`, `parse_tlp`, `generate_markdown`, `generate_deep_json` |
+| `opencirt/tests/test_report_generators.py` | **Create** | Unit tests for generator helpers |
+| `opencirt/templates/reports/report_template.html` | **Create** | Self-contained HTML report (no external CSS). Used by preview, PDF, HTML archive |
+| `opencirt/views.py` | **Modify** | Remove pdfkit import; replace pdf/md/json views; add report_preview, download_word, download_csv, download_html |
+| `opencirt/urls.py` | **Modify** | Add 4 new endpoints (preview, word, csv, html) |
+| `opencirt/templates/incidents/report.html` | **Rewrite** | Two-panel page: section picker left, iframe preview right |
+| `opencirt/static/css/report.css` | **Rewrite** | Two-panel layout, export buttons, section picker styles |
 
 ---
 
@@ -50,12 +50,12 @@ Expected: `python-docx OK`
 - [ ] **Step 3: Create the reports template directory**
 
 ```bash
-mkdir -p sharpcirt/templates/reports
+mkdir -p opencirt/templates/reports
 ```
 
 - [ ] **Step 4: Remove dead pdfkit import from views.py**
 
-In `sharpcirt/views.py`, find and remove line 19:
+In `opencirt/views.py`, find and remove line 19:
 ```python
 import pdfkit
 ```
@@ -65,28 +65,28 @@ The file should keep `from xhtml2pdf import pisa` (line 17) and `from io import 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add sharpcirt/views.py
+git add opencirt/views.py
 git commit -m "chore: install python-docx, remove pdfkit import"
 ```
 
 ---
 
-## Task 2: Create `sharpcirt/report_generators.py`
+## Task 2: Create `opencirt/report_generators.py`
 
 **Files:**
-- Create: `sharpcirt/report_generators.py`
-- Create: `sharpcirt/tests/__init__.py` (empty)
-- Create: `sharpcirt/tests/test_report_generators.py`
+- Create: `opencirt/report_generators.py`
+- Create: `opencirt/tests/__init__.py` (empty)
+- Create: `opencirt/tests/test_report_generators.py`
 
 - [ ] **Step 1: Write the tests first**
 
-Create `sharpcirt/tests/__init__.py` (empty file) then create `sharpcirt/tests/test_report_generators.py`:
+Create `opencirt/tests/__init__.py` (empty file) then create `opencirt/tests/test_report_generators.py`:
 
 ```python
 """Unit tests for report_generators.py helpers."""
 import pytest
 from unittest.mock import MagicMock, patch
-from sharpcirt.report_generators import (
+from opencirt.report_generators import (
     ALL_SECTIONS,
     DEFAULT_SECTIONS,
     parse_sections,
@@ -165,7 +165,7 @@ def _make_incident():
     incident.duration = '2:00:00'
     incident.time_to_detect = '0:15:00'
     incident.time_to_respond = '0:30:00'
-    incident.created_by = MagicMock(username='lead_admin')
+    incident.created_by = MagicMock(username='admin')
     incident.is_public = False
     incident.genericiocs.all.return_value = [ioc]
     incident.genericiocs.exists.return_value = True
@@ -225,12 +225,12 @@ def test_generate_markdown_pipe_in_value_is_escaped():
 - [ ] **Step 2: Run tests — expect ImportError (module doesn't exist yet)**
 
 ```bash
-python -m pytest sharpcirt/tests/test_report_generators.py -v 2>&1 | head -20
+python -m pytest opencirt/tests/test_report_generators.py -v 2>&1 | head -20
 ```
 
-Expected: `ImportError: cannot import name 'parse_sections' from 'sharpcirt.report_generators'` (or ModuleNotFoundError)
+Expected: `ImportError: cannot import name 'parse_sections' from 'opencirt.report_generators'` (or ModuleNotFoundError)
 
-- [ ] **Step 3: Create `sharpcirt/report_generators.py`**
+- [ ] **Step 3: Create `opencirt/report_generators.py`**
 
 ```python
 """
@@ -575,7 +575,7 @@ def generate_deep_json(incident, generated_by):
 - [ ] **Step 4: Run tests — expect all pass**
 
 ```bash
-python -m pytest sharpcirt/tests/test_report_generators.py -v
+python -m pytest opencirt/tests/test_report_generators.py -v
 ```
 
 Expected: all 18 tests PASS.
@@ -583,7 +583,7 @@ Expected: all 18 tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add sharpcirt/report_generators.py sharpcirt/tests/
+git add opencirt/report_generators.py opencirt/tests/
 git commit -m "feat: add report_generators module with parse_sections, parse_tlp, generate_markdown, generate_deep_json"
 ```
 
@@ -592,7 +592,7 @@ git commit -m "feat: add report_generators module with parse_sections, parse_tlp
 ## Task 3: Create unified HTML report template
 
 **Files:**
-- Create: `sharpcirt/templates/reports/report_template.html`
+- Create: `opencirt/templates/reports/report_template.html`
 
 This template is self-contained (all CSS inline, no external dependencies). It is used by:
 - `report_preview` → returned as HTML for the iframe `srcdoc`
@@ -608,7 +608,7 @@ Context variables it expects:
 - `generated_at` — formatted datetime string
 - `generated_by` — username string
 
-- [ ] **Step 1: Create `sharpcirt/templates/reports/report_template.html`**
+- [ ] **Step 1: Create `opencirt/templates/reports/report_template.html`**
 
 ```html
 <!DOCTYPE html>
@@ -1013,7 +1013,7 @@ body {
 - [ ] **Step 2: Commit**
 
 ```bash
-git add sharpcirt/templates/reports/report_template.html
+git add opencirt/templates/reports/report_template.html
 git commit -m "feat: add self-contained unified report HTML template"
 ```
 
@@ -1022,12 +1022,12 @@ git commit -m "feat: add self-contained unified report HTML template"
 ## Task 4: Add `report_preview` view and URL
 
 **Files:**
-- Modify: `sharpcirt/views.py` — add import + view
-- Modify: `sharpcirt/urls.py` — add URL pattern
+- Modify: `opencirt/views.py` — add import + view
+- Modify: `opencirt/urls.py` — add URL pattern
 
 - [ ] **Step 1: Add import to views.py**
 
-At the top of `sharpcirt/views.py`, after the existing imports (around line 22), add:
+At the top of `opencirt/views.py`, after the existing imports (around line 22), add:
 
 ```python
 from .report_generators import parse_sections, parse_tlp, TLP_STYLES, DEFAULT_SECTIONS, ALL_SECTIONS, generate_markdown, generate_deep_json
@@ -1070,7 +1070,7 @@ def report_preview(request, id):
 
 - [ ] **Step 3: Add URL pattern to urls.py**
 
-In `sharpcirt/urls.py`, add after the `download-pdf` line (around line 36):
+In `opencirt/urls.py`, add after the `download-pdf` line (around line 36):
 
 ```python
 path('api/incident/<int:id>/report-preview/', views.report_preview, name='report_preview'),
@@ -1087,7 +1087,7 @@ Expected: a styled HTML page with cover + executive summary + metadata sections,
 - [ ] **Step 5: Commit**
 
 ```bash
-git add sharpcirt/views.py sharpcirt/urls.py
+git add opencirt/views.py opencirt/urls.py
 git commit -m "feat: add report_preview API endpoint"
 ```
 
@@ -1096,7 +1096,7 @@ git commit -m "feat: add report_preview API endpoint"
 ## Task 5: Rewrite `download_incident_pdf` (xhtml2pdf)
 
 **Files:**
-- Modify: `sharpcirt/views.py` — replace the existing `download_incident_pdf` function
+- Modify: `opencirt/views.py` — replace the existing `download_incident_pdf` function
 
 - [ ] **Step 1: Replace the function**
 
@@ -1167,7 +1167,7 @@ Expected: `PDF document, version 1.4` (or similar).
 - [ ] **Step 3: Commit**
 
 ```bash
-git add sharpcirt/views.py
+git add opencirt/views.py
 git commit -m "feat: replace wkhtmltopdf PDF with xhtml2pdf, add section/TLP support"
 ```
 
@@ -1176,12 +1176,12 @@ git commit -m "feat: replace wkhtmltopdf PDF with xhtml2pdf, add section/TLP sup
 ## Task 6: Add `download_incident_word` view
 
 **Files:**
-- Modify: `sharpcirt/views.py` — add import + new view
-- Modify: `sharpcirt/urls.py` — add URL pattern
+- Modify: `opencirt/views.py` — add import + new view
+- Modify: `opencirt/urls.py` — add URL pattern
 
 - [ ] **Step 1: Add python-docx import to views.py**
 
-After the existing imports block at the top of `sharpcirt/views.py`, add:
+After the existing imports block at the top of `opencirt/views.py`, add:
 
 ```python
 from docx import Document as DocxDocument
@@ -1394,7 +1394,7 @@ Navigate to the report page (Task 11) and click the Word button, or use curl. Op
 - [ ] **Step 5: Commit**
 
 ```bash
-git add sharpcirt/views.py sharpcirt/urls.py
+git add opencirt/views.py opencirt/urls.py
 git commit -m "feat: add Word (.docx) export via python-docx"
 ```
 
@@ -1403,7 +1403,7 @@ git commit -m "feat: add Word (.docx) export via python-docx"
 ## Task 7: Rewrite `download_incident_markdown`
 
 **Files:**
-- Modify: `sharpcirt/views.py` — replace the function body
+- Modify: `opencirt/views.py` — replace the function body
 
 - [ ] **Step 1: Replace the function**
 
@@ -1440,7 +1440,7 @@ def download_incident_markdown(request, id):
 - [ ] **Step 2: Commit**
 
 ```bash
-git add sharpcirt/views.py
+git add opencirt/views.py
 git commit -m "feat: rewrite markdown export with section picker + TLP support"
 ```
 
@@ -1449,7 +1449,7 @@ git commit -m "feat: rewrite markdown export with section picker + TLP support"
 ## Task 8: Rewrite `download_incident_json` (deep export)
 
 **Files:**
-- Modify: `sharpcirt/views.py` — replace the function body
+- Modify: `opencirt/views.py` — replace the function body
 
 - [ ] **Step 1: Replace the function**
 
@@ -1483,7 +1483,7 @@ def download_incident_json(request, id):
 - [ ] **Step 2: Commit**
 
 ```bash
-git add sharpcirt/views.py
+git add opencirt/views.py
 git commit -m "feat: replace shallow JSON export with deep serialiser (iocs, timeline, notes, tasks, impacts)"
 ```
 
@@ -1492,8 +1492,8 @@ git commit -m "feat: replace shallow JSON export with deep serialiser (iocs, tim
 ## Task 9: Add `download_incident_csv` view
 
 **Files:**
-- Modify: `sharpcirt/views.py` — add new view
-- Modify: `sharpcirt/urls.py` — add URL pattern
+- Modify: `opencirt/views.py` — add new view
+- Modify: `opencirt/urls.py` — add URL pattern
 
 - [ ] **Step 1: Add the view after `download_incident_json`**
 
@@ -1546,7 +1546,7 @@ path('api/incident/<int:id>/download-csv/', views.download_incident_csv, name='d
 - [ ] **Step 3: Commit**
 
 ```bash
-git add sharpcirt/views.py sharpcirt/urls.py
+git add opencirt/views.py opencirt/urls.py
 git commit -m "feat: add CSV IoC export"
 ```
 
@@ -1555,8 +1555,8 @@ git commit -m "feat: add CSV IoC export"
 ## Task 10: Add `download_incident_html` view
 
 **Files:**
-- Modify: `sharpcirt/views.py` — add new view
-- Modify: `sharpcirt/urls.py` — add URL pattern
+- Modify: `opencirt/views.py` — add new view
+- Modify: `opencirt/urls.py` — add URL pattern
 
 - [ ] **Step 1: Add the view**
 
@@ -1606,7 +1606,7 @@ path('api/incident/<int:id>/download-html/', views.download_incident_html, name=
 - [ ] **Step 3: Commit**
 
 ```bash
-git add sharpcirt/views.py sharpcirt/urls.py
+git add opencirt/views.py opencirt/urls.py
 git commit -m "feat: add HTML archive export"
 ```
 
@@ -1615,9 +1615,9 @@ git commit -m "feat: add HTML archive export"
 ## Task 11: Report page UI — rewrite `report.html` and `report.css`
 
 **Files:**
-- Modify: `sharpcirt/views.py` — update `report` view context
-- Rewrite: `sharpcirt/templates/incidents/report.html`
-- Rewrite: `sharpcirt/static/css/report.css`
+- Modify: `opencirt/views.py` — update `report` view context
+- Rewrite: `opencirt/templates/incidents/report.html`
+- Rewrite: `opencirt/static/css/report.css`
 
 ### Sub-step A: Update the `report` view
 
@@ -1651,7 +1651,7 @@ def report(request, id):
 
 ### Sub-step B: Rewrite `report.html`
 
-- [ ] **Step 2: Rewrite `sharpcirt/templates/incidents/report.html`**
+- [ ] **Step 2: Rewrite `opencirt/templates/incidents/report.html`**
 
 ```html
 {% extends 'incidents/base.html' %}
@@ -1881,7 +1881,7 @@ refreshPreview();
 
 ### Sub-step C: Rewrite `report.css`
 
-- [ ] **Step 3: Rewrite `sharpcirt/static/css/report.css`**
+- [ ] **Step 3: Rewrite `opencirt/static/css/report.css`**
 
 ```css
 /* ── Report page — two-panel layout ── */
@@ -2073,7 +2073,7 @@ refreshPreview();
 - [ ] **Step 4: Manual end-to-end test**
 
 1. Start the server: `python manage.py runserver 8765`
-2. Log in as `lead_admin / admin`
+2. Log in as `admin / admin`
 3. Open any incident → Report tab
 4. Verify: two-panel layout loads, preview populates within 1s
 5. Toggle a section checkbox → preview updates after 400ms
@@ -2088,7 +2088,7 @@ refreshPreview();
 - [ ] **Step 5: Commit**
 
 ```bash
-git add sharpcirt/views.py sharpcirt/templates/incidents/report.html sharpcirt/static/css/report.css
+git add opencirt/views.py opencirt/templates/incidents/report.html opencirt/static/css/report.css
 git commit -m "feat: report page — two-panel section picker + live preview + 6 export formats"
 ```
 
@@ -2108,7 +2108,7 @@ After all tasks are complete:
 - [ ] Section toggle + TLP change each trigger a debounced preview refresh
 - [ ] Tasks and Notes checkboxes start unchecked (spec requirement)
 - [ ] No pdfkit import remains in views.py
-- [ ] `python -m pytest sharpcirt/tests/test_report_generators.py -v` passes
+- [ ] `python -m pytest opencirt/tests/test_report_generators.py -v` passes
 
 ---
 

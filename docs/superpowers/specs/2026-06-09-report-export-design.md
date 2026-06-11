@@ -64,7 +64,7 @@ Live preview `<iframe>` rendered server-side. Updates 400ms after any section ch
 ### One template, three renderers
 
 ```
-sharpcirt/templates/reports/report_template.html
+opencirt/templates/reports/report_template.html
     ↓  rendered with context {incident, sections: set[str], tlp: str}
     ├── GET  /api/<id>/report-preview/    → HTML string → iframe srcdoc
     ├── POST /api/<id>/download-pdf/      → xhtml2pdf → .pdf download
@@ -203,11 +203,11 @@ Existing endpoints `download_incident_pdf`, `download_incident_markdown`, `downl
 
 | File | Action |
 |---|---|
-| `sharpcirt/templates/incidents/report.html` | Full rewrite — section picker + live preview pane |
-| `sharpcirt/templates/reports/report_template.html` | New — unified HTML report template |
-| `sharpcirt/static/css/report.css` | Full rewrite — two-panel layout + print CSS |
-| `sharpcirt/views.py` | Add `report_preview`, `download_word`, `download_csv`, `download_html`; replace PDF/MD/JSON views |
-| `sharpcirt/urls.py` | Add new endpoints, replace old ones |
+| `opencirt/templates/incidents/report.html` | Full rewrite — section picker + live preview pane |
+| `opencirt/templates/reports/report_template.html` | New — unified HTML report template |
+| `opencirt/static/css/report.css` | Full rewrite — two-panel layout + print CSS |
+| `opencirt/views.py` | Add `report_preview`, `download_word`, `download_csv`, `download_html`; replace PDF/MD/JSON views |
+| `opencirt/urls.py` | Add new endpoints, replace old ones |
 | `requirements.txt` | Add `python-docx` |
 
 ---

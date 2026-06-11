@@ -1,0 +1,97 @@
+/* CSV import modal — mirrors the Shared Files upload design (notes.html) */
+
+.csv-import-body { padding: 24px; }
+@media (max-width: 600px) {
+    .csv-import-body { padding: 16px; }
+}
+
+.csv-import-hint-text {
+    color: var(--text-color-2);
+    font-size: 0.82rem;
+    line-height: 1.55;
+    margin: 0 0 14px;
+}
+.csv-import-hint-text code {
+    background: var(--main-color-1);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+}
+
+.csv-drop-zone {
+    border: 2px dashed var(--border-color);
+    border-radius: 10px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--background-color);
+}
+.csv-drop-zone:hover,
+.csv-drop-zone.drag-over {
+    border-color: var(--accent-color);
+    background: var(--main-color-1);
+}
+.csv-drop-zone i {
+    font-size: 1.6rem;
+    color: var(--text-color-2);
+    margin-bottom: 8px;
+    display: block;
+}
+.csv-drop-zone p {
+    margin: 0 0 4px;
+    font-size: 0.85rem;
+    color: var(--text-color-2);
+}
+.csv-drop-zone .csv-drop-hint {
+    font-size: 0.72rem;
+    color: var(--text-color-2);
+    opacity: 0.7;
+}
+.csv-drop-zone input[type="file"] { display: none; }
+
+/* Selected-file row (same look as a file-item in the files list) */
+.csv-selected-file {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--widget-background-color);
+}
+.csv-file-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--main-color-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: var(--accent-color);
+    flex-shrink: 0;
+}
+.csv-file-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-color-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Result / error banner */
+.csv-import-result {
+    display: none;
+    font-size: 0.83rem;
+    margin: 12px 0 0;
+    padding: 8px 14px;
+    border-radius: 8px;
+}
+.csv-import-result.info { background: var(--main-color-1); border: 1px solid var(--border-color); color: var(--text-color-2); }
+.csv-import-result.ok   { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
+.csv-import-result.err  { background: #fff5f5; border: 1px solid #fecaca; color: #dc3545; }

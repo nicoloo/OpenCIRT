@@ -1,0 +1,296 @@
+{% extends 'incidents/base.html' %}
+
+{% load static %}
+{% load custom_filters %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/overview.css' %}">
+<style>
+/* ── AI rephrase button ── */
+.section-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.ai-rephrase-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 11px;
+    border: 1px solid var(--accent-color);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--accent-color);
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, opacity 0.15s;
+    font-family: inherit;
+    line-height: 1.6;
+    flex-shrink: 0;
+}
+
+.ai-rephrase-btn:hover:not(:disabled) {
+    background: var(--accent-color);
+    color: #fff;
+}
+
+.ai-rephrase-btn:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="overview-page">
+    <form id="incident-form">
+
+        <div class="overview-header">
+            <div class="overview-title-row">
+                <input type="text" id="title" name="title"
+                       class="title-input"
+                       value="{{ incident.name }}"
+                       placeholder="Incident title"
+                       {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+                <div class="header-badges">
+                    <span class="badge badge-status badge-{{ incident.status|lower }}">{{ incident.status }}</span>
+                    <span class="badge badge-severity badge-{{ incident.severity|lower }}">{{ incident.severity }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="overview-body">
+
+            <div class="overview-main">
+
+                <div class="section-card">
+                    <div class="section-label-row">
+                        <label class="section-label" for="description">Description</label>
+                        {% if ai_configured and incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                        <button type="button" class="ai-rephrase-btn"
+                                data-field="description" data-target="description"
+                                title="Generate from incident data">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                        </button>
+                        {% endif %}
+                    </div>
+                    <textarea id="description" name="description" class="section-textarea"
+                              {% if current_user_role.role in 'READER, PUBLIC_VIEWER' %}disabled{% endif %}>{{ incident.description }}</textarea>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-label-row">
+                        <label class="section-label" for="summary">Executive Summary</label>
+                        {% if ai_configured and incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                        <button type="button" class="ai-rephrase-btn"
+                                data-field="executive_summary" data-target="summary"
+                                title="Generate from incident data">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                        </button>
+                        {% endif %}
+                    </div>
+                    <textarea id="summary" name="summary" class="section-textarea"
+                              {% if current_user_role.role in 'PUBLIC_VIEWER' %}disabled{% endif %}>{{ incident.executive_summary }}</textarea>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-label-row">
+                        <label class="section-label" for="lessons-learned">Lessons Learned</label>
+                        {% if ai_configured and incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                        <button type="button" class="ai-rephrase-btn"
+                                data-field="lessons_learned" data-target="lessons-learned"
+                                title="Generate from incident data">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                        </button>
+                        {% endif %}
+                    </div>
+                    <textarea id="lessons-learned" name="lessons-learned" class="section-textarea"
+                              {% if current_user_role.role in 'READER, PUBLIC_VIEWER' %}disabled{% endif %}>{{ incident.lessons_learned }}</textarea>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-label-row">
+                        <label class="section-label" for="technical-details">Technical Details</label>
+                        {% if ai_configured and incident.ai_rephrase_enabled and current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                        <button type="button" class="ai-rephrase-btn"
+                                data-field="technical_details" data-target="technical-details"
+                                title="Generate from incident data">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                        </button>
+                        {% endif %}
+                    </div>
+                    <textarea id="technical-details" name="technical-details" class="section-textarea"
+                              {% if current_user_role.role in 'READER, PUBLIC_VIEWER' %}disabled{% endif %}>{{ incident.technical_details }}</textarea>
+                </div>
+
+            </div>
+
+            <div class="overview-side">
+
+                <div class="meta-card">
+                    <div class="meta-field">
+                        <label class="section-label" for="status">Status</label>
+                        <select id="status" name="status" class="meta-select" autocomplete="off"
+                                {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+                            {% for val, label in INCIDENT_STATUS_CHOICES %}
+                                <option value="{{ val }}" {% if incident.status == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="meta-field">
+                        <label class="section-label" for="severity">Severity</label>
+                        <select id="severity" name="severity" class="meta-select" autocomplete="off"
+                                {% if current_user_role.role in 'RESPONDER, READER, PUBLIC_VIEWER' %}disabled{% endif %}>
+                            {% for val, label in INCIDENT_SEVERITY_CHOICES %}
+                                <option value="{{ val }}" {% if incident.severity == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% if incident.external_reference %}
+                    <div class="meta-field">
+                        <label class="section-label">External reference</label>
+                        {% if incident.external_reference|slice:":7" == "http://" or incident.external_reference|slice:":8" == "https://" %}
+                            <a href="{{ incident.external_reference }}" target="_blank" rel="noopener noreferrer" class="meta-ext-ref-link">{{ incident.external_reference }}</a>
+                        {% else %}
+                            <span class="meta-ext-ref">{{ incident.external_reference }}</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">Time to Detect</span>
+                        <strong class="metric-value">{{ incident.time_to_detect|duration_format }}</strong>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Time to Respond</span>
+                        <strong class="metric-value">{{ incident.time_to_respond|duration_format }}</strong>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Duration</span>
+                        <strong class="metric-value">{{ incident.duration|duration_format }}</strong>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">IoCs Found</span>
+                        <strong class="metric-value">{{ incident.genericiocs.count }}</strong>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">CIRT Members</span>
+                        <strong class="metric-value">{{ incident.incident_roles.count }}</strong>
+                    </div>
+                </div>
+
+                <div class="timing-card">
+                    <i class="fa-solid fa-calendar-days timing-icon"></i>
+                    <div>
+                        <span class="timing-label">Started</span>
+                        <strong class="timing-value">{{ incident.starting_time|date:"j F Y \\a\\t H:i" }}</strong>
+                    </div>
+                </div>
+
+                <div class="save-indicator" id="saveIndicator">
+                    <i class="fa-solid fa-circle-check"></i> Saved
+                </div>
+
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('incident-form');
+    const incidentId = '{{ incident.id }}';
+    const csrfToken = '{{ csrf_token }}';
+    const saveIndicator = document.getElementById('saveIndicator');
+    let saveTimer;
+
+    function showSaved() {
+        saveIndicator.classList.add('visible');
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => saveIndicator.classList.remove('visible'), 2000);
+    }
+
+    // ── AI rephrase buttons ───────────────────────────────────────
+    document.querySelectorAll('.ai-rephrase-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const field    = btn.dataset.field;
+            const targetId = btn.dataset.target;
+            const textarea = document.getElementById(targetId);
+            if (!textarea) return;
+
+            const originalHtml = btn.innerHTML;
+            btn.disabled  = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Generating…';
+
+            try {
+                const resp = await fetch(`/api/incident/${incidentId}/ai-rephrase/`, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body:    JSON.stringify({ field }),
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    alert(data.error || 'AI generation failed.');
+                    return;
+                }
+                // Fill textarea and trigger auto-save via blur event
+                textarea.value = data.text;
+                textarea.dispatchEvent(new Event('blur', { bubbles: true }));
+            } catch(e) {
+                alert('Error: ' + e.message);
+            } finally {
+                btn.disabled  = false;
+                btn.innerHTML = originalHtml;
+            }
+        });
+    });
+
+    form.querySelectorAll('input, textarea, select').forEach(field => {
+        field.addEventListener('blur', async (event) => {
+            const f = event.target;
+            const formData = new FormData(form);
+            const data = {};
+
+            if (f.name === 'title' && formData.get('title') !== '{{ incident.name|escapejs }}') {
+                data.title = formData.get('title');
+            } else if (f.name === 'description' && formData.get('description') !== '{{ incident.description|escapejs }}') {
+                data.description = formData.get('description');
+            } else if (f.name === 'summary' && formData.get('summary') !== '{{ incident.executive_summary|escapejs }}') {
+                data.executive_summary = formData.get('summary');
+            } else if (f.name === 'lessons-learned' && formData.get('lessons-learned') !== '{{ incident.lessons_learned|escapejs }}') {
+                data.lessons_learned = formData.get('lessons-learned');
+            } else if (f.name === 'technical-details' && formData.get('technical-details') !== '{{ incident.technical_details|escapejs }}') {
+                data.technical_details = formData.get('technical-details');
+            } else if (f.name === 'status' && formData.get('status') !== '{{ incident.status|escapejs }}') {
+                data.status = formData.get('status');
+            } else if (f.name === 'severity' && formData.get('severity') !== '{{ incident.severity|escapejs }}') {
+                data.severity = formData.get('severity');
+            }
+
+            if (Object.keys(data).length > 0) {
+                try {
+                    const response = await fetch(`/api/incident/${incidentId}/update/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    if (response.ok) showSaved();
+                } catch (err) {
+                    console.error('Save failed:', err);
+                }
+            }
+        });
+    });
+});
+</script>
+
+{% endblock %}

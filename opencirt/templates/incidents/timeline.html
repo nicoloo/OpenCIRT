@@ -1,0 +1,474 @@
+{% extends 'incidents/base.html' %}
+{% load static %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/timeline.css' %}">
+    <link rel="stylesheet" href="{% static 'css/modal.css' %}">
+    <link rel="stylesheet" href="{% static 'css/csv-import.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="timeline-page" incident-id="{{ incident.id }}">
+
+    <div class="tl-header">
+        <div class="tl-header-left">
+            <h1 class="tl-title">Timeline</h1>
+            <span class="tl-count">{{ incident.actions.count }} event{% if incident.actions.count != 1 %}s{% endif %}</span>
+        </div>
+        {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+        <div class="tl-header-actions">
+            <button id="importActionBtn" class="add-action-btn" style="background:transparent;border:1px solid var(--accent-color);color:var(--accent-color);">
+                <i class="fa-solid fa-file-csv"></i> Import CSV
+            </button>
+            <button class="add-action-btn ActionAddButton">
+                <i class="fa-solid fa-plus"></i> Add Action
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ── Import Actions Modal ──────────────────────────────────────── -->
+    <div id="importActionModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Import timeline actions from CSV</h2>
+                <span class="close import-action-modal">&times;</span>
+            </div>
+            <div class="csv-import-body">
+                <p class="csv-import-hint-text">
+                    Upload a CSV with a header row. Columns: <code>title</code>, <code>description</code>, <code>type</code>,
+                    <code>observed_at</code> (or <code>starting_time</code> + <code>ending_time</code>).
+                    Dates in ISO format, e.g. <code>2026-06-08T14:30</code>.
+                </p>
+                <div class="csv-drop-zone" id="import-action-drop">
+                    <input type="file" id="import-action-file" accept=".csv,text/csv">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <p>Drop a CSV here or <strong style="color:var(--accent-color);cursor:pointer;">click to browse</strong></p>
+                    <span class="csv-drop-hint">.csv · header row required · max 2 MB</span>
+                </div>
+                <div class="csv-selected-file" id="import-action-selected" style="display:none;">
+                    <span class="csv-file-icon"><i class="fa-solid fa-file-csv"></i></span>
+                    <span class="csv-file-name" id="import-action-filename"></span>
+                </div>
+                <div class="csv-import-result" id="import-action-result"></div>
+                <div class="form-actions">
+                    <button type="button" id="import-action-submit" class="btn btn-primary">
+                        <i class="fa-solid fa-file-import"></i> Import
+                    </button>
+                    <button type="button" class="btn btn-secondary import-action-modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if incident.actions.all %}
+    <!-- ── Timechart (overview of actions over time) ─────────────────── -->
+    <div class="timechart-panel">
+        <div class="timechart-head">
+            <h2 class="timechart-title">Timeline overview</h2>
+            <div class="timechart-tools">
+                <div class="timechart-legend" id="timelineTypeLegend"></div>
+                <div class="timechart-zoom-controls">
+                    <button type="button" class="timechart-zoom-btn" id="timelineZoomIn" title="Zoom in">+</button>
+                    <button type="button" class="timechart-zoom-btn" id="timelineZoomOut" title="Zoom out">&minus;</button>
+                    <button type="button" class="timechart-zoom-btn" id="timelineZoomReset" title="Reset zoom">Reset</button>
+                </div>
+            </div>
+        </div>
+        <div class="timechart-rail" id="timelineTimechart"></div>
+        <div class="timechart-help">Drag across the chart to zoom to a time range · click a point to jump to that action.</div>
+        <!-- Configured action types (drives chart colours + legend) -->
+        <div id="timelineActionTypes" style="display:none;">
+            {% for value, label in GENERIC_ACTION_CHOICES %}
+            <span data-type="{{ value|lower }}" data-label="{{ label }}"></span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="tl-track" id="verticalTimelineTrack">
+
+        {% for action in incident.sorted_actions %}
+
+            {% if action.is_first_action_this_day %}
+            <div class="tl-day-sep">
+                <span class="tl-day-label">{{ action.observed_at|date:"l, j F Y" }}</span>
+            </div>
+            {% endif %}
+
+            <div class="tl-item" data-action-id="{{ action.id }}"
+                 data-action-type="{{ action.type }}"
+                 data-action-time="{% if action.observed_at %}{{ action.observed_at|date:'c' }}{% elif action.starting_time %}{{ action.starting_time|date:'c' }}{% endif %}">
+
+                <div class="tl-spine">
+                    <div class="tl-dot tl-{{ action.type|lower }}"></div>
+                    <div class="tl-line"></div>
+                </div>
+
+                <div class="tl-card tl-card-{{ action.type|lower }} timeline-card">
+
+                    <div class="tl-card-head">
+                        <span class="tl-badge tl-badge-{{ action.type|lower }}">
+                            {% if action.type == 'MALICIOUS' %}<i class="fa-solid fa-skull-crossbones"></i>
+                            {% elif action.type == 'DEFENSIVE' %}<i class="fa-solid fa-shield-halved"></i>
+                            {% elif action.type == 'MITIGATION' %}<i class="fa-solid fa-wrench"></i>
+                            {% elif action.type == 'ALERT' %}<i class="fa-solid fa-bell"></i>
+                            {% elif action.type == 'COMMUNICATION' %}<i class="fa-solid fa-comments"></i>
+                            {% else %}<i class="fa-solid fa-circle-dot"></i>{% endif %}
+                            {{ action.get_type_display }}
+                        </span>
+                        <span class="tl-time">
+                            {% if action.observed_at %}
+                                {{ action.observed_at|date:"d M Y · H:i" }}
+                            {% elif action.starting_time %}
+                                {{ action.starting_time|date:"d M Y · H:i" }}{% if action.ending_time %} → {{ action.ending_time|date:"H:i" }}{% endif %}
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="tl-card-body">
+                        <h3 class="tl-action-title">{{ action.title }}</h3>
+                        {% if action.description %}
+                        <p class="tl-action-desc">{{ action.description }}</p>
+                        {% endif %}
+                    </div>
+
+                    {% if action.iocs.all %}
+                    <div class="tl-iocs">
+                        {% for ioc in action.iocs.all %}
+                        <span class="ioc-item tl-ioc-chip tl-ioc-{{ ioc.type|lower }}"
+                              data-ioc-id="{{ ioc.id }}"
+                              data-ioc-type="{{ ioc.type }}"
+                              data-ioc-value="{{ ioc.value }}"
+                              data-ioc-type-label="{{ ioc.get_type_display }}"
+                              title="{{ ioc.get_type_display }}: {{ ioc.value }}">
+                            {% if ioc.type == 'IPADRESS' %}<i class="fa-solid fa-network-wired"></i>
+                            {% elif ioc.type == 'HASH' %}<i class="fa-solid fa-fingerprint"></i>
+                            {% elif ioc.type == 'EMAIL' %}<i class="fa-solid fa-envelope"></i>
+                            {% elif ioc.type == 'ACCOUNT' %}<i class="fa-solid fa-user"></i>
+                            {% elif ioc.type == 'FILE' or ioc.type == 'FILENAME' %}<i class="fa-solid fa-file-code"></i>
+                            {% elif ioc.type == 'DOMAIN' or ioc.type == 'NETWORK' %}<i class="fa-solid fa-globe"></i>
+                            {% elif ioc.type == 'DEVICE' %}<i class="fa-solid fa-laptop"></i>
+                            {% elif ioc.type == 'PERSON' %}<i class="fa-solid fa-person"></i>
+                            {% else %}<i class="fa-solid fa-tag"></i>{% endif %}
+                            <span class="tl-ioc-value">{{ ioc.value|truncatechars:30 }}</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                    <div class="tl-card-foot">
+                        <button class="tl-delete-btn delete-action-trigger" title="Delete action" type="button">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                        <div class="tl-delete-confirm">
+                            <span class="tl-delete-confirm-label">Delete?</span>
+                            <button class="tl-confirm-yes" type="button">Yes</button>
+                            <button class="tl-confirm-no" type="button">No</button>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+        {% empty %}
+        <div class="tl-empty">
+            <i class="fa-regular fa-clock"></i>
+            <p>No events yet. Add the first action to start the timeline.</p>
+        </div>
+        {% endfor %}
+
+    </div>
+</div>
+
+<!-- ── Add Action Modal ─────────────────────────────────────────── -->
+<div id="actionAddModal" class="modal" style="display: none;">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>Add Action</h2>
+            <span id="closeActionModal" class="close">&times;</span>
+        </div>
+        <form id="actionForm" method="POST" class="modern-form">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="actionTitle">Title <span class="required">*</span></label>
+                    <input type="text" id="actionTitle" name="title" placeholder="Enter action title" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="actionDescription">Description <span class="required">*</span></label>
+                    <textarea id="actionDescription" name="description" placeholder="Enter action description" rows="4" required></textarea>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="actionType">Type <span class="required">*</span></label>
+                    <select id="actionType" name="type" required>
+                        {% for value, label in GENERIC_ACTION_CHOICES %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3 class="form-section-title">Timing</h3>
+                <div class="form-group timing-fields" id="observedAtField">
+                    <label for="actionObservedAt">Observed At</label>
+                    <input type="datetime-local" id="actionObservedAt" name="observed_at">
+                </div>
+                <div class="form-row timing-fields" id="startingEndingTimeFields" style="display:none;">
+                    <div class="form-group">
+                        <label for="actionStartingTime">Starting Time</label>
+                        <input type="datetime-local" id="actionStartingTime" name="starting_time">
+                    </div>
+                    <div class="form-group">
+                        <label for="actionEndingTime">Ending Time</label>
+                        <input type="datetime-local" id="actionEndingTime" name="ending_time">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="button" id="toggleTimingFields" class="btn btn-secondary btn-small">
+                        Switch to Starting/Ending Time
+                    </button>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3 class="form-section-title">Related Evidence</h3>
+                <div class="ioc-picker">
+                    <div class="ioc-picker-linked-label">Linked</div>
+                    <div id="add-modal-iocs-linked" class="ioc-picker-linked"></div>
+                    <input type="text" id="addIocSearchInput" class="ioc-picker-search" placeholder="Search incident IoCs to add…" autocomplete="off">
+                    <div id="add-modal-iocs-available" class="ioc-picker-available"></div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Create Action</button>
+                <button type="button" id="cancelActionForm" class="btn btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Edit Action Modal ────────────────────────────────────────── -->
+<div id="editActionModal" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>Action Details</h2>
+            <span class="close action-modal">&times;</span>
+        </div>
+        <form id="actionEditForm" method="POST" class="modern-form">
+            <input type="hidden" id="modalEditActionId" value="">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="modal-action-type">Type</label>
+                    <select id="modal-action-type">
+                        {% for choice_value, choice_label in GENERIC_ACTION_CHOICES %}
+                            <option value="{{ choice_value }}">{{ choice_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="modal-action-title">Title</label>
+                    <input type="text" id="modal-action-title" maxlength="64" placeholder="Enter action title">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="modal-action-description">Description</label>
+                    <textarea id="modal-action-description" rows="4" placeholder="Enter action description"></textarea>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3 class="form-section-title">Related Evidence</h3>
+                <div class="ioc-picker">
+                    <div class="ioc-picker-linked-label">Linked</div>
+                    <div id="modal-action-iocs-linked" class="ioc-picker-linked"></div>
+                    <input type="text" id="iocSearchInput" class="ioc-picker-search" placeholder="Search incident IOCs to add…" autocomplete="off">
+                    <div id="modal-action-iocs-available" class="ioc-picker-available"></div>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3 class="form-section-title">Timing</h3>
+                <div class="form-group">
+                    <button type="button" id="toggleTimingFieldsEdit" class="btn btn-secondary btn-small">
+                        Switch to Starting/Ending Time
+                    </button>
+                </div>
+                <div class="form-group timing-fields" id="observedAtFieldEdit">
+                    <label for="actionObservedAtEdit">Observed At</label>
+                    <input type="datetime-local" id="actionObservedAtEdit" name="observed_at">
+                </div>
+                <div class="form-row timing-fields" id="startingEndingTimeFieldsEdit" style="display:none;">
+                    <div class="form-group">
+                        <label for="actionStartingTimeEdit">Starting Time</label>
+                        <input type="datetime-local" id="actionStartingTimeEdit" name="starting_time">
+                    </div>
+                    <div class="form-group">
+                        <label for="actionEndingTimeEdit">Ending Time</label>
+                        <input type="datetime-local" id="actionEndingTimeEdit" name="ending_time">
+                    </div>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3 class="form-section-title">Audit</h3>
+                <div id="modal-action-audit" class="audit-container">
+                    <p>Created by <span id="modal-action-createdby"></span> on <span id="modal-action-createdat"></span></p>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-secondary close action-modal">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Edit IOC Modal ───────────────────────────────────────────── -->
+<div id="editIocModal" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>Evidence Details</h2>
+            <span class="close ioc-modal">&times;</span>
+        </div>
+        <form class="modern-form">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="modal-ioc-type">Type</label>
+                    <select id="modal-ioc-type">
+                        {% for choice_value, choice_label in GENERIC_IOC_TYPE_CHOICES %}
+                            <option value="{{ choice_value }}">{{ choice_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modal-ioc-status">Status</label>
+                    <select id="modal-ioc-status">
+                        <option value="" selected>None</option>
+                        {% for choice_value, choice_label in GENERIC_IOC_STATUS_CHOICES %}
+                            <option value="{{ choice_value }}">{{ choice_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="modal-ioc-value">Value</label>
+                    <input type="text" id="modal-ioc-value" maxlength="64" placeholder="Enter IOC value">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group form-group-full">
+                    <label for="modal-ioc-description">Description</label>
+                    <textarea id="modal-ioc-description" rows="4" placeholder="Enter evidence description"></textarea>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3 class="form-section-title">Observed in Incident</h3>
+                <div id="modal-ioc-actions" class="actions-container"></div>
+            </div>
+            <div class="form-section">
+                <h3 class="form-section-title">Audit</h3>
+                <div id="modal-ioc-audit" class="audit-container">
+                    <p>Created by <span id="modal-ioc-createdby"></span> on <span id="modal-ioc-createdat"></span></p>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" id="saveEditIoC" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-secondary close ioc-modal">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script defer src="/static/js/defang.js"></script>
+<script defer src="/static/js/iocs.js"></script>
+<script defer src="/static/js/timeline.js"></script>
+
+<script>
+// ── CSV import (timeline actions) ───────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    const modal    = document.getElementById('importActionModal');
+    const openBtn  = document.getElementById('importActionBtn');
+    const dropZone = document.getElementById('import-action-drop');
+    const fileEl   = document.getElementById('import-action-file');
+    const selected = document.getElementById('import-action-selected');
+    const filename = document.getElementById('import-action-filename');
+    const submit   = document.getElementById('import-action-submit');
+    const result   = document.getElementById('import-action-result');
+    if (!modal || !openBtn) return;
+
+    const csrfEl     = document.getElementById('csrf-token');
+    const csrfToken  = csrfEl ? csrfEl.value : '';
+    const incidentEl = document.querySelector('[incident-id]');
+    const incidentId = incidentEl ? incidentEl.getAttribute('incident-id') : '';
+
+    function showResult(text, kind) {
+        result.className = 'csv-import-result ' + kind;
+        result.textContent = text;
+        result.style.display = 'block';
+    }
+    function reset() {
+        result.style.display = 'none';
+        selected.style.display = 'none';
+        fileEl.value = '';
+    }
+    function pickFile(file) {
+        if (!file) return;
+        filename.textContent = file.name;
+        selected.style.display = 'flex';
+        result.style.display = 'none';
+    }
+    function close() { modal.style.display = 'none'; }
+
+    openBtn.addEventListener('click', () => { reset(); modal.style.display = 'flex'; });
+    document.querySelectorAll('.import-action-modal').forEach(b => b.addEventListener('click', close));
+    window.addEventListener('click', e => { if (e.target === modal) close(); });
+
+    dropZone.addEventListener('click', e => { if (!e.target.closest('strong')) fileEl.click(); });
+    dropZone.querySelector('strong').addEventListener('click', () => fileEl.click());
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length) { fileEl.files = e.dataTransfer.files; pickFile(fileEl.files[0]); }
+    });
+    fileEl.addEventListener('change', () => pickFile(fileEl.files[0]));
+
+    submit.addEventListener('click', async () => {
+        if (!fileEl.files || !fileEl.files[0]) { showResult('Please choose a CSV file first.', 'err'); return; }
+        const fd = new FormData();
+        fd.append('file', fileEl.files[0]);
+        submit.disabled = true;
+        showResult('Importing…', 'info');
+        try {
+            const r = await fetch(`/api/incident/${incidentId}/import-actions/`, {
+                method: 'POST', headers: { 'X-CSRFToken': csrfToken }, body: fd,
+            });
+            const data = await r.json().catch(() => ({}));
+            if (r.ok && data.status === 'success') {
+                let msg = `Imported ${data.created} action(s)`;
+                if (data.skipped) msg += `, skipped ${data.skipped}`;
+                if (data.errors && data.errors.length) msg += `. Errors: ${data.errors.join('; ')}`;
+                showResult(msg, 'ok');
+                if (data.created) setTimeout(() => location.reload(), 900);
+            } else {
+                showResult(`Error: ${data.error || 'Import failed.'}`, 'err');
+            }
+        } catch (e) {
+            showResult('Network error during import.', 'err');
+        } finally {
+            submit.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock %}

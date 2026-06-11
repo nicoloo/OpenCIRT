@@ -45,9 +45,9 @@ Three charts side by side, styled in the ochre palette:
 - **Severity distribution** — new donut chart
 
 ### Files changed
-- `sharpcirt/templates/home.html` — full rewrite
-- `sharpcirt/static/css/home.css` — new file
-- `sharpcirt/views.py` — add severity_counts to home context
+- `opencirt/templates/home.html` — full rewrite
+- `opencirt/static/css/home.css` — new file
+- `opencirt/views.py` — add severity_counts to home context
 
 ---
 
@@ -59,7 +59,7 @@ Minimal form to open an incident fast. Creator automatically becomes Incident Le
 ### URL & View
 - URL: `GET/POST /incident/create`
 - View: `create_incident(request)`
-- Template: `sharpcirt/templates/incidents/create_incident.html` (extends `base2.html`)
+- Template: `opencirt/templates/incidents/create_incident.html` (extends `base2.html`)
 
 ### Form Fields (minimal)
 | Field | Type | Required | Default |
@@ -104,7 +104,7 @@ Helper: `generate_invite_code()` → `str(random.randint(100000, 999999))`
 ### 3b. Post-Creation Invite Screen
 - URL: `GET /incident/<id>/invite`
 - View: `incident_invite(request, id)`
-- Template: `sharpcirt/templates/incidents/invite.html` (extends `base2.html`)
+- Template: `opencirt/templates/incidents/invite.html` (extends `base2.html`)
 - **Access**: only the incident lead / logged-in users (no sidebar needed yet — standalone page)
 
 **Page content:**
@@ -154,7 +154,7 @@ App-level preferences for the logged-in user, distinct from the profile page (wh
 ### URL & View
 - URL: `GET/POST /settings`
 - View: `settings_view(request)`
-- Template: `sharpcirt/templates/settings.html` (extends `base2.html`)
+- Template: `opencirt/templates/settings.html` (extends `base2.html`)
 - Navbar: "Settings" link in `base2.html` (currently links to `/about`) → split into separate "Settings" and "About" entries
 
 ### Sections
@@ -201,14 +201,14 @@ One migration. Endpoint: `POST /api/update-settings/` saves theme + notification
 
 | File | Action |
 |------|--------|
-| `sharpcirt/models.py` | Add `invite_code`, `preferences` to respective models |
-| `sharpcirt/views.py` | Add `create_incident`, `incident_invite`, `settings_view`, `regenerate_invite`, update `join`/`welcome` |
-| `sharpcirt/urls.py` | Add `/incident/create`, `/incident/<id>/invite`, `/settings`, `/api/.../regenerate-invite/` |
-| `sharpcirt/templates/home.html` | Full rewrite |
-| `sharpcirt/templates/incidents/create_incident.html` | New |
-| `sharpcirt/templates/incidents/invite.html` | New |
-| `sharpcirt/templates/incidents/join.html` | Update (add code field) |
-| `sharpcirt/templates/incidents/responders.html` | Update invite modal |
-| `sharpcirt/templates/settings.html` | New |
-| `sharpcirt/static/css/home.css` | New |
-| `sharpcirt/templates/base2.html` | Wire up "New incident" + "Settings" nav links |
+| `opencirt/models.py` | Add `invite_code`, `preferences` to respective models |
+| `opencirt/views.py` | Add `create_incident`, `incident_invite`, `settings_view`, `regenerate_invite`, update `join`/`welcome` |
+| `opencirt/urls.py` | Add `/incident/create`, `/incident/<id>/invite`, `/settings`, `/api/.../regenerate-invite/` |
+| `opencirt/templates/home.html` | Full rewrite |
+| `opencirt/templates/incidents/create_incident.html` | New |
+| `opencirt/templates/incidents/invite.html` | New |
+| `opencirt/templates/incidents/join.html` | Update (add code field) |
+| `opencirt/templates/incidents/responders.html` | Update invite modal |
+| `opencirt/templates/settings.html` | New |
+| `opencirt/static/css/home.css` | New |
+| `opencirt/templates/base2.html` | Wire up "New incident" + "Settings" nav links |

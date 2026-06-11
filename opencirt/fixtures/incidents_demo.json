@@ -1,0 +1,879 @@
+[
+  {
+    "model": "opencirt.incident",
+    "pk": 1,
+    "fields": {
+      "name": "LockBit Ransomware Attack - IT Infrastructure",
+      "description": "Multi-stage ransomware attack targeting company IT infrastructure. Initial compromise through phishing email with weaponized document. Lateral movement across Windows domain, encryption of critical file shares.",
+      "status": "CLOSED",
+      "severity": "CRITICAL",
+      "executive_summary": "On June 8, 2026, the organization was targeted by a LockBit ransomware operation. An employee received a phishing email with a malicious Word document. Upon opening, the document executed a PowerShell script that deployed Cobalt Strike beacon. The attacker gained domain admin privileges within 48 hours and began encrypting critical network shares. Quick response by the incident team resulted in contained scope of encryption and recovery from backups without paying the ransom.",
+      "lessons_learned": "Improve email filtering rules for Office documents. Deploy EDR solution across all endpoints. Implement MFA on all domain admin accounts. Regular backup testing is critical for recovery.",
+      "technical_details": "Initial vector: Malicious .docx file via email. Exploit: CVE-2021-42292 (Office macro execution). Post-exploitation: Cobalt Strike beacon, Mimikatz for credential dumping, PSExec for lateral movement. Persistence: Registry Run key modifications. Encryption: LockBit ransomware variant, .lockbit file extension.",
+      "starting_time": "2026-06-08T14:30:00Z",
+      "ending_time": "2026-06-09T18:45:00Z",
+      "duration": "1 day, 4:15:00",
+      "time_to_detect": "0:45:00",
+      "time_to_respond": "0:30:00",
+      "created_at": "2026-06-08T14:00:00Z",
+      "updated_at": "2026-06-09T19:00:00Z",
+      "created_by": 1,
+      "is_public": false,
+      "iocs_shared": true,
+      "tlp": "AMBER",
+      "ai_rephrase_enabled": false,
+      "export_include_timeline": true,
+      "export_include_iocs": true,
+      "export_include_attachements": true
+    }
+  },
+  {
+    "model": "opencirt.incident",
+    "pk": 2,
+    "fields": {
+      "name": "APT28 Spear Phishing Campaign - Executive Targeting",
+      "description": "Targeted spear phishing campaign attributed to APT28 (Fancy Bear) targeting executive leadership with financial data theft objectives. Campaign utilized typosquatted domain and credential harvesting landing page.",
+      "status": "CLOSED",
+      "severity": "HIGH",
+      "executive_summary": "APT28 conducted a highly targeted spear phishing campaign against the CFO and finance team. Emails spoofed internal communications and directed recipients to credential harvesting pages hosted on typosquatted domains. Two executives entered credentials before security team discovered the campaign. SIEM alerts detected suspicious logins from Russia-based IPs within 2 hours. All compromised accounts were secured, and fraudulent transactions were reversed.",
+      "lessons_learned": "Implement FIDO2 hardware tokens for executive accounts. Deploy advanced email authentication (DKIM, SPF, DMARC enforcement). Conduct regular phishing awareness training. Monitor for typosquatted domains.",
+      "technical_details": "Campaign began June 5, 2026. Phishing domain: secure-financeauth.local-replica.net. Infrastructure hosted on DigitalOcean. Email headers indicated SMTP relay through compromised server in Eastern Europe. Two sets of credentials harvested. Login attempts detected from 185.220.100.x (Tor exit node), 192.168.1.x ranges.",
+      "starting_time": "2026-06-05T08:00:00Z",
+      "ending_time": "2026-06-07T16:30:00Z",
+      "duration": "2 days, 8:30:00",
+      "time_to_detect": "2:15:00",
+      "time_to_respond": "0:45:00",
+      "created_at": "2026-06-05T07:00:00Z",
+      "updated_at": "2026-06-07T17:00:00Z",
+      "created_by": 1,
+      "is_public": false,
+      "iocs_shared": true,
+      "tlp": "AMBER",
+      "ai_rephrase_enabled": false,
+      "export_include_timeline": true,
+      "export_include_iocs": true,
+      "export_include_attachements": true
+    }
+  },
+  {
+    "model": "opencirt.incident",
+    "pk": 3,
+    "fields": {
+      "name": "Web Application SQL Injection - Customer Data Exposure",
+      "description": "SQL injection vulnerability discovered in customer portal allowing unauthorized database access. Attacker exfiltrated customer PII including names, emails, phone numbers, and hashed passwords from 12,500 customer records.",
+      "status": "IN_PROGRESS",
+      "severity": "CRITICAL",
+      "executive_summary": "On June 9, 2026, monitoring detected unusual database queries from an external IP address. Investigation revealed SQL injection vulnerability in the customer search functionality. Attacker successfully extracted customer records over a 6-hour period before database access was restricted. Database transactions were logged and reviewed to determine scope of exfiltration. Customer notification process initiated. Patch development and deployment underway.",
+      "lessons_learned": "Implement input validation and parameterized queries across all endpoints. Deploy WAF with OWASP rules. Conduct quarterly security code reviews. Implement database activity monitoring.",
+      "technical_details": "Vulnerability: SQL injection in /api/customers/search endpoint. Attacker IP: 203.0.113.42 (ASN: AS64512). Query pattern: ' OR '1'='1; UNION SELECT ... Exfiltration vector: Time-based blind SQL injection. Scope: 12,500 customer records, hashes using bcrypt (secure). Password reset initiated for all affected users. Data loss prevention alerts triggered 5 times during exfiltration.",
+      "starting_time": "2026-06-09T18:00:00Z",
+      "ending_time": "2026-06-10T21:00:00Z",
+      "duration": "1 day, 3:00:00",
+      "time_to_detect": "0:30:00",
+      "time_to_respond": "1:00:00",
+      "created_at": "2026-06-09T17:00:00Z",
+      "updated_at": "2026-06-11T10:00:00Z",
+      "created_by": 1,
+      "is_public": false,
+      "iocs_shared": false,
+      "tlp": "RED",
+      "ai_rephrase_enabled": false,
+      "export_include_timeline": true,
+      "export_include_iocs": true,
+      "export_include_attachements": true
+    }
+  },
+  {
+    "model": "opencirt.userrole",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "incident": 1,
+      "role": "INCIDENT_LEAD",
+      "display_role": "Incident Commander"
+    }
+  },
+  {
+    "model": "opencirt.userrole",
+    "pk": 2,
+    "fields": {
+      "user": 1,
+      "incident": 2,
+      "role": "INCIDENT_LEAD",
+      "display_role": "Incident Commander"
+    }
+  },
+  {
+    "model": "opencirt.userrole",
+    "pk": 3,
+    "fields": {
+      "user": 1,
+      "incident": 3,
+      "role": "INCIDENT_LEAD",
+      "display_role": "Incident Commander"
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 1,
+    "fields": {
+      "created_at": "2026-06-08T14:35:00Z",
+      "updated_at": "2026-06-08T14:35:00Z",
+      "observed_at": "2026-06-08T14:30:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "Phishing Email Delivers Malicious .docx",
+      "description": "Employee received phishing email with weaponized Word document. Document contained macro that executed PowerShell script to download Cobalt Strike beacon.",
+      "type": "MALICIOUS",
+      "incident": 1,
+      "is_first_action_this_day": true,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 2,
+    "fields": {
+      "created_at": "2026-06-08T16:50:00Z",
+      "updated_at": "2026-06-08T16:50:00Z",
+      "observed_at": "2026-06-08T16:45:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "Cobalt Strike Beacon Deployed via PowerShell",
+      "description": "Attacker enumerated domain structure using whoami, ipconfig, and net commands. Performed network share discovery with net view commands.",
+      "type": "MALICIOUS",
+      "incident": 1,
+      "is_first_action_this_day": false,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 3,
+    "fields": {
+      "created_at": "2026-06-08T22:20:00Z",
+      "updated_at": "2026-06-08T22:20:00Z",
+      "observed_at": "2026-06-08T22:15:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "Domain Admin Credentials Dumped via Mimikatz",
+      "description": "Attacker used Mimikatz to extract credentials from LSASS memory. Obtained domain admin account 'svc_sharepoint' with plaintext password. Used PSExec to execute commands with elevated privileges.",
+      "type": "MALICIOUS",
+      "incident": 1,
+      "is_first_action_this_day": false,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 4,
+    "fields": {
+      "created_at": "2026-06-09T08:05:00Z",
+      "updated_at": "2026-06-09T12:35:00Z",
+      "observed_at": "2026-06-09T08:00:00Z",
+      "starting_time": "2026-06-09T08:00:00Z",
+      "ending_time": "2026-06-09T12:30:00Z",
+      "created_by": 1,
+      "title": "LockBit Ransomware Executed Across File Shares",
+      "description": "Attacker deployed ransomware to file servers and workstations. Encrypted critical data on shares: Finance, HR, Legal, and Customer Data. File extensions changed to .lockbit. Ransom note created in root directories.",
+      "type": "MALICIOUS",
+      "incident": 1,
+      "is_first_action_this_day": true,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 5,
+    "fields": {
+      "created_at": "2026-06-09T15:20:00Z",
+      "updated_at": "2026-06-09T15:20:00Z",
+      "observed_at": "2026-06-09T15:15:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "Infected Hosts Isolated and Backups Restored",
+      "description": "Network team isolated encrypted file servers from network. Database team initiated restore from clean backups dated June 7. Workstations recovered from Golden Image. All compromised accounts reset.",
+      "type": "MITIGATION",
+      "incident": 1,
+      "is_first_action_this_day": false,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 6,
+    "fields": {
+      "created_at": "2026-06-05T08:35:00Z",
+      "updated_at": "2026-06-05T08:35:00Z",
+      "observed_at": "2026-06-05T08:30:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "Spear Phishing Email Sent to CFO and VP Finance",
+      "description": "APT28 begins targeted spear phishing campaign targeting CFO, VP Finance, and Controller. Emails spoofed internal executives with subject lines referencing urgent wire transfers.",
+      "type": "MALICIOUS",
+      "incident": 2,
+      "is_first_action_this_day": true,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 7,
+    "fields": {
+      "created_at": "2026-06-05T10:20:00Z",
+      "updated_at": "2026-06-05T10:20:00Z",
+      "observed_at": "2026-06-05T10:15:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "Executive Credentials Harvested on Fake Portal",
+      "description": "Two executives click phishing links and enter credentials on typosquatted domain. Credentials harvested: CFO account (john.doe@company.com) and VP Finance account (jane.smith@company.com).",
+      "type": "MALICIOUS",
+      "incident": 2,
+      "is_first_action_this_day": false,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 8,
+    "fields": {
+      "created_at": "2026-06-05T10:50:00Z",
+      "updated_at": "2026-06-05T10:50:00Z",
+      "observed_at": "2026-06-05T10:45:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "Unauthorized Login from Tor Exit Node Detected",
+      "description": "First login attempt from 185.220.100.5 using harvested CFO credentials. Access to Microsoft 365, Salesforce, and banking portal. Attacker explores financial records and email.",
+      "type": "MALICIOUS",
+      "incident": 2,
+      "is_first_action_this_day": false,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 9,
+    "fields": {
+      "created_at": "2026-06-05T13:35:00Z",
+      "updated_at": "2026-06-05T13:35:00Z",
+      "observed_at": "2026-06-05T13:30:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "SIEM Alert: Anomalous Login from Russian IP Range",
+      "description": "SIEM alerts triggered by suspicious login from foreign IP and impossible travel. Security team disabled both compromised accounts immediately. Reviewed email forwarding rules and 2FA status. No unauthorized transactions detected.",
+      "type": "ALERT",
+      "incident": 2,
+      "is_first_action_this_day": false,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 10,
+    "fields": {
+      "created_at": "2026-06-05T14:35:00Z",
+      "updated_at": "2026-06-05T14:35:00Z",
+      "observed_at": "2026-06-05T14:30:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "Accounts Reset, MFA Enforced, Sessions Revoked",
+      "description": "Email server logs reviewed. Phishing emails originated from compromised SMTP relay. Full email headers analyzed. Domain registrant information collected for law enforcement referral.",
+      "type": "MITIGATION",
+      "incident": 2,
+      "is_first_action_this_day": false,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 11,
+    "fields": {
+      "created_at": "2026-06-09T18:05:00Z",
+      "updated_at": "2026-06-09T18:05:00Z",
+      "observed_at": "2026-06-09T18:00:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "SQL Injection Payload Detected in Login Parameter",
+      "description": "WAF and database monitoring detected unusual query patterns from external IP 203.0.113.42. Queries contained SQL injection payloads with UNION SELECT statements.",
+      "type": "MALICIOUS",
+      "incident": 3,
+      "is_first_action_this_day": true,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 12,
+    "fields": {
+      "created_at": "2026-06-09T18:35:00Z",
+      "updated_at": "2026-06-09T18:35:00Z",
+      "observed_at": "2026-06-09T18:30:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "Attacker Enumerates Customer PII via UNION SELECT",
+      "description": "Security team manually tests /api/customers/search endpoint. Confirms SQL injection vulnerability. Attacker able to extract full customer records including names, emails, phone numbers.",
+      "type": "MALICIOUS",
+      "incident": 3,
+      "is_first_action_this_day": false,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 13,
+    "fields": {
+      "created_at": "2026-06-09T19:05:00Z",
+      "updated_at": "2026-06-10T00:05:00Z",
+      "observed_at": "2026-06-09T19:00:00Z",
+      "starting_time": "2026-06-09T19:00:00Z",
+      "ending_time": "2026-06-10T00:00:00Z",
+      "created_by": 1,
+      "title": "Bulk Export of Customer Records to External Host",
+      "description": "Analysis of database logs shows attacker conducted queries from 19:00 on June 9 until 00:00 on June 10. Extracted approximately 12,500 customer records with PII. Data likely exfiltrated via HTTP response tunneling.",
+      "type": "MALICIOUS",
+      "incident": 3,
+      "is_first_action_this_day": false,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 14,
+    "fields": {
+      "created_at": "2026-06-10T00:20:00Z",
+      "updated_at": "2026-06-10T00:20:00Z",
+      "observed_at": "2026-06-10T00:15:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "WAF Rule Deployed; Vulnerable Endpoint Blocked",
+      "description": "Database firewall rules immediately restricted external access to customer API. IP 203.0.113.42 blacklisted. All database connections from vulnerable endpoint reviewed. API endpoint taken offline pending patch deployment.",
+      "type": "DEFENSIVE",
+      "incident": 3,
+      "is_first_action_this_day": false,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.action",
+    "pk": 15,
+    "fields": {
+      "created_at": "2026-06-10T06:05:00Z",
+      "updated_at": "2026-06-10T06:05:00Z",
+      "observed_at": "2026-06-10T06:00:00Z",
+      "starting_time": null,
+      "ending_time": null,
+      "created_by": 1,
+      "title": "Emergency Patch Applied; Customer Notification Sent",
+      "description": "Development team identified root cause: missing input validation on search parameter. Implemented parameterized queries. Code review completed. QA testing shows vulnerability fixed.",
+      "type": "MITIGATION",
+      "incident": 3,
+      "is_first_action_this_day": true,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 1,
+    "fields": {
+      "created_at": "2026-06-08T15:00:00Z",
+      "updated_at": "2026-06-08T15:00:00Z",
+      "created_by": 1,
+      "tag": "C2 Beacon Domain",
+      "status": "MALICIOUS",
+      "description": "Cobalt Strike C2 beacon domain. Used for command and control of compromised endpoints.",
+      "type": "DOMAIN",
+      "incident": 1,
+      "value": "update.microsoft-svc.net",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 2,
+    "fields": {
+      "created_at": "2026-06-08T15:10:00Z",
+      "updated_at": "2026-06-08T15:10:00Z",
+      "created_by": 1,
+      "tag": "C2 Beacon IP",
+      "status": "MALICIOUS",
+      "description": "Cobalt Strike C2 server IP address. Hosted on VPS provider in Eastern Europe.",
+      "type": "IPADRESS",
+      "incident": 1,
+      "value": "185.220.101.42",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 3,
+    "fields": {
+      "created_at": "2026-06-08T15:20:00Z",
+      "updated_at": "2026-06-08T15:20:00Z",
+      "created_by": 1,
+      "tag": "Ransomware File Extension",
+      "status": "MALICIOUS",
+      "description": "File extension appended by LockBit ransomware during encryption process.",
+      "type": "FILENAME",
+      "incident": 1,
+      "value": ".lockbit",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 4,
+    "fields": {
+      "created_at": "2026-06-08T15:30:00Z",
+      "updated_at": "2026-06-08T15:30:00Z",
+      "created_by": 1,
+      "tag": "Beacon Process Name",
+      "status": "MALICIOUS",
+      "description": "Process name used by Cobalt Strike beacon for command execution. Masqueraded as legitimate Windows process.",
+      "type": "FILENAME",
+      "incident": 1,
+      "value": "svchost32.exe",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 5,
+    "fields": {
+      "created_at": "2026-06-05T09:00:00Z",
+      "updated_at": "2026-06-05T09:00:00Z",
+      "created_by": 1,
+      "tag": "Phishing Domain - Typosquat",
+      "status": "MALICIOUS",
+      "description": "Typosquatted domain used for credential harvesting. Closely resembled legitimate finance portal domain.",
+      "type": "DOMAIN",
+      "incident": 2,
+      "value": "secure-financeauth.local-replica.net",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 6,
+    "fields": {
+      "created_at": "2026-06-05T10:00:00Z",
+      "updated_at": "2026-06-05T10:00:00Z",
+      "created_by": 1,
+      "tag": "Attacker IP - Phishing Campaign",
+      "status": "MALICIOUS",
+      "description": "Source IP of credential harvesting attempt. Routed through Tor exit node.",
+      "type": "IPADRESS",
+      "incident": 2,
+      "value": "185.220.100.5",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 7,
+    "fields": {
+      "created_at": "2026-06-05T11:00:00Z",
+      "updated_at": "2026-06-05T11:00:00Z",
+      "created_by": 1,
+      "tag": "Secondary Attacker IP",
+      "status": "MALICIOUS",
+      "description": "Secondary IP used by APT28 for unauthorized access attempts after credential compromise.",
+      "type": "IPADRESS",
+      "incident": 2,
+      "value": "192.168.1.100",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 8,
+    "fields": {
+      "created_at": "2026-06-05T12:00:00Z",
+      "updated_at": "2026-06-05T12:00:00Z",
+      "created_by": 1,
+      "tag": "Malicious Email Header - SMTP Relay",
+      "status": "MALICIOUS",
+      "description": "Compromised SMTP relay server used to send phishing emails. Origin of email campaign.",
+      "type": "DOMAIN",
+      "incident": 2,
+      "value": "mail.compromised-business.ru",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 9,
+    "fields": {
+      "created_at": "2026-06-09T18:30:00Z",
+      "updated_at": "2026-06-09T18:30:00Z",
+      "created_by": 1,
+      "tag": "SQL Injection Source IP",
+      "status": "MALICIOUS",
+      "description": "Source IP of SQL injection attack against customer portal. Attempted data exfiltration.",
+      "type": "IPADRESS",
+      "incident": 3,
+      "value": "203.0.113.42",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 10,
+    "fields": {
+      "created_at": "2026-06-09T19:00:00Z",
+      "updated_at": "2026-06-09T19:00:00Z",
+      "created_by": 1,
+      "tag": "SQL Injection Payload Hash",
+      "status": "MALICIOUS",
+      "description": "MD5 hash of SQL injection payload. Detected in WAF logs.",
+      "type": "HASH",
+      "incident": 3,
+      "value": "3c59dc048e8850243be8079a5c74d079",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.note",
+    "pk": 1,
+    "fields": {
+      "created_at": "2026-06-08T16:00:00Z",
+      "updated_at": "2026-06-08T16:00:00Z",
+      "created_by": 1,
+      "incident": 1,
+      "name": "Attack Timeline Summary",
+      "text": "LockBit attack followed typical multi-stage ransomware playbook. Initial access via phishing (14:30), reconnaissance (16:45), privilege escalation to domain admin within 7.5 hours (22:15), lateral movement and encryption over 4.5 hours (08:00-12:30), complete containment by 15:15. Total dwell time approximately 24 hours. Quick detection of file encryption activity prevented wider spread."
+    }
+  },
+  {
+    "model": "opencirt.note",
+    "pk": 2,
+    "fields": {
+      "created_at": "2026-06-09T10:00:00Z",
+      "updated_at": "2026-06-09T10:00:00Z",
+      "created_by": 1,
+      "incident": 1,
+      "name": "Post-Incident Analysis",
+      "text": "Root cause analysis shows: 1) Weak email gateway filtering allowed macro-enabled document, 2) No EDR on user workstations to detect suspicious behavior, 3) Single administrator account (svc_sharepoint) with weak password policy, 4) No real-time backup validation. Remediation: Deploy EDR across all endpoints, enforce MFA for all admin accounts, implement offline backup copies, improve email filter rules."
+    }
+  },
+  {
+    "model": "opencirt.note",
+    "pk": 3,
+    "fields": {
+      "created_at": "2026-06-05T12:00:00Z",
+      "updated_at": "2026-06-05T12:00:00Z",
+      "created_by": 1,
+      "incident": 2,
+      "name": "Phishing Campaign Attribution",
+      "text": "APT28 (Fancy Bear) attribution based on: 1) Typosquatting domain registration patterns consistent with APT28, 2) Timing aligned with other APT28 campaigns targeting financial sector, 3) Email tradecraft matches previous APT28 operations, 4) Infrastructure (SMTP relay) matches known APT28 hosts, 5) Objective aligns with APT28 financial targeting. Confidence level: HIGH."
+    }
+  },
+  {
+    "model": "opencirt.note",
+    "pk": 4,
+    "fields": {
+      "created_at": "2026-06-05T14:00:00Z",
+      "updated_at": "2026-06-05T14:00:00Z",
+      "created_by": 1,
+      "incident": 2,
+      "name": "Credential Management Actions",
+      "text": "Both compromised accounts (CFO and VP Finance) had passwords reset. Hardware security keys (FIDO2) issued to both executives. Email forwarding rules reviewed and suspicious rules removed. 2FA enforcement enabled on all financial systems. Banking portal investigated for unauthorized transactions - none found. Recommend MFA hardware tokens for all C-level executives moving forward."
+    }
+  },
+  {
+    "model": "opencirt.note",
+    "pk": 5,
+    "fields": {
+      "created_at": "2026-06-09T19:00:00Z",
+      "updated_at": "2026-06-09T19:00:00Z",
+      "created_by": 1,
+      "incident": 3,
+      "name": "Vulnerability Details",
+      "text": "SQL injection in /api/customers/search endpoint. Vulnerable parameter: 'search_term' - no input validation or parameterized queries used. Attacker crafted queries like: search_term=' OR '1'='1; UNION SELECT username,password,email FROM auth_user -- to extract customer data. Estimated 12,500 customer records accessed. Passwords were bcrypt hashed (not plaintext), reducing exposure."
+    }
+  },
+  {
+    "model": "opencirt.note",
+    "pk": 6,
+    "fields": {
+      "created_at": "2026-06-10T08:00:00Z",
+      "updated_at": "2026-06-10T08:00:00Z",
+      "created_by": 1,
+      "incident": 3,
+      "name": "Customer Notification Status",
+      "text": "Breach notification email sent to all 12,500 affected customers on June 10, 2026. Customers advised to change passwords immediately. Complimentary credit monitoring service offered. GDPR notification sent to data protection authorities within 24 hours of discovery. Legal team prepared for potential litigation. Media inquiry expected."
+    }
+  },
+  {
+    "model": "opencirt.task",
+    "pk": 1,
+    "fields": {
+      "created_at": "2026-06-08T15:30:00Z",
+      "updated_at": "2026-06-08T15:30:00Z",
+      "created_by": 1,
+      "incident": 1,
+      "title": "Deploy EDR Solution",
+      "external_reference": "SEC-2026-0601",
+      "description": "Purchase and deploy Endpoint Detection and Response (EDR) solution across all 500+ Windows workstations and servers. Requires: vendor selection, licensing, deployment planning, user training.",
+      "status": "IN_PROGRESS",
+      "priority": "HIGH",
+      "assignee": 1,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.task",
+    "pk": 2,
+    "fields": {
+      "created_at": "2026-06-08T15:45:00Z",
+      "updated_at": "2026-06-08T15:45:00Z",
+      "created_by": 1,
+      "incident": 1,
+      "title": "Email Gateway Rule Update",
+      "external_reference": "SEC-2026-0602",
+      "description": "Update email gateway rules to block Office documents with macro execution capabilities. Implement macro blocking policies. Whitelist known-safe internal macro sources.",
+      "status": "CLOSED",
+      "priority": "CRITICAL",
+      "assignee": 1,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.task",
+    "pk": 3,
+    "fields": {
+      "created_at": "2026-06-08T16:00:00Z",
+      "updated_at": "2026-06-08T16:00:00Z",
+      "created_by": 1,
+      "incident": 1,
+      "title": "Admin Account MFA Enforcement",
+      "external_reference": "SEC-2026-0603",
+      "description": "Enforce MFA on all domain admin accounts and service accounts. Deploy hardware security keys (FIDO2) for sensitive admin roles. Plan rollout: 2 weeks.",
+      "status": "IN_PROGRESS",
+      "priority": "CRITICAL",
+      "assignee": 1,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.task",
+    "pk": 4,
+    "fields": {
+      "created_at": "2026-06-05T13:00:00Z",
+      "updated_at": "2026-06-05T13:00:00Z",
+      "created_by": 1,
+      "incident": 2,
+      "title": "Hardware Token Deployment for Executives",
+      "external_reference": "SEC-2026-0604",
+      "description": "Distribute FIDO2 hardware security tokens to all C-level executives and finance team. Configure for all financial systems and O365.",
+      "status": "CLOSED",
+      "priority": "CRITICAL",
+      "assignee": 1,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.task",
+    "pk": 5,
+    "fields": {
+      "created_at": "2026-06-05T14:00:00Z",
+      "updated_at": "2026-06-05T14:00:00Z",
+      "created_by": 1,
+      "incident": 2,
+      "title": "Law Enforcement Report",
+      "external_reference": "SEC-2026-0605",
+      "description": "File formal report with FBI Cyber Division and Secret Service regarding APT28 phishing campaign. Provide IOCs and timeline for joint investigation.",
+      "status": "CLOSED",
+      "priority": "HIGH",
+      "assignee": 1,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.task",
+    "pk": 6,
+    "fields": {
+      "created_at": "2026-06-09T19:00:00Z",
+      "updated_at": "2026-06-09T19:00:00Z",
+      "created_by": 1,
+      "incident": 3,
+      "title": "Deploy Web Application Firewall Rules",
+      "external_reference": "SEC-2026-0606",
+      "description": "Update WAF rules to detect and block SQL injection patterns. Add rate limiting and request validation. Monitor for false positives during 7-day testing period.",
+      "status": "IN_PROGRESS",
+      "priority": "CRITICAL",
+      "assignee": 1,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.task",
+    "pk": 7,
+    "fields": {
+      "created_at": "2026-06-09T20:00:00Z",
+      "updated_at": "2026-06-09T20:00:00Z",
+      "created_by": 1,
+      "incident": 3,
+      "title": "Code Review - API Security",
+      "external_reference": "SEC-2026-0607",
+      "description": "Conduct comprehensive security code review of all customer-facing API endpoints. Focus on input validation, parameterized queries, and authentication/authorization. Target completion: June 20, 2026.",
+      "status": "IN_PROGRESS",
+      "priority": "CRITICAL",
+      "assignee": 1,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.impact",
+    "pk": 1,
+    "fields": {
+      "created_at": "2026-06-08T15:00:00Z",
+      "updated_at": "2026-06-09T16:00:00Z",
+      "created_by": 1,
+      "incident": 1,
+      "title": "File Server Encryption",
+      "external_reference": "IMP-2026-0601",
+      "description": "Critical file shares encrypted: Finance, HR, Legal, Customer Data. Estimated 2.5TB of data locked. Recovery completed from June 7 backups with minimal data loss.",
+      "status": "CLOSED",
+      "severity": "CRITICAL",
+      "type": "DATA",
+      "assignee": 1,
+      "action": [],
+      "starting_time": "2026-06-09T08:00:00Z",
+      "ending_time": "2026-06-09T15:15:00Z",
+      "duration": "7:15:00",
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.impact",
+    "pk": 2,
+    "fields": {
+      "created_at": "2026-06-08T16:00:00Z",
+      "updated_at": "2026-06-09T14:30:00Z",
+      "created_by": 1,
+      "incident": 1,
+      "title": "Business Operations Disruption",
+      "external_reference": "IMP-2026-0602",
+      "description": "Finance team unable to access accounting systems for 6 hours. HR unable to process payroll updates. Legal unable to access contract library. Estimated business impact: $50,000 in lost productivity.",
+      "status": "CLOSED",
+      "severity": "HIGH",
+      "type": "AVAILABILITY",
+      "assignee": 1,
+      "action": [],
+      "starting_time": "2026-06-09T08:00:00Z",
+      "ending_time": "2026-06-09T14:00:00Z",
+      "duration": "6:00:00",
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.impact",
+    "pk": 3,
+    "fields": {
+      "created_at": "2026-06-05T10:00:00Z",
+      "updated_at": "2026-06-05T14:00:00Z",
+      "created_by": 1,
+      "incident": 2,
+      "title": "Executive Account Compromise",
+      "external_reference": "IMP-2026-0603",
+      "description": "CFO and VP Finance accounts compromised. Access to financial systems, email, and cloud storage. No fraudulent transactions detected. Accounts secured within 2 hours.",
+      "status": "CLOSED",
+      "severity": "HIGH",
+      "type": "CONFIDENTIALITY",
+      "assignee": 1,
+      "action": [],
+      "starting_time": "2026-06-05T10:15:00Z",
+      "ending_time": "2026-06-05T13:30:00Z",
+      "duration": "3:15:00",
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.impact",
+    "pk": 4,
+    "fields": {
+      "created_at": "2026-06-05T11:00:00Z",
+      "updated_at": "2026-06-05T14:00:00Z",
+      "created_by": 1,
+      "incident": 2,
+      "title": "Information Disclosure - Executive Email",
+      "external_reference": "IMP-2026-0604",
+      "description": "APT28 gained access to CFO email mailbox. Reviewed financial communications and strategic plans. Approximately 500+ emails read. Potential competitive intelligence theft.",
+      "status": "OPEN",
+      "severity": "MEDIUM",
+      "type": "CONFIDENTIALITY",
+      "assignee": 1,
+      "action": [],
+      "starting_time": "2026-06-05T10:45:00Z",
+      "ending_time": "2026-06-05T13:30:00Z",
+      "duration": "2:45:00",
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.impact",
+    "pk": 5,
+    "fields": {
+      "created_at": "2026-06-09T18:30:00Z",
+      "updated_at": "2026-06-10T10:00:00Z",
+      "created_by": 1,
+      "incident": 3,
+      "title": "Customer PII Exposure",
+      "external_reference": "IMP-2026-0605",
+      "description": "12,500 customer records exposed including names, email addresses, phone numbers. Passwords hashed with bcrypt (not plaintext). Customer notification and credit monitoring offered.",
+      "status": "OPEN",
+      "severity": "CRITICAL",
+      "type": "CONFIDENTIALITY",
+      "assignee": 1,
+      "action": [],
+      "starting_time": "2026-06-09T18:00:00Z",
+      "ending_time": "2026-06-10T00:15:00Z",
+      "duration": "6:15:00",
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.impact",
+    "pk": 6,
+    "fields": {
+      "created_at": "2026-06-10T00:30:00Z",
+      "updated_at": "2026-06-10T12:30:00Z",
+      "created_by": 1,
+      "incident": 3,
+      "title": "Customer Portal Unavailability",
+      "external_reference": "IMP-2026-0606",
+      "description": "Customer search API taken offline for patching. Portal unavailable for 12 hours. Alternative manual lookup process implemented. Customers unable to access account information self-service.",
+      "status": "CLOSED",
+      "severity": "MEDIUM",
+      "type": "AVAILABILITY",
+      "assignee": 1,
+      "action": [],
+      "starting_time": "2026-06-10T00:15:00Z",
+      "ending_time": "2026-06-10T12:00:00Z",
+      "duration": "11:45:00",
+      "tags": []
+    }
+  }
+]

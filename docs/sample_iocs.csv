@@ -1,0 +1,7 @@
+type,value,description,status
+IPV4,185.220.101.42,Cobalt Strike C2 server,COMPROMISED
+URL,https://malicious.example.com/payload,Malware delivery URL,COMPROMISED
+DOMAIN,update.microsoft-svc.net,Typosquatted C2 domain,POTENTIALLY_COMPROMISED
+EMAIL,attacker@evil-domain.ru,Phishing sender,COMPROMISED
+HASH,3c59dc048e8850243be8079a5c74d079,Dropper MD5,COMPROMISED
+FILENAME,svchost32.exe,Masqueraded beacon process,COMPROMISED

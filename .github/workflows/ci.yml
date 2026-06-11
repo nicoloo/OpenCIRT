@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - "feature/**"
+  pull_request:
+
+jobs:
+  test-and-conformity:
+    runs-on: ubuntu-latest
+
+    env:
+      COMPOSE_PROJECT_NAME: opencirt-ci
+      DEBUG: "False"
+      SECRET_KEY: ci-secret-key
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      POSTGRES_DB: opencirt
+      POSTGRES_USER: opencirt
+      POSTGRES_PASSWORD: opencirt
+      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
+      VIRUSTOTAL_API_KEY: ""
+      ABUSEIPDB_API_KEY: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Compose configuration
+        run: docker compose config
+
+      - name: Build services
+        run: |
+          docker compose build
+
+      - name: Start stack
+        run: docker compose up -d
+
+      - name: Wait for services
+        run: docker compose ps
+
+      - name: Run Django system checks
+        run: docker compose exec -T backend python manage.py check
+
+      - name: Check for missing migrations
+        run: docker compose exec -T backend python manage.py makemigrations --check --dry-run
+
+      - name: Run tests
+        run: docker compose exec -T backend pytest
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v

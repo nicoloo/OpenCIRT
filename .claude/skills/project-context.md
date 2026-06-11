@@ -41,12 +41,12 @@ This is the target layout as we rename and refactor to `opencirt`:
 - `requirements.txt` — pinned Python dependencies
 - `.claude/skills/` — Claude Code skills for this project
 
-## Renaming `sharpcirt` → `opencirt`
+## Renaming `opencirt` → `opencirt`
 
 When completing the rename:
 
 - Update all internal imports, `AppConfig.name`, and migration app labels
-- Search/replace `sharpcirt` → `opencirt` in code, templates, fixtures, and migration files
+- Search/replace `opencirt` → `opencirt` in code, templates, fixtures, and migration files
 - Update `crud/settings.py`: add `opencirt` to `INSTALLED_APPS`, set `AUTH_USER_MODEL = 'opencirt.User'`
 - Run `python manage.py makemigrations` and `python manage.py migrate` on a safe branch
-- If migrations reference the old label, update tuples (e.g. `('sharpcirt', '0001_initial')` → `('opencirt', '0001_initial')`)
+- If migrations reference the old label, update tuples (e.g. `('opencirt', '0001_initial')` → `('opencirt', '0001_initial')`)

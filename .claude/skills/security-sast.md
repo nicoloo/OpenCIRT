@@ -53,19 +53,19 @@ description: SAST checklist for OpenCIRT — Django-specific security review cov
 ## Quick Scan Commands
 ```bash
 # Potential open redirects
-grep -n "redirect(request.GET\|redirect(request.POST" sharpcirt/views.py
+grep -n "redirect(request.GET\|redirect(request.POST" opencirt/views.py
 
 # Raw SQL
-grep -n "\.raw(\|cursor\.\|execute(" sharpcirt/views.py
+grep -n "\.raw(\|cursor\.\|execute(" opencirt/views.py
 
 # Unsafe template rendering
-grep -rn "| safe" sharpcirt/templates/
+grep -rn "| safe" opencirt/templates/
 
 # Views missing auth decorator
-grep -n "^def \|^@" sharpcirt/views.py | grep -v "login_required\|csrf"
+grep -n "^def \|^@" opencirt/views.py | grep -v "login_required\|csrf"
 
 # File extension checks (look for missing MIME validation nearby)
-grep -n "\.endswith\|split('.')" sharpcirt/views.py
+grep -n "\.endswith\|split('.')" opencirt/views.py
 ```
 
 ## Fix Patterns

@@ -1,0 +1,5 @@
+title,description,type,observed_at
+Phishing email delivered,Employee received weaponized .docx via email,MALICIOUS,2026-06-08T14:30
+Cobalt Strike beacon deployed,PowerShell macro downloaded and ran the beacon,MALICIOUS,2026-06-08T16:45
+EDR isolated affected host,Endpoint quarantined from the network,DEFENSIVE,2026-06-08T17:10
+Credentials reset for domain admins,Forced reset + MFA enrolment,MITIGATION,2026-06-09T09:00

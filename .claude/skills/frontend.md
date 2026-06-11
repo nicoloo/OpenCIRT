@@ -6,16 +6,16 @@ description: Guidelines for working with the OpenCIRT frontend — Django templa
 # OpenCIRT Frontend
 
 ## Stack
-- **Templates**: Django template language (DTL) — no React/Vue. All HTML in `sharpcirt/templates/`
+- **Templates**: Django template language (DTL) — no React/Vue. All HTML in `opencirt/templates/`
 - **CSS**: Custom modular CSS with CSS variables in `static/css/variables.css`. Light/dark mode via `light_mode.css` / `dark_mode.css`
 - **JS**: Vanilla JS + jQuery 3.6 + DataTables 1.12.1. No build step — plain `.js` files in `static/js/`
 - **Icons**: Font Awesome 6.0.0-beta3 (CDN)
 
 ## Adding a New Page
-1. Create `sharpcirt/templates/<feature>.html` extending `base.html` or `incidents/base.html`
-2. Add a view in `sharpcirt/views.py`
-3. Register the URL in `sharpcirt/urls.py`
-4. If it needs new styles, add `sharpcirt/static/css/<feature>.css` and load it in the template with `{% load static %}`
+1. Create `opencirt/templates/<feature>.html` extending `base.html` or `incidents/base.html`
+2. Add a view in `opencirt/views.py`
+3. Register the URL in `opencirt/urls.py`
+4. If it needs new styles, add `opencirt/static/css/<feature>.css` and load it in the template with `{% load static %}`
 
 ## CSS Conventions
 - Use CSS variables from `variables.css` — never hardcode colors or spacing
