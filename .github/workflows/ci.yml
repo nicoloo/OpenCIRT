@@ -37,7 +37,7 @@ jobs:
           docker compose build
 
       - name: Start stack
-        run: docker compose up -d
+        run: docker compose up -d || (docker compose logs backend && exit 1)
 
       - name: Wait for backend to be healthy
         run: |
