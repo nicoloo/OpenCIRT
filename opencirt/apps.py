@@ -6,7 +6,7 @@ _KNOWN_INSECURE_KEYS = {
     'change-me-in-production',
     'django-insecure-nsc+0)*z!9m50@3*lp&1(sq6&%9zk(9r*=q=$j=g*9*-_7h3jn',
 }
-_MIN_SECRET_KEY_LENGTH = 40
+_MIN_SECRET_KEY_LENGTH = 50
 
 
 def _validate_production_config():

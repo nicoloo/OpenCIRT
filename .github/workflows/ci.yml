@@ -15,7 +15,7 @@ jobs:
     env:
       COMPOSE_PROJECT_NAME: opencirt-ci
       DEBUG: "False"
-      SECRET_KEY: ci-secret-key
+      SECRET_KEY: "ci-only-not-for-production-use-replace-before-deploying-abcdef1234567890XYZ"
       ALLOWED_HOSTS: localhost,127.0.0.1
       POSTGRES_DB: opencirt
       POSTGRES_USER: opencirt
