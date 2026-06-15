@@ -7,6 +7,7 @@ from opencirt.models import User
 LOGIN_URL = '/login/'
 
 
+@pytest.mark.usefixtures("disable_ssl_redirect")
 @pytest.mark.django_db
 class TestLoginRateLimit(TestCase):
 
