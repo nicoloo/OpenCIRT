@@ -19,7 +19,7 @@ jobs:
       ALLOWED_HOSTS: localhost,127.0.0.1
       POSTGRES_DB: opencirt
       POSTGRES_USER: opencirt
-      POSTGRES_PASSWORD: opencirt
+      POSTGRES_PASSWORD: ci-test-password
       ANTHROPIC_API_KEY: ""
       OPENAI_API_KEY: ""
       VIRUSTOTAL_API_KEY: ""

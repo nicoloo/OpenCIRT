@@ -38,7 +38,6 @@ services:
     volumes:
       - static_volume:/vol/web/static
       - media_volume:/vol/web/media
-      - .:/app:ro
     depends_on:
       db:
         condition: service_healthy
