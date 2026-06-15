@@ -50,9 +50,11 @@ services:
   frontend:
     image: nginx:1.27-alpine
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
     volumes:
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
       - static_volume:/vol/web/static:ro
       - media_volume:/vol/web/media:ro
     depends_on:

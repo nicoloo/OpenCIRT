@@ -20,6 +20,9 @@ __pycache__/
 db.sqlite3
 staticfiles/
 
+# SSL certificates — never commit private keys
+docker/certs/
+
 # User-uploaded media (runtime data — not source assets)
 opencirt/media/incident_files/
 opencirt/media/profile_pics/
