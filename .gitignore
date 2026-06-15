@@ -1,14 +1,30 @@
+# Python / virtualenv
 .venv/
 venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Test & lint caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Environment / secrets
 .env
 .env.*
+!.env.example
+
+# Django runtime
 db.sqlite3
 staticfiles/
+
+# User-uploaded media (runtime data — not source assets)
+opencirt/media/incident_files/
+opencirt/media/profile_pics/
+
+# Local IDE / tool settings
+.claude/settings.local.json
+.claude/launch.json
 
