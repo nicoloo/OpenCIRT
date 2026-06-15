@@ -1,6 +1,6 @@
 from functools import wraps
-from django.shortcuts import get_object_or_404
-from django.http import JsonResponse, HttpResponseForbidden, HttpRequest
+from django.shortcuts import get_object_or_404, render
+from django.http import JsonResponse, HttpRequest
 from .models import UserRole, Incident
 from django.db.models import Min, Max
 from collections import defaultdict
@@ -64,7 +64,10 @@ def user_is_incident_responder_orpublic(view_func):
                 # Check if this is an API request
                 if request.path.startswith('/api/'):
                     return JsonResponse({'error': 'You do not have permission to access this incident.'}, status=403)
-                return HttpResponseForbidden("You do not have permission to access this incident.")
+                return render(request, '403.html', {
+                    'reason': 'You are not a member of this incident.',
+                    'incident': incident,
+                }, status=403)
             
             return view_func(request, id, *args, **kwargs)
     return wrapper
@@ -78,7 +81,11 @@ def user_is_incident_responder(view_func):
         # If the user is not a responder for this incident, deny access
         is_responder = UserRole.objects.filter(incident_id=id, user=request.user).exists()
         if not is_responder:
-            return HttpResponseForbidden("You do not have permission to modify this incident.")
+            incident = get_object_or_404(Incident, id=id)
+            return render(request, '403.html', {
+                'reason': 'You are not a member of this incident.',
+                'incident': incident,
+            }, status=403)
         
         return view_func(request, id, *args, **kwargs)
     return wrapper

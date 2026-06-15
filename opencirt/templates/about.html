@@ -1,166 +1,117 @@
-{% extends 'base2.html' %}
+{% extends 'base.html' %}
+{% load static %}
 
 {% block styles %}
 <style>
-.roadmap-page {
-    padding: 32px 28px;
-    max-width: 680px;
-    margin: 0 auto;
+.about-page {
+    min-height: calc(100vh - 64px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
 }
 
-.roadmap-page h1 {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--text-color-1);
+.about-card {
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 48px 44px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+}
+
+.about-logo {
+    height: 48px;
+    width: auto;
+    margin-bottom: 28px;
+}
+
+.about-version {
+    display: block;
+    width: fit-content;
+    margin: 0 auto 28px;
+    padding: 3px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-color-2);
+    background: var(--background-color);
+    letter-spacing: 0.04em;
+}
+
+.about-divider {
+    height: 1px;
+    background: var(--border-color);
     margin: 0 0 24px 0;
 }
 
-.roadmap-section {
-    background: var(--widget-background-color);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    margin-bottom: 16px;
-    overflow: hidden;
-}
-
-.roadmap-section-header {
-    padding: 10px 20px;
-    border-bottom: 1px solid var(--border-color);
-    background: var(--main-color-1);
-}
-
-.roadmap-section-header h2 {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-color-1);
-    margin: 0;
-}
-
-.roadmap-group-title {
+.about-license-title {
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--accent-color);
-    padding: 12px 20px 4px;
-}
-
-.roadmap-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 9px 20px;
-    border-top: 1px solid var(--border-color);
-}
-
-.roadmap-item:first-of-type {
-    border-top: none;
-}
-
-.roadmap-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent-color);
-    margin-top: 7px;
-    flex-shrink: 0;
-}
-
-.roadmap-dot.future {
-    background: var(--muted-color);
-}
-
-.roadmap-item p {
-    font-size: 0.84rem;
-    color: var(--text-color-1);
-    line-height: 1.5;
-    margin: 0;
-}
-
-.roadmap-item small {
-    display: block;
-    font-size: 0.73rem;
+    letter-spacing: 0.1em;
     color: var(--text-color-2);
-    margin-top: 2px;
+    margin: 0 0 10px 0;
+}
+
+.about-license-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color-1);
+    margin-bottom: 10px;
+    text-decoration: none;
+    transition: border-color 0.15s;
+}
+
+.about-license-badge:hover {
+    border-color: var(--main-color-3);
+    text-decoration: none;
+    color: var(--text-color-1);
+}
+
+.about-license-badge i {
+    color: var(--accent-color);
+}
+
+.about-copyright {
+    font-size: 0.78rem;
+    color: var(--text-color-2);
+    margin: 0;
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<main>
-<div class="roadmap-page">
-    <h1>Roadmap</h1>
+<div class="about-page">
+    <div class="about-card">
 
-    <!-- In progress -->
-    <div class="roadmap-section">
-        <div class="roadmap-section-header"><h2>In progress</h2></div>
+        {% if user.is_authenticated and user.light_mode == 'dark_mode' %}
+        <img src="{% static 'logo_phrase_dark.png' %}" alt="OpenCIRT" class="about-logo"
+             onerror="this.onerror=null;this.src='{% static 'logo_phrase_light.png' %}'">
+        {% else %}
+        <img src="{% static 'logo_phrase_light.png' %}" alt="OpenCIRT" class="about-logo">
+        {% endif %}
 
-        <div class="roadmap-group-title">Access &amp; Security</div>
-        <div class="roadmap-item">
-            <div class="roadmap-dot"></div>
-            <div><p>Proper RBAC (role-based access control)</p></div>
-        </div>
-        <div class="roadmap-item">
-            <div class="roadmap-dot"></div>
-            <div>
-                <p>Dark / Light mode</p>
-                <small>Toggle exists in user settings but not yet active</small>
-            </div>
-        </div>
-        <div class="roadmap-item">
-            <div class="roadmap-dot"></div>
-            <div>
-                <p>Email notifications</p>
-                <small>Requires SMTP configuration in platform settings</small>
-            </div>
-        </div>
+        <div class="about-version">Version 1.0</div>
 
-        <div class="roadmap-group-title">Incidents &amp; Data</div>
-        <div class="roadmap-item">
-            <div class="roadmap-dot"></div>
-            <div>
-                <p>Tags on incidents</p>
-                <small>e.g. Fraud, Insider Threat, Supply Chain, Data Breach — with custom tag creation</small>
-            </div>
-        </div>
-        <div class="roadmap-item">
-            <div class="roadmap-dot"></div>
-            <div>
-                <p>Homepage timechart — timeframe toggle</p>
-                <small>With smart date grouping (days → months when zooming out)</small>
-            </div>
-        </div>
-        <div class="roadmap-item">
-            <div class="roadmap-dot"></div>
-            <div><p>Download all IoCs in MISP-importable format</p></div>
-        </div>
+        <div class="about-divider"></div>
 
-        <div class="roadmap-group-title">Integrations</div>
-        <div class="roadmap-item">
-            <div class="roadmap-dot"></div>
-            <div><p>Jira / Microsoft Defender integration stubs</p></div>
-        </div>
+        <p class="about-license-title">License</p>
+        <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer" class="about-license-badge">
+            <i class="fa-solid fa-scale-balanced"></i>
+            MIT License
+        </a>
+        <p class="about-copyright">Copyright &copy; 2026 OpenCIRT Contributors</p>
+
     </div>
-
-    <!-- Future -->
-    <div class="roadmap-section">
-        <div class="roadmap-section-header"><h2>Future</h2></div>
-        <div class="roadmap-item">
-            <div class="roadmap-dot future"></div>
-            <div><p>Share IoCs between incidents</p></div>
-        </div>
-        <div class="roadmap-item">
-            <div class="roadmap-dot future"></div>
-            <div><p>Import tasks playbook (pre-created task templates)</p></div>
-        </div>
-        <div class="roadmap-item">
-            <div class="roadmap-dot future"></div>
-            <div><p>Documentation and README for integrations</p></div>
-        </div>
-    </div>
-
 </div>
-</main>
 {% endblock %}

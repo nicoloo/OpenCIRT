@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="{% static 'css/variables.css' %}">
     <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% if user.is_authenticated and user.light_mode == 'dark_mode' %}
+    <link rel="stylesheet" href="{% static 'css/dark_mode.css' %}">
+    {% endif %}
     {% block styles %}{% endblock %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
@@ -21,7 +24,11 @@
 
         <div class="sidebar-header">
             <a class="sidebar-logo" href="/home">
+                {% if user.is_authenticated and user.light_mode == 'dark_mode' %}
+                <img src="{% static 'logo_phrase_dark.png' %}" alt="OpenCIRT" onerror="this.onerror=null;this.src='/static/logo.png'">
+                {% else %}
                 <img src="{% static 'logo.png' %}" alt="OpenCIRT">
+                {% endif %}
             </a>
             <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
                 <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
@@ -97,7 +104,11 @@
                 <span class="nav-label">Logout</span>
             </a>
             <a href="/profile" class="nav-link nav-link-profile" data-tooltip="{{ user.displayname|default:user.username }}">
+                {% if user.profile_picture and user.profile_picture.name != 'profile_pics/default.jpg' %}
+                <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="avatar-mini" style="object-fit:cover;">
+                {% else %}
                 <div class="avatar-mini">{{ user.username|slice:":1" }}</div>
+                {% endif %}
                 <span class="nav-label">{{ user.displayname|default:user.username }}</span>
                 {% if current_user_role.role %}
                 <span class="role-badge nav-label">{{ current_user_role.role }}</span>

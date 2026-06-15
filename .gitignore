@@ -27,6 +27,9 @@ docker/certs/
 opencirt/media/incident_files/
 opencirt/media/profile_pics/
 
+# AI development planning specs (internal tooling output)
+docs/superpowers/
+
 # Local IDE / tool settings
 .claude/settings.local.json
 .claude/launch.json

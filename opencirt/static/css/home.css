@@ -188,6 +188,25 @@
     text-overflow: ellipsis;
 }
 
+/* Category pills */
+.ic-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 7px;
+}
+
+.ic-cat-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid;
+    font-size: 0.68rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 .ic-meta {
     display: flex;
     gap: 16px;

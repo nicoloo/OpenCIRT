@@ -13,8 +13,9 @@
 }
 
 .filter-button.active {
-    background: var(--main-color-2);
+    background: var(--main-color-1);
     border-color: var(--main-color-3);
+    color: var(--text-color-1);
     font-weight: 700;
 }
 

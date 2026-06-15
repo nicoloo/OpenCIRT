@@ -1,9 +1,9 @@
 ---
 name: devops
-description: Running, building, and debugging SharpCIRT locally and in Docker — environment setup, common failure modes, and CI pipeline reference
+description: Running, building, and debugging OpenCIRT locally and in Docker — environment setup, common failure modes, and CI pipeline reference
 ---
 
-# SharpCIRT DevOps Reference
+# OpenCIRT DevOps Reference
 
 ## Local Dev Server (no Docker)
 

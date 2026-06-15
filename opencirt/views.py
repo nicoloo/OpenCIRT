@@ -1,25 +1,21 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import login, logout, authenticate
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
-from opencirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformSettings, CtiProvider
-from . import models
+from opencirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformSettings, CtiProvider, IncidentCategory
 from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, sync_incident_times, get_incidents_by_day_and_severity
 from .threat_intel import schedule_lookup, ELIGIBLE_TYPES as THREAT_INTEL_ELIGIBLE_TYPES
-from django.contrib import messages
 import json
 import os
 import re
 import random
 from datetime import timedelta, datetime
 from django.utils import timezone
-from .models import Incident
 from django.template.loader import render_to_string
 from xhtml2pdf import pisa
 from io import BytesIO
-import os
-from collections import Counter, defaultdict
+from collections import Counter
 from .report_generators import (
     parse_sections, parse_tlp, TLP_STYLES,
     DEFAULT_SECTIONS, ALL_SECTIONS,
@@ -34,6 +30,22 @@ from django.core.cache import cache
 _LOGIN_RATE_LIMIT = 10     # max failed attempts
 _LOGIN_RATE_WINDOW = 900   # 15 minutes in seconds
 _AI_REPHRASE_DAILY_LIMIT = 20
+
+# ── Access control helpers ────────────────────────────────────────────────────
+
+def _forbidden(request, reason='You do not have permission to perform this action.', incident=None):
+    return render(request, '403.html', {'reason': reason, 'incident': incident}, status=403)
+
+def custom_403(request, exception=None):
+    reason = str(exception) if exception else 'You do not have permission to perform this action.'
+    return render(request, '403.html', {'reason': reason}, status=403)
+
+def _not_found(request, reason='The page or resource you requested does not exist.'):
+    return render(request, '404.html', {'reason': reason}, status=404)
+
+def custom_404(request, exception=None):
+    reason = str(exception) if exception else 'The page or resource you requested does not exist.'
+    return render(request, '404.html', {'reason': reason}, status=404)
 
 # ── Audit log helpers ─────────────────────────────────────────────────────────
 
@@ -227,22 +239,6 @@ def profile(request):
         'prefs': prefs,
     })
 
-@login_required
-def profile_change_password(request):
-    if request.method == 'POST':
-        pass
-    #     form = PasswordChangeForm(user=request.user, data=request.POST)
-    #     if form.is_valid():
-    #         user = form.save()
-    #         update_session_auth_hash(request, user)
-    #         messages.success(request, 'Your password has been updated!')
-    #         return redirect('my_profile')
-    #     else:
-    #         messages.error(request, 'Please correct the errors below.')
-    # else:
-    #     form = PasswordChangeForm(user=request.user)
-    return render(request, 'profile.html', {'form': form})
-
 
 
 @login_required(login_url='login')
@@ -255,14 +251,15 @@ def overview(request, id):
         if incident.is_public:
             user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
         else:
-            return HttpResponseForbidden("You do not have permission to access this incident.")
+            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
 
     platform = PlatformSettings.get()
     return render(request, 'incidents/overview.html', {
-        'incident':          incident,
-        'user':              request.user,
-        'current_user_role': user_role,
-        'ai_configured':     platform.ai_provider != 'NONE' and bool(platform.ai_api_key),
+        'incident':           incident,
+        'user':               request.user,
+        'current_user_role':  user_role,
+        'ai_configured':      platform.ai_provider != 'NONE' and bool(platform.ai_api_key),
+        'all_categories':     list(IncidentCategory.objects.order_by('name').values('id', 'name', 'color')),
     })
 
 @login_required(login_url='login')
@@ -278,10 +275,9 @@ def activity(request, id):
             user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
             incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
         else:
-            return HttpResponseForbidden("You do not have permission to access this incident.")
-            
+            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     except Incident.DoesNotExist:
-        my_object = None
+        pass
     return render(request,'incidents/activity.html', {'incident': incident, 'user': request.user,'current_user_role': user_role, 'incident_leads': incident_leads})
 
 @login_required(login_url='login')
@@ -297,10 +293,9 @@ def impacts(request, id):
             user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
             incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
         else:
-            return HttpResponseForbidden("You do not have permission to access this incident.")
-            
+            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     except Incident.DoesNotExist:
-        my_object = None
+        pass
     return render(request,'incidents/impacts.html', {'incident': incident, 'user': request.user,'current_user_role': user_role, 'incident_leads': incident_leads})
 
 @login_required(login_url='login')
@@ -314,9 +309,9 @@ def notes(request, id):
         if incident.is_public:
             user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
         else:
-            return HttpResponseForbidden("You do not have permission to access this incident.")
+            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     except Incident.DoesNotExist:
-        my_object = None
+        pass
     shared_files = list(incident.shared_files.all().order_by('-created_at'))
     for sf in shared_files:
         sf.is_executable = _get_extension(sf.original_name) in _EXECUTABLE_EXTENSIONS
@@ -337,9 +332,9 @@ def tasks(request, id):
         if incident.is_public:
             user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
         else:
-            return HttpResponseForbidden("You do not have permission to access this incident.")
+            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     except Incident.DoesNotExist:
-        my_object = None
+        pass
     return render(request,'incidents/tasks.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
 
 @login_required(login_url='login')
@@ -536,12 +531,6 @@ def delete_file(request, id):
 
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
-def responders(request, id):
-    from django.shortcuts import redirect
-    return redirect('incident_settings', id=id)
-
-@login_required(login_url='login')
-@user_is_incident_responder_orpublic
 def incident_settings(request, id):
     try:
         incident = Incident.objects.get(pk=id)
@@ -550,11 +539,11 @@ def incident_settings(request, id):
         if incident.is_public:
             user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
         else:
-            return HttpResponseForbidden("You do not have permission to access this incident.")
+            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     except Incident.DoesNotExist:
-        return HttpResponseNotFound("Incident not found.")
+        return _not_found(request, 'This incident does not exist.')
     if user_role.role not in ('INCIDENT_LEAD',) and not request.user.is_admin:
-        return HttpResponseForbidden("You do not have permission to access incident settings.")
+        return _forbidden(request, 'Only Incident Leads and platform admins can access incident settings.', incident=incident)
 
     platform = PlatformSettings.get()
     return render(request, 'incidents/incident_settings.html', {
@@ -602,9 +591,9 @@ def report(request, id):
         if incident.is_public:
             user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
         else:
-            return HttpResponseForbidden("You do not have permission to access this incident.")
+            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     except Incident.DoesNotExist:
-        return HttpResponse("Incident not found.", status=404)
+        return _not_found(request, 'This incident does not exist.')
 
     return render(request, 'incidents/report.html', {
         'incident': incident,
@@ -626,9 +615,9 @@ def iocs(request, id):
         elif incident.is_public:
             user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
         else:
-            return HttpResponseForbidden("You do not have permission to access this incident.")
+            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     except Incident.DoesNotExist:
-        my_object = None
+        pass
     cti_configured      = CtiProvider.objects.filter(enabled=True).exclude(api_key='').exists()
     supported_ioc_types = _cti_supported_types()
     return render(request, 'incidents/evidence.html', {
@@ -651,9 +640,9 @@ def timeline(request, id):
         elif incident.is_public:
             user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
         else:
-            return HttpResponseForbidden("You do not have permission to access this incident.")
+            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     except Incident.DoesNotExist:
-        my_object = None
+        pass
     return render(request,'incidents/timeline.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
 
 def join(request, id):
@@ -714,36 +703,6 @@ def join(request, id):
         'user': request.user,
     })
 
-
-def welcome(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        inviter_name = request.user.username if request.user.is_authenticated else "Someone"
-        if request.method == 'POST':
-            username = request.POST.get('username')
-            email = request.POST.get('email')
-            password = request.POST.get('password')
-
-            if User.objects.filter(username=username).exists():
-                return render(request, 'incidents/join.html', {
-                    'incident': incident,
-                    'inviter_name': inviter_name,
-                    'error': 'Username already exists'
-                })
-
-            user = User.objects.create_user(username=username, email=email, password=password)
-            login(request, user)
-            user.save()
-            # Add the user to the incident
-            UserRole.objects.create(user=user, incident=incident, role="INCIDENT_VIEWER", display_role="Incident Viewer")
-            # Log the user in
-            login(request, user)          
-            return redirect('overview', id=incident.id)
-        else:
-            return render(request, 'incidents/join.html', {'incident': incident, 'inviter_name': inviter_name})
-    except Incident.DoesNotExist:
-        my_object = None
-        return render(request,'incidents/join.html', {'incident': incident})
 
 # ─────────────────────────────────────────────────────
 # INVITE HELPERS
@@ -864,6 +823,9 @@ def regenerate_invite(request, id):
 
 @login_required(login_url='login')
 def settings_view(request):
+    if not request.user.is_admin:
+        return _forbidden(request, 'Platform settings are restricted to administrators.')
+
     user = request.user
     prefs = user.preferences if user.preferences else {}
 
@@ -1938,7 +1900,6 @@ def get_impact(request, id, impact_id):
                 "description": impact.description,
                 "status": impact.status,
                 "severity": impact.severity,
-                "description": impact.description,
                 "external_reference": impact.external_reference,
                 "starting_time": impact.starting_time.strftime("%Y-%m-%dT%H:%M"),
                 "ending_time": impact.ending_time.strftime("%Y-%m-%dT%H:%M"),
@@ -1964,13 +1925,12 @@ def update_ioc(request, id):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            body = json.loads(request.body.decode('utf-8'))
-            ioc_id = body.get('ioc_id')
+            ioc_id = data.get('ioc_id')
             ioc = GenericIoc.objects.get(id=ioc_id)
-            
-            ioc.type = body.get('type')
-            ioc.value = body.get('value')
-            ioc.description = body.get('description')
+
+            ioc.type = data.get('type')
+            ioc.value = data.get('value')
+            ioc.description = data.get('description')
             ioc.save()
             _audit(ioc.incident, request, 'UPDATE', 'IoC', f'Updated IoC: {ioc.value}')
             return JsonResponse({'status': 'success', id: id})
@@ -1989,13 +1949,11 @@ def update_impact(request, id):
             data = json.loads(request.body)['data']
             impact_id = data['id']
             impact = Impact.objects.get(id=impact_id)
-            print(data)
             for field, value in data.items():
                 if hasattr(impact, field):
                     setattr(impact, field, value)
 
             impact.duration = datetime.strptime(impact.ending_time, "%Y-%m-%dT%H:%M") - datetime.strptime(impact.starting_time, "%Y-%m-%dT%H:%M")
-            print(impact.duration)
             impact.save()
             
             return JsonResponse({'status': 'success', id: impact_id})
@@ -2509,7 +2467,7 @@ def warroom(request, id):
         if incident.is_public:
             user_role = UserRole(user=request.user, incident=incident, role='PUBLIC_VIEWER')
         else:
-            return HttpResponseForbidden('You do not have permission to access this incident.')
+            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     return render(request, 'incidents/warroom.html', {
         'incident': incident,
         'user': request.user,
@@ -2637,6 +2595,60 @@ def warroom_data(request, id):
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PLATFORM SETTINGS (admin-only)
+# ─────────────────────────────────────────────────────────────────────────────
+# INCIDENT CATEGORIES
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+def list_categories(request):
+    cats = list(IncidentCategory.objects.order_by('name').values('id', 'name', 'color'))
+    return JsonResponse({'categories': cats})
+
+
+@login_required(login_url='login')
+def create_category(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=405)
+    data = json.loads(request.body)
+    name = data.get('name', '').strip()
+    color = data.get('color', '#796FA7').strip()
+    if not name:
+        return JsonResponse({'error': 'Name is required'}, status=400)
+    cat, created = IncidentCategory.objects.get_or_create(name=name, defaults={'color': color})
+    return JsonResponse({'id': cat.id, 'name': cat.name, 'color': cat.color, 'created': created})
+
+
+@login_required(login_url='login')
+@user_is_incident_responder
+@verify_permissions(['INCIDENT_LEAD', 'RESPONDER'])
+def add_incident_category(request, id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=405)
+    incident = get_object_or_404(Incident, id=id)
+    data = json.loads(request.body)
+    category_id = data.get('category_id')
+    if not category_id:
+        return JsonResponse({'error': 'category_id required'}, status=400)
+    cat = get_object_or_404(IncidentCategory, id=category_id)
+    incident.categories.add(cat)
+    return JsonResponse({'status': 'success', 'id': cat.id, 'name': cat.name, 'color': cat.color})
+
+
+@login_required(login_url='login')
+@user_is_incident_responder
+@verify_permissions(['INCIDENT_LEAD', 'RESPONDER'])
+def remove_incident_category(request, id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=405)
+    incident = get_object_or_404(Incident, id=id)
+    data = json.loads(request.body)
+    category_id = data.get('category_id')
+    if not category_id:
+        return JsonResponse({'error': 'category_id required'}, status=400)
+    incident.categories.remove(category_id)
+    return JsonResponse({'status': 'success'})
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required(login_url='login')

@@ -19,13 +19,13 @@
                 <i class="fa-solid fa-plus"></i> Add task
             </button>
             <div class="filter-buttons">
-                <button class="btn filter-button" id="my-tasks-button">
+                <button class="btn btn-secondary btn-sm filter-button" id="my-tasks-button">
                     <i class="fa-solid fa-user"></i> My tasks
                 </button>
-                <button class="btn filter-button" id="unassigned-button">
+                <button class="btn btn-secondary btn-sm filter-button" id="unassigned-button">
                     <i class="fa-solid fa-user-slash"></i> Unassigned
                 </button>
-                <button class="btn filter-button" id="reset-button">
+                <button class="btn btn-icon btn-sm filter-button" id="reset-button">
                     <i class="fa-solid fa-rotate-left"></i> Reset
                 </button>
             </div>
@@ -198,23 +198,32 @@
 
 
 <script>
+    const filterBtns = document.querySelectorAll('.filter-button');
+    function setActiveFilter(btn) {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+    }
+
     document.getElementById('my-tasks-button').addEventListener('click', function() {
         const currentUsername = document.getElementById('current-username').value;
         document.querySelectorAll('.kanban-task').forEach(task => {
             task.style.display = task.getAttribute('data-assignee') === currentUsername ? 'block' : 'none';
         });
+        setActiveFilter(this);
     });
 
     document.getElementById('unassigned-button').addEventListener('click', function() {
         document.querySelectorAll('.kanban-task').forEach(task => {
             task.style.display = task.getAttribute('data-assignee') === '' ? 'block' : 'none';
         });
+        setActiveFilter(this);
     });
 
     document.getElementById('reset-button').addEventListener('click', function() {
         document.querySelectorAll('.kanban-task').forEach(task => {
             task.style.display = 'block';
         });
+        setActiveFilter(null);
     });
 
 

@@ -1,3 +1,5 @@
+name: opencirt
+
 services:
   db:
     image: postgres:16-alpine
@@ -32,9 +34,11 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
       ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-}
+      LOAD_DEMO_DATA: ${LOAD_DEMO_DATA:-false}
     volumes:
       - static_volume:/vol/web/static
       - media_volume:/vol/web/media
+      - .:/app:ro
     depends_on:
       db:
         condition: service_healthy

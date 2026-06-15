@@ -6,6 +6,81 @@
 {% block styles %}
     <link rel="stylesheet" href="{% static 'css/overview.css' %}">
 <style>
+/* ── Incident categories ── */
+.cat-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+.cat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.cat-pill-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.6;
+    padding: 0;
+    font-size: 0.9rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+}
+.cat-pill-remove:hover { opacity: 1; }
+.cat-empty { font-size: 0.8rem; color: var(--text-color-2); }
+.cat-add-row { margin-top: 6px; }
+.cat-input-wrap { position: relative; }
+.cat-search {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: var(--background-color);
+    color: var(--text-color-1);
+    font-size: 0.82rem;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+.cat-search:focus { outline: none; border-color: var(--main-color-3); }
+.cat-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    z-index: 50;
+    overflow: hidden;
+}
+.cat-dropdown.open { display: block; }
+.cat-dd-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    color: var(--text-color-1);
+    transition: background 0.1s;
+}
+.cat-dd-item:hover { background: var(--hover-color); }
+.cat-dd-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.cat-dd-create { color: var(--text-color-2); gap: 6px; }
+.cat-dd-create i { font-size: 0.75rem; }
+
 /* ── AI rephrase button ── */
 .section-label-row {
     display: flex;
@@ -45,6 +120,7 @@
 {% endblock %}
 
 {% block content %}
+{{ all_categories|json_script:"all-cats-data" }}
 <div class="overview-page">
     <form id="incident-form">
 
@@ -159,6 +235,31 @@
                         {% endif %}
                     </div>
                     {% endif %}
+
+                    <!-- ── Incident Categories ── -->
+                    <div class="meta-field">
+                        <label class="section-label">Categories</label>
+                        <div class="cat-pills" id="catPills">
+                            {% for cat in incident.categories.all %}
+                            <span class="cat-pill" data-id="{{ cat.id }}" style="background:{{ cat.color }}20;color:{{ cat.color }};border-color:{{ cat.color }}60;">
+                                {{ cat.name }}
+                                {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                                <button class="cat-pill-remove" data-id="{{ cat.id }}" title="Remove">&times;</button>
+                                {% endif %}
+                            </span>
+                            {% empty %}
+                            <span class="cat-empty" id="catEmpty">None</span>
+                            {% endfor %}
+                        </div>
+                        {% if current_user_role.role != 'READER' and current_user_role.role != 'PUBLIC_VIEWER' %}
+                        <div class="cat-add-row">
+                            <div class="cat-input-wrap">
+                                <input type="text" id="catSearch" class="cat-search" placeholder="Add category…" autocomplete="off">
+                                <div class="cat-dropdown" id="catDropdown"></div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <div class="metrics-grid">
@@ -300,6 +401,116 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // ── Incident Categories ────────────────────────────────────────
+    const allCats = JSON.parse(document.getElementById('all-cats-data').textContent);
+    const catPills    = document.getElementById('catPills');
+    const catSearch   = document.getElementById('catSearch');
+    const catDropdown = document.getElementById('catDropdown');
+
+    let activeCatIds = new Set([{% for cat in incident.categories.all %}{{ cat.id }},{% endfor %}]);
+
+    if (catSearch) {
+
+    function renderDropdown(query) {
+        const q = query.toLowerCase();
+        const matches = allCats.filter(c => c.name.toLowerCase().includes(q) && !activeCatIds.has(c.id));
+        const showCreate = query.trim() && !allCats.some(c => c.name.toLowerCase() === q);
+        catDropdown.innerHTML = '';
+        if (!matches.length && !showCreate) { catDropdown.classList.remove('open'); return; }
+
+        matches.forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'cat-dd-item';
+            item.innerHTML = `<span class="cat-dd-dot" style="background:${c.color}"></span>${c.name}`;
+            item.addEventListener('mousedown', e => { e.preventDefault(); attachCategory(c); });
+            catDropdown.appendChild(item);
+        });
+        if (showCreate) {
+            const item = document.createElement('div');
+            item.className = 'cat-dd-item cat-dd-create';
+            item.innerHTML = `<i class="fa-solid fa-plus"></i> Create "<strong>${query.trim()}</strong>"`;
+            item.addEventListener('mousedown', e => { e.preventDefault(); createAndAttach(query.trim()); });
+            catDropdown.appendChild(item);
+        }
+        catDropdown.classList.add('open');
+    }
+
+    catSearch.addEventListener('input', () => renderDropdown(catSearch.value));
+    catSearch.addEventListener('focus', () => renderDropdown(catSearch.value));
+    catSearch.addEventListener('blur', () => setTimeout(() => catDropdown.classList.remove('open'), 150));
+
+    async function attachCategory(cat) {
+        catSearch.value = '';
+        catDropdown.classList.remove('open');
+        const resp = await fetch(`/api/incident/${incidentId}/add-category/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ category_id: cat.id }),
+        });
+        if (!resp.ok) return;
+        activeCatIds.add(cat.id);
+        addPill(cat);
+    }
+
+    async function createAndAttach(name) {
+        catSearch.value = '';
+        catDropdown.classList.remove('open');
+        const color = randomColor();
+        const resp = await fetch('/api/categories/create/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ name, color }),
+        });
+        if (!resp.ok) return;
+        const cat = await resp.json();
+        allCats.push(cat);
+        await attachCategory(cat);
+    }
+
+    function addPill(cat) {
+        document.getElementById('catEmpty')?.remove();
+        const pill = document.createElement('span');
+        pill.className = 'cat-pill';
+        pill.dataset.id = cat.id;
+        pill.style.cssText = `background:${cat.color}20;color:${cat.color};border-color:${cat.color}60;`;
+        pill.innerHTML = `${cat.name}<button class="cat-pill-remove" data-id="${cat.id}" title="Remove">&times;</button>`;
+        pill.querySelector('.cat-pill-remove').addEventListener('click', () => removeCategory(cat.id, pill));
+        catPills.appendChild(pill);
+    }
+
+    catPills.addEventListener('click', e => {
+        const btn = e.target.closest('.cat-pill-remove');
+        if (!btn) return;
+        const id = parseInt(btn.dataset.id);
+        const pill = btn.closest('.cat-pill');
+        removeCategory(id, pill);
+    });
+
+    async function removeCategory(catId, pillEl) {
+        const resp = await fetch(`/api/incident/${incidentId}/remove-category/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ category_id: catId }),
+        });
+        if (!resp.ok) return;
+        activeCatIds.delete(catId);
+        pillEl.remove();
+        if (!catPills.querySelector('.cat-pill')) {
+            const empty = document.createElement('span');
+            empty.className = 'cat-empty';
+            empty.id = 'catEmpty';
+            empty.textContent = 'None';
+            catPills.appendChild(empty);
+        }
+    }
+
+    function randomColor() {
+        const palette = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
+        return palette[Math.floor(Math.random() * palette.length)];
+    }
+
+    } // end if (catSearch)
 });
 </script>
 

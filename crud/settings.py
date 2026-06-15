@@ -166,7 +166,8 @@ AUTHENTICATION_BACKENDS = [
 
 AUTH_USER_MODEL = 'opencirt.User'
 
-handler403 = 'myapp.views.custom_403'  # (if you want to handle 403 specifically in a custom view)
+handler403 = 'opencirt.views.custom_403'
+handler404 = 'opencirt.views.custom_404'
 
 # ── AI rephrase keys — set via environment variables ─────────────────────────
 # Set ANTHROPIC_API_KEY and/or OPENAI_API_KEY in your environment.

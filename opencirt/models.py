@@ -28,6 +28,14 @@ class User(AbstractUser):
     )
 
 
+class IncidentCategory(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    color = models.CharField(max_length=7, default='#796FA7')
+
+    def __str__(self):
+        return self.name
+
+
 class Incident(models.Model):
     id = models.AutoField(primary_key=True)  # Auto-generated primary key
     name = models.CharField(max_length=255)  # Name of the incident
@@ -65,6 +73,7 @@ class Incident(models.Model):
     TLP_CHOICES = [('CLEAR','CLEAR'),('GREEN','GREEN'),('AMBER','AMBER'),('RED','RED')]
     tlp = models.CharField(max_length=10, choices=TLP_CHOICES, default='CLEAR')
     ai_rephrase_enabled = models.BooleanField(default=False)
+    categories = models.ManyToManyField(IncidentCategory, blank=True, related_name='incidents')
 
     def __str__(self):
         return self.name

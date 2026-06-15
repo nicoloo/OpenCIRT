@@ -1,4 +1,4 @@
-{% extends 'base2.html' %}
+{% extends 'base.html' %}
 {% load static %}
 {% load custom_filters %}
 
@@ -72,6 +72,15 @@
                     <span class="ic-name">{{ inc.name }}</span>
                     <span class="ic-status-pill ic-status-{{ inc.status|lower }}">{{ inc.get_status_display }}</span>
                 </div>
+                {% with cats=inc.categories.all %}
+                {% if cats %}
+                <div class="ic-categories">
+                    {% for cat in cats %}
+                    <span class="ic-cat-pill" style="background:{{ cat.color }}20;color:{{ cat.color }};border-color:{{ cat.color }}60;">{{ cat.name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
                 <div class="ic-meta">
                     <span><i class="fa-regular fa-calendar"></i> {{ inc.created_at|date:"d M Y" }}</span>
                     <span><i class="fa-solid fa-virus"></i> {{ inc.genericiocs.count }} IoC{% if inc.genericiocs.count != 1 %}s{% endif %}</span>

@@ -114,6 +114,81 @@
     }
   },
   {
+    "model": "opencirt.incidentcategory",
+    "pk": 1,
+    "fields": { "name": "Malware", "color": "#ef4444" }
+  },
+  {
+    "model": "opencirt.incidentcategory",
+    "pk": 2,
+    "fields": { "name": "Ransomware", "color": "#dc2626" }
+  },
+  {
+    "model": "opencirt.incidentcategory",
+    "pk": 3,
+    "fields": { "name": "Phishing", "color": "#f97316" }
+  },
+  {
+    "model": "opencirt.incidentcategory",
+    "pk": 4,
+    "fields": { "name": "Data Breach", "color": "#8b5cf6" }
+  },
+  {
+    "model": "opencirt.incidentcategory",
+    "pk": 5,
+    "fields": { "name": "Insider Threat", "color": "#b91c1c" }
+  },
+  {
+    "model": "opencirt.incidentcategory",
+    "pk": 6,
+    "fields": { "name": "Fraud", "color": "#d97706" }
+  },
+  {
+    "model": "opencirt.incidentcategory",
+    "pk": 7,
+    "fields": { "name": "DDoS", "color": "#3b82f6" }
+  },
+  {
+    "model": "opencirt.incidentcategory",
+    "pk": 8,
+    "fields": { "name": "Supply Chain Attack", "color": "#10b981" }
+  },
+  {
+    "model": "opencirt.incidentcategory",
+    "pk": 9,
+    "fields": { "name": "Social Engineering", "color": "#f59e0b" }
+  },
+  {
+    "model": "opencirt.incidentcategory",
+    "pk": 10,
+    "fields": { "name": "Vulnerability Exploitation", "color": "#06b6d4" }
+  },
+  {
+    "model": "opencirt.incidentcategory",
+    "pk": 11,
+    "fields": { "name": "APT", "color": "#7c3aed" }
+  },
+  {
+    "model": "opencirt.incidentcategory",
+    "pk": 12,
+    "fields": { "name": "Unauthorized Access", "color": "#6b7280" }
+  },
+  {
+    "model": "opencirt.incident",
+    "pk": 1,
+    "fields": { "categories": [1, 2] }
+  },
+  {
+    "model": "opencirt.incident",
+    "pk": 2,
+    "fields": { "categories": [3, 11] }
+  },
+  {
+    "model": "opencirt.incident",
+    "pk": 3,
+    "fields": { "categories": [4, 10] }
+  },
+  {
     "model": "opencirt.action",
     "pk": 1,
     "fields": {

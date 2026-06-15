@@ -1,19 +1,91 @@
 :root {
+    /* Primary palette */
     --main-color-1: rgba(53, 52, 71, 0.8);
     --main-color-2: rgba(57, 56, 69, 0.8);
     --main-color-3: #796FA7;
-    --text-color-1: #c0c0ca;
-    --text-color-2: #5c5c5e;
+
+    /* Backgrounds */
+    --background-color: #141415;
     --widget-background-color: #232325;
-    --hover-color: #4c4f54;
-    --background-color:#141415;
-    --color-severity-critical:#f06654a0;
-    --color-severity-high:#dc7c73ca;
-    --color-severity-medium:#e3cf98;
-    --color-severity-low:#c5ceae;
-    --color-case-closed:#9eb7dc;
+    --sidebar-bg: #1c1c1e;
+    --topbar-bg: #1c1c1e;
+
+    /* Text */
+    --text-color-1: #c0c0ca;
+    --text-color-2: #7a7a80;
+    --muted-color: #55555a;
+
+    /* UI states */
+    --hover-color: #2c2c30;
+    --border-color: #38383d;
+
+    /* Accent */
+    --accent-color: #796FA7;
+
+    /* Severity */
+    --color-severity-critical: #f06654a0;
+    --color-severity-high: #dc7c73ca;
+    --color-severity-medium: #e3cf98;
+    --color-severity-low: #c5ceae;
+
+    /* Action / case colors */
+    --color-case-closed: #9eb7dc;
     --color-action-malicious: #ff6b6b;
     --color-action-defensive: #4da6ff;
     --color-action-mitigation: #a78bfa;
     --color-action-alert: #fbbf24;
 }
+
+/* ── Element-level overrides not covered by variables ── */
+
+/* Table borders */
+th, td { border-bottom-color: var(--border-color); }
+th { background-color: var(--main-color-1); color: var(--text-color-1); }
+
+/* Form inputs */
+input, textarea, select {
+    background-color: var(--widget-background-color);
+    color: var(--text-color-1);
+    border-color: var(--border-color);
+}
+input::placeholder, textarea::placeholder { color: var(--muted-color); }
+
+/* Scrollbar (Webkit) */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--background-color); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+
+/* ── Timeline page ── */
+
+/* Card text — hardcoded near-black in timeline.css */
+.tl-action-title { color: var(--text-color-1); }
+.tl-action-desc  { color: var(--text-color-2); }
+.tl-time         { color: var(--muted-color); }
+.tl-empty        { color: var(--muted-color); }
+
+/* Type badges — lighten backgrounds for dark surfaces */
+.tl-badge-malicious    { background: rgba(239,68,68,.15);   color: #fca5a5; }
+.tl-badge-defensive    { background: rgba(59,130,246,.15);  color: #93c5fd; }
+.tl-badge-mitigation   { background: rgba(139,92,246,.15);  color: #c4b5fd; }
+.tl-badge-alert        { background: rgba(245,158,11,.15);  color: #fcd34d; }
+.tl-badge-communication { background: rgba(20,184,166,.15); color: #5eead4; }
+.tl-badge-other        { background: rgba(156,163,175,.15); color: #d1d5db; }
+
+/* Form group labels + inputs inside timeline modals */
+.form-group label       { color: var(--text-color-2); }
+.form-section-title     { color: var(--muted-color); }
+.form-group input,
+.form-group select,
+.form-group textarea    { background: var(--widget-background-color); color: var(--text-color-1); border-color: var(--border-color); }
+
+/* IOC picker */
+.ioc-picker-linked,
+.ioc-picker-search      { background: var(--widget-background-color); color: var(--text-color-1); border-color: var(--border-color); }
+
+/* Secondary button */
+.btn-secondary          { background: var(--widget-background-color); color: var(--text-color-1); border-color: var(--border-color); }
+.btn-secondary:hover    { background: var(--hover-color); }
+
+/* Modal close button */
+.modal-header .close      { color: var(--text-color-2); }
+.modal-header .close:hover { background: var(--hover-color); }
