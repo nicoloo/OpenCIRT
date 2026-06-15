@@ -29,6 +29,10 @@ import csv
 from io import StringIO
 from docx import Document as DocxDocument
 from docx.shared import Pt, RGBColor
+from django.core.cache import cache
+
+_LOGIN_RATE_LIMIT = 10     # max failed attempts
+_LOGIN_RATE_WINDOW = 900   # 15 minutes in seconds
 
 # ── Audit log helpers ─────────────────────────────────────────────────────────
 
@@ -160,15 +164,36 @@ def home(request):
     })
 
 
+def _login_rate_limit_exceeded(ip: str) -> bool:
+    """Return True if this IP has exceeded the failed-login rate limit."""
+    key = f'login_fail_{ip}'
+    try:
+        count = cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, timeout=_LOGIN_RATE_WINDOW)
+        count = 1
+    return count > _LOGIN_RATE_LIMIT
+
+
+def _login_rate_limit_reset(ip: str) -> None:
+    """Clear the failed-login counter for an IP on successful login."""
+    cache.delete(f'login_fail_{ip}')
+
+
 def custom_login(request):
     if request.method == 'POST':
+        ip = _get_client_ip(request)
+        if _login_rate_limit_exceeded(ip):
+            return render(request, 'login.html',
+                          {'error': 'Too many failed attempts. Try again in 15 minutes.'},
+                          status=429)
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
         user = authenticate(request, username=username, password=password)
         if user is not None:
+            _login_rate_limit_reset(ip)
             login(request, user)
             next_url = request.GET.get('next', '/home')
-            # Guard against open-redirect: only allow same-host relative URLs
             if not url_has_allowed_host_and_scheme(
                 next_url,
                 allowed_hosts={request.get_host()},
