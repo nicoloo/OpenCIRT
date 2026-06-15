@@ -1,9 +1,9 @@
 #!/bin/sh
 set -eu
 
-if [ "${DEBUG:-False}" != "True" ] && [ "${POSTGRES_PASSWORD:-opencirt}" = "opencirt" ]; then
-    echo "ERROR: POSTGRES_PASSWORD is still the default 'opencirt'." >&2
-    echo "       Set a strong password in your .env file before starting in production." >&2
+if [ "${DEBUG:-False}" != "True" ] && [ "${DATABASE_PASSWORD:-opencirt}" = "opencirt" ]; then
+    echo "ERROR: DATABASE_PASSWORD is still the default 'opencirt'." >&2
+    echo "       Set POSTGRES_PASSWORD to a strong value in your .env file." >&2
     exit 1
 fi
 
