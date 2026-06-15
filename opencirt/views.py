@@ -2296,14 +2296,17 @@ def export_audit_logs(request, id):
 
 def _ai_rephrase_rate_limit_exceeded(user_id: int) -> bool:
     """Return True if this user has used up their daily AI rephrase quota."""
-    today = timezone.now().date().isoformat()
-    key = f'ai_rephrase_{user_id}_{today}'
+    from datetime import timezone as dt_timezone
+    now_utc = timezone.now()  # always UTC-aware in Django with USE_TZ=True
+    today_utc = now_utc.astimezone(dt_timezone.utc).date().isoformat()
+    key = f'ai_rephrase_{user_id}_{today_utc}'
     try:
         count = cache.incr(key)
     except ValueError:
-        now = timezone.now()
-        tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        secs = int((tomorrow - now).total_seconds())
+        midnight_utc = (now_utc.astimezone(dt_timezone.utc) + timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        secs = int((midnight_utc - now_utc).total_seconds())
         cache.set(key, 1, timeout=secs)
         count = 1
     return count > _AI_REPHRASE_DAILY_LIMIT
