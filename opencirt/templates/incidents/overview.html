@@ -192,6 +192,16 @@
                     </div>
                 </div>
 
+                {% if incident.status == 'CLOSED' %}
+                <div class="timing-card">
+                    <i class="fa-solid fa-calendar-check timing-icon"></i>
+                    <div>
+                        <span class="timing-label">Ended</span>
+                        <strong class="timing-value">{{ incident.ending_time|date:"j F Y \\a\\t H:i" }}</strong>
+                    </div>
+                </div>
+                {% endif %}
+
                 <div class="save-indicator" id="saveIndicator">
                     <i class="fa-solid fa-circle-check"></i> Saved
                 </div>

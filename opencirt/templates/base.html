@@ -24,17 +24,16 @@
 
 
 
-                {% if user.profile_pictureurl %}
-                <div class="profile-picture-base">
-                    <img src="{{ user.profile_pictureurl }}" alt="{{ user.username }}'s Profile Picture" class="profile-picture-base">
-                </div>
+                {% if user.profile_picture %}
+                <a href="/profile">
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}'s Profile Picture" class="profile-picture-base">
+                </a>
                 {% else %}
-                    <a href="/profile">
-                    <div class="default-picture-base" title="{{ user.username }}" >
-                        
+                <a href="/profile">
+                    <div class="default-picture-base" title="{{ user.username }}">
                         {{ user.username|slice:":1" }}
                     </div>
-                    </a>
+                </a>
                 {% endif %}
 
             </div>

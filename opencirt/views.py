@@ -5,7 +5,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
 from opencirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformSettings, CtiProvider
 from . import models
-from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, get_incidents_by_day_and_severity
+from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, sync_incident_times, get_incidents_by_day_and_severity
 from .threat_intel import schedule_lookup, ELIGIBLE_TYPES as THREAT_INTEL_ELIGIBLE_TYPES
 from django.contrib import messages
 import json
@@ -1372,6 +1372,7 @@ def add_action(request, id):
             if action_iocs:
                 action.iocs.set(action_iocs)
             update_first_actions(incident=incident)
+            sync_incident_times(incident)
             Message.objects.create(
                 incident=incident,
                 sender=request.user,
@@ -1564,6 +1565,7 @@ def import_actions(request, id):
 
     if created:
         update_first_actions(incident=incident)
+        sync_incident_times(incident)
         Message.objects.create(
             incident=incident, sender=request.user, is_bot=True,
             text=f"{request.user.username} imported {created} timeline action(s) from CSV",
@@ -1607,6 +1609,7 @@ def update_action(request, id):
             
             action.save()
             update_first_actions(incident=action.incident)
+            sync_incident_times(action.incident)
             _audit(action.incident, request, 'UPDATE', 'Timeline', f'Updated timeline event "{action.title}"')
             return JsonResponse({"status": "success", "message": "Action updated successfully"})
 
@@ -1637,6 +1640,7 @@ def delete_action(request, id):
             action_title = action.title
             action.delete()
             update_first_actions(incident=incident)
+            sync_incident_times(incident)
             _audit(incident, request, 'DELETE', 'Timeline', f'Deleted timeline event "{action_title}"')
             return JsonResponse({"status": "success", "message": "Action deleted successfully"})
 
@@ -2106,6 +2110,8 @@ def update_incident(request, id):
                 incident.external_reference = (data['external_reference'] or '')[:255]
             if 'status' in data:
                 incident.status = data['status']
+                if data['status'] == 'CLOSED':
+                    sync_incident_times(incident)
             if 'severity' in data:
                 incident.severity = data['severity']
             if 'export_include_timeline' in data:

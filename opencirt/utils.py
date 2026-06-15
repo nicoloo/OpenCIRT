@@ -85,6 +85,25 @@ def user_is_incident_responder(view_func):
 
 
 
+def sync_incident_times(incident: Incident) -> None:
+    """Set incident.starting_time to the earliest action time.
+    When the incident is CLOSED, also set ending_time to the latest action time.
+    """
+    times = []
+    for a in incident.actions.all():
+        t = a.observed_at or a.starting_time
+        if t:
+            times.append(t)
+    if not times:
+        return
+    fields_to_update = ['starting_time']
+    incident.starting_time = min(times)
+    if incident.status == 'CLOSED':
+        incident.ending_time = max(times)
+        fields_to_update.append('ending_time')
+    incident.save(update_fields=fields_to_update)
+
+
 def update_first_actions(incident: Incident):
     actions = incident.actions.all().order_by('observed_at', 'starting_time')  # Sort by observed_at or starting_time
     action_dates = {}

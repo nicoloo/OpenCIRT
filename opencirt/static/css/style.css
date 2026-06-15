@@ -77,9 +77,15 @@ body {
 .sidebar .link:hover {
     background-color: #3E5870;
 }
+.sidebar a.logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 0;
+}
 .sidebar a.logo:hover {
-    background-color: transparent; /* Removes hover background */
-    color: inherit; /* Ensures text color doesn't change */
+    background-color: transparent;
+    color: inherit;
 }
 
 /* Main content styling */
