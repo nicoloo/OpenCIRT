@@ -33,6 +33,7 @@ from django.core.cache import cache
 
 _LOGIN_RATE_LIMIT = 10     # max failed attempts
 _LOGIN_RATE_WINDOW = 900   # 15 minutes in seconds
+_AI_REPHRASE_DAILY_LIMIT = 20
 
 # ── Audit log helpers ─────────────────────────────────────────────────────────
 
@@ -2293,6 +2294,21 @@ def export_audit_logs(request, id):
 # AI REPHRASE
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _ai_rephrase_rate_limit_exceeded(user_id: int) -> bool:
+    """Return True if this user has used up their daily AI rephrase quota."""
+    today = timezone.now().date().isoformat()
+    key = f'ai_rephrase_{user_id}_{today}'
+    try:
+        count = cache.incr(key)
+    except ValueError:
+        now = timezone.now()
+        tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        secs = int((tomorrow - now).total_seconds())
+        cache.set(key, 1, timeout=secs)
+        count = 1
+    return count > _AI_REPHRASE_DAILY_LIMIT
+
+
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def ai_rephrase(request, id):
@@ -2318,6 +2334,12 @@ def ai_rephrase(request, id):
             return JsonResponse({'error': 'Permission denied: read-only role.'}, status=403)
     except UserRole.DoesNotExist:
         pass  # Public incident — logged-in non-responder; allow (already passed decorator)
+
+    if _ai_rephrase_rate_limit_exceeded(request.user.pk):
+        return JsonResponse(
+            {'error': f'Daily AI rephrase limit ({_AI_REPHRASE_DAILY_LIMIT} calls) reached. Resets at midnight UTC.'},
+            status=429,
+        )
 
     try:
         body = json.loads(request.body)
