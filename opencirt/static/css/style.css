@@ -522,10 +522,11 @@ body.incident-layout {
 .sidebar-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 10px 10px 10px 14px;
+    justify-content: center;
+    padding: 10px;
     border-bottom: 1px solid var(--border-color);
     min-height: 60px;
+    position: relative;
 }
 
 .sidebar-logo {
@@ -561,6 +562,8 @@ body.incident-layout {
     border-radius: 6px;
     transition: background 0.15s;
     font-size: 0.8rem;
+    position: absolute;
+    right: 10px;
 }
 
 .sidebar-toggle:hover {
