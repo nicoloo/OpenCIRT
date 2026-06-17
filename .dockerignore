@@ -10,3 +10,8 @@ __pycache__/
 staticfiles/
 media/
 node_modules/
+docs/
+*.md
+.env*
+.github/
+tests/
