@@ -17,19 +17,38 @@ OpenCIRT is an open-source platform for cybersecurity teams to manage the full i
 - **Report export** — PDF / DOCX with configurable sections
 - **AI assistance** — optional Anthropic / OpenAI integration
 
-## Quick start (Docker)
+## Quick start (pre-built image)
+
+No source clone or local build needed — pulls the latest published image from GitHub Container Registry.
 
 ```bash
-git clone https://github.com/nicoloo/OpenCIRT.git
-cd OpenCIRT
+# 1. Download the two files you need
+curl -O https://raw.githubusercontent.com/nicoloo/OpenCIRT/master/docker-compose.prod.yml
+curl --create-dirs -O --output-dir docker https://raw.githubusercontent.com/nicoloo/OpenCIRT/master/docker/nginx.conf
+
+# 2. Create your .env
+curl -O https://raw.githubusercontent.com/nicoloo/OpenCIRT/master/.env.example
 cp .env.example .env
 # Edit .env: set SECRET_KEY and POSTGRES_PASSWORD
-docker compose up --build
+
+# 3. Start
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 Open [http://localhost](http://localhost) — username `admin`, password printed in the container logs on first start.
 
-> **Demo data:** set `LOAD_DEMO_DATA=true` in `.env` before the first `docker compose up` to load sample incidents automatically.
+> **SSL:** The default nginx config requires TLS certificates in `docker/certs/` (`fullchain.pem` + `privkey.pem`). For HTTP-only local testing, edit `docker/nginx.conf` to remove the HTTPS server block and listen on port 80 directly.
+
+> **Demo data:** set `LOAD_DEMO_DATA=true` in `.env` before the first `docker compose` to load sample incidents automatically.
+
+### Pinning a specific version
+
+```bash
+# Use a specific release instead of latest
+sed -i 's|ghcr.io/nicoloo/opencirt:latest|ghcr.io/nicoloo/opencirt:1.2.3|' docker-compose.prod.yml
+```
+
+Available tags: `latest`, `sha-<commit>`, and semver tags (`1.2.3`, `1.2`, `1`) for each [release](https://github.com/nicoloo/OpenCIRT/releases).
 
 ## Environment variables
 
@@ -43,6 +62,16 @@ Open [http://localhost](http://localhost) — username `admin`, password printed
 | `OPENAI_API_KEY` | No | Alternative AI provider |
 | `VIRUSTOTAL_API_KEY` | No | IOC enrichment |
 | `ABUSEIPDB_API_KEY` | No | IP reputation lookups |
+
+## Development / build from source
+
+```bash
+git clone https://github.com/nicoloo/OpenCIRT.git
+cd OpenCIRT
+cp .env.example .env
+# Edit .env: set SECRET_KEY and POSTGRES_PASSWORD
+docker compose up --build
+```
 
 ## Contributing
 
