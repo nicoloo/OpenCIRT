@@ -12,7 +12,7 @@ Only the latest release receives security fixes.
 
 **Please do not open a public GitHub issue for security vulnerabilities.**
 
-Report vulnerabilities by emailing the maintainers directly. Include:
+Use GitHub's private vulnerability reporting — click **"Report a vulnerability"** on the [Security tab](https://github.com/nicoloo/OpenCIRT/security/advisories/new). Include:
 
 - A description of the vulnerability
 - Steps to reproduce
