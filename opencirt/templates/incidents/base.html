@@ -24,11 +24,7 @@
 
         <div class="sidebar-header">
             <a class="sidebar-logo" href="/home">
-                {% if user.is_authenticated and user.light_mode == 'dark_mode' %}
-                <img src="{% static 'logo_phrase_dark.png' %}" alt="OpenCIRT" onerror="this.onerror=null;this.src='/static/logo.png'">
-                {% else %}
                 <img src="{% static 'logo.png' %}" alt="OpenCIRT">
-                {% endif %}
             </a>
             <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
                 <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>

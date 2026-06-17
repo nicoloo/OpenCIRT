@@ -1,0 +1,67 @@
+name: opencirt
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-opencirt}
+      POSTGRES_USER: ${POSTGRES_USER:-opencirt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ghcr.io/nicoloo/opencirt:latest
+    environment:
+      DEBUG: ${DEBUG:-False}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DATABASE_ENGINE: django.db.backends.postgresql
+      DATABASE_NAME: ${POSTGRES_DB:-opencirt}
+      DATABASE_USER: ${POSTGRES_USER:-opencirt}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      STATIC_ROOT: /vol/web/static
+      MEDIA_ROOT: /vol/web/media
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+      ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-}
+      LOAD_DEMO_DATA: ${LOAD_DEMO_DATA:-false}
+    volumes:
+      - static_volume:/vol/web/static
+      - media_volume:/vol/web/media
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2)\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  frontend:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx-http.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_volume:/vol/web/static:ro
+      - media_volume:/vol/web/media:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
