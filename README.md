@@ -44,8 +44,10 @@ Open [http://localhost](http://localhost) — username `admin`, password printed
 ### Pinning a specific version
 
 ```bash
-# Use a specific release instead of latest
-sed -i 's|ghcr.io/nicoloo/opencirt:latest|ghcr.io/nicoloo/opencirt:1.2.3|' docker-compose.prod.yml
+# Pin to a specific release — edit docker-compose.prod.yml and change:
+#   image: ghcr.io/nicoloo/opencirt:latest
+# to:
+#   image: ghcr.io/nicoloo/opencirt:1.2.3
 ```
 
 Available tags: `latest`, `sha-<commit>`, and semver tags (`1.2.3`, `1.2`, `1`) for each [release](https://github.com/nicoloo/OpenCIRT/releases).
