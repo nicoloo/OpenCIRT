@@ -24,7 +24,8 @@
       "ai_rephrase_enabled": false,
       "export_include_timeline": true,
       "export_include_iocs": true,
-      "export_include_attachements": true
+      "export_include_attachements": true,
+      "categories": [1, 2]
     }
   },
   {
@@ -52,7 +53,8 @@
       "ai_rephrase_enabled": false,
       "export_include_timeline": true,
       "export_include_iocs": true,
-      "export_include_attachements": true
+      "export_include_attachements": true,
+      "categories": [3, 11]
     }
   },
   {
@@ -80,7 +82,8 @@
       "ai_rephrase_enabled": false,
       "export_include_timeline": true,
       "export_include_iocs": true,
-      "export_include_attachements": true
+      "export_include_attachements": true,
+      "categories": [4, 10]
     }
   },
   {
@@ -172,21 +175,6 @@
     "model": "opencirt.incidentcategory",
     "pk": 12,
     "fields": { "name": "Unauthorized Access", "color": "#6b7280" }
-  },
-  {
-    "model": "opencirt.incident",
-    "pk": 1,
-    "fields": { "categories": [1, 2] }
-  },
-  {
-    "model": "opencirt.incident",
-    "pk": 2,
-    "fields": { "categories": [3, 11] }
-  },
-  {
-    "model": "opencirt.incident",
-    "pk": 3,
-    "fields": { "categories": [4, 10] }
   },
   {
     "model": "opencirt.action",
@@ -728,7 +716,7 @@
       "title": "Email Gateway Rule Update",
       "external_reference": "SEC-2026-0602",
       "description": "Update email gateway rules to block Office documents with macro execution capabilities. Implement macro blocking policies. Whitelist known-safe internal macro sources.",
-      "status": "CLOSED",
+      "status": "DONE",
       "priority": "CRITICAL",
       "assignee": 1,
       "tags": []
@@ -762,7 +750,7 @@
       "title": "Hardware Token Deployment for Executives",
       "external_reference": "SEC-2026-0604",
       "description": "Distribute FIDO2 hardware security tokens to all C-level executives and finance team. Configure for all financial systems and O365.",
-      "status": "CLOSED",
+      "status": "DONE",
       "priority": "CRITICAL",
       "assignee": 1,
       "tags": []
@@ -779,7 +767,7 @@
       "title": "Law Enforcement Report",
       "external_reference": "SEC-2026-0605",
       "description": "File formal report with FBI Cyber Division and Secret Service regarding APT28 phishing campaign. Provide IOCs and timeline for joint investigation.",
-      "status": "CLOSED",
+      "status": "DONE",
       "priority": "HIGH",
       "assignee": 1,
       "tags": []
@@ -832,7 +820,7 @@
       "description": "Critical file shares encrypted: Finance, HR, Legal, Customer Data. Estimated 2.5TB of data locked. Recovery completed from June 7 backups with minimal data loss.",
       "status": "CLOSED",
       "severity": "CRITICAL",
-      "type": "DATA",
+      "type": "DATA_LOSS",
       "assignee": 1,
       "action": [],
       "starting_time": "2026-06-09T08:00:00Z",
@@ -854,7 +842,7 @@
       "description": "Finance team unable to access accounting systems for 6 hours. HR unable to process payroll updates. Legal unable to access contract library. Estimated business impact: $50,000 in lost productivity.",
       "status": "CLOSED",
       "severity": "HIGH",
-      "type": "AVAILABILITY",
+      "type": "SYSTEMS_AVAILABILITY",
       "assignee": 1,
       "action": [],
       "starting_time": "2026-06-09T08:00:00Z",
@@ -876,7 +864,7 @@
       "description": "CFO and VP Finance accounts compromised. Access to financial systems, email, and cloud storage. No fraudulent transactions detected. Accounts secured within 2 hours.",
       "status": "CLOSED",
       "severity": "HIGH",
-      "type": "CONFIDENTIALITY",
+      "type": "NOT_DEFINED",
       "assignee": 1,
       "action": [],
       "starting_time": "2026-06-05T10:15:00Z",
@@ -896,9 +884,9 @@
       "title": "Information Disclosure - Executive Email",
       "external_reference": "IMP-2026-0604",
       "description": "APT28 gained access to CFO email mailbox. Reviewed financial communications and strategic plans. Approximately 500+ emails read. Potential competitive intelligence theft.",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "severity": "MEDIUM",
-      "type": "CONFIDENTIALITY",
+      "type": "NOT_DEFINED",
       "assignee": 1,
       "action": [],
       "starting_time": "2026-06-05T10:45:00Z",
@@ -918,9 +906,9 @@
       "title": "Customer PII Exposure",
       "external_reference": "IMP-2026-0605",
       "description": "12,500 customer records exposed including names, email addresses, phone numbers. Passwords hashed with bcrypt (not plaintext). Customer notification and credit monitoring offered.",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "severity": "CRITICAL",
-      "type": "CONFIDENTIALITY",
+      "type": "NOT_DEFINED",
       "assignee": 1,
       "action": [],
       "starting_time": "2026-06-09T18:00:00Z",
@@ -942,7 +930,7 @@
       "description": "Customer search API taken offline for patching. Portal unavailable for 12 hours. Alternative manual lookup process implemented. Customers unable to access account information self-service.",
       "status": "CLOSED",
       "severity": "MEDIUM",
-      "type": "AVAILABILITY",
+      "type": "SYSTEMS_AVAILABILITY",
       "assignee": 1,
       "action": [],
       "starting_time": "2026-06-10T00:15:00Z",
