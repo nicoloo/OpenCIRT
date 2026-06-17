@@ -22,6 +22,8 @@ from .report_generators import (
     generate_markdown, generate_deep_json,
 )
 import csv
+import io
+from PIL import Image
 from io import StringIO
 from docx import Document as DocxDocument
 from docx.shared import Pt, RGBColor
@@ -654,8 +656,12 @@ def join(request, id):
     if request.method == 'POST':
         code = request.POST.get('code', '').strip()
 
-        # Validate invite code
-        if incident.invite_code and code != incident.invite_code:
+        # Ensure every incident has a code (backfill for any created before this guard)
+        if not incident.invite_code:
+            incident.invite_code = generate_invite_code()
+            incident.save(update_fields=['invite_code'])
+
+        if code != incident.invite_code:
             return render(request, 'incidents/join.html', {
                 'incident': incident,
                 'error': 'Invalid code. Please check with your incident lead.',
@@ -1949,9 +1955,11 @@ def update_impact(request, id):
             data = json.loads(request.body)['data']
             impact_id = data['id']
             impact = Impact.objects.get(id=impact_id)
-            for field, value in data.items():
-                if hasattr(impact, field):
-                    setattr(impact, field, value)
+
+            _IMPACT_EDITABLE = {'title', 'external_reference', 'description', 'status', 'severity', 'type', 'starting_time', 'ending_time'}
+            for field in _IMPACT_EDITABLE:
+                if field in data:
+                    setattr(impact, field, data[field])
 
             impact.duration = datetime.strptime(impact.ending_time, "%Y-%m-%dT%H:%M") - datetime.strptime(impact.starting_time, "%Y-%m-%dT%H:%M")
             impact.save()
@@ -2153,6 +2161,12 @@ def update_profile(request):
                 ext = os.path.splitext(profile_picture.name)[1].lower()
                 if ext not in [".jpg", ".jpeg", ".png"]:
                     return JsonResponse({'error': "You ain't uploading any webshells on my app you dirty cow. Only JPG and PNG are allowed"}, status=403)
+                try:
+                    img = Image.open(io.BytesIO(profile_picture.read()))
+                    img.verify()
+                    profile_picture.seek(0)
+                except Exception:
+                    return JsonResponse({'error': 'Invalid image file.'}, status=400)
 
                 user.profile_picture.save(profile_picture.name, profile_picture)
 
@@ -2609,6 +2623,10 @@ def list_categories(request):
 def create_category(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid method'}, status=405)
+    if not request.user.is_superuser and not UserRole.objects.filter(
+        user=request.user, role__in=['INCIDENT_LEAD', 'RESPONDER']
+    ).exists():
+        return JsonResponse({'error': 'Forbidden'}, status=403)
     data = json.loads(request.body)
     name = data.get('name', '').strip()
     color = data.get('color', '#796FA7').strip()
