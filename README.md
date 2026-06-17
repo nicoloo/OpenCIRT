@@ -24,7 +24,7 @@ No source clone or local build needed — pulls the latest published image from 
 ```bash
 # 1. Download the two files you need
 curl -O https://raw.githubusercontent.com/nicoloo/OpenCIRT/master/docker-compose.prod.yml
-curl --create-dirs -O --output-dir docker https://raw.githubusercontent.com/nicoloo/OpenCIRT/master/docker/nginx.conf
+curl --create-dirs -O --output-dir docker https://raw.githubusercontent.com/nicoloo/OpenCIRT/master/docker/nginx-http.conf
 
 # 2. Create your .env
 curl -O https://raw.githubusercontent.com/nicoloo/OpenCIRT/master/.env.example
@@ -37,9 +37,26 @@ docker compose -f docker-compose.prod.yml up -d
 
 Open [http://localhost](http://localhost) — username `admin`, password printed in the container logs on first start.
 
-> **SSL:** The default nginx config requires TLS certificates in `docker/certs/` (`fullchain.pem` + `privkey.pem`). For HTTP-only local testing, edit `docker/nginx.conf` to remove the HTTPS server block and listen on port 80 directly.
-
 > **Demo data:** set `LOAD_DEMO_DATA=true` in `.env` before the first `docker compose` to load sample incidents automatically.
+
+### HTTPS / production (TLS)
+
+The quick-start uses `nginx-http.conf` (HTTP only, port 80) so it works without any certificates.
+
+For a production deployment with TLS:
+
+1. Place your certificates in `docker/certs/`: `fullchain.pem` and `privkey.pem`.
+2. In `docker-compose.prod.yml`, replace the nginx volume mount:
+   ```yaml
+   - ./docker/nginx-http.conf:/etc/nginx/conf.d/default.conf:ro
+   ```
+   with:
+   ```yaml
+   - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+   - ./docker/certs:/etc/nginx/certs:ro
+   ```
+3. Also add `- "443:443"` under `ports` for the frontend service.
+4. Restart: `docker compose -f docker-compose.prod.yml up -d`
 
 ### Pinning a specific version
 
