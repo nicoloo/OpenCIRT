@@ -34,6 +34,7 @@ services:
       VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
       ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-}
       LOAD_DEMO_DATA: ${LOAD_DEMO_DATA:-false}
+      HTTPS_REDIRECT: ${HTTPS_REDIRECT:-false}
     volumes:
       - static_volume:/vol/web/static
       - media_volume:/vol/web/media
