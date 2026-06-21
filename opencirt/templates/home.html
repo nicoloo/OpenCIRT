@@ -62,15 +62,26 @@
     <div class="home-incident-list" id="incidentList">
         {% for inc in incidents %}
         <div class="incident-card"
+             data-id="{{ inc.id }}"
              data-name="{{ inc.name|lower }}"
              data-severity="{{ inc.severity }}"
-             data-status="{{ inc.status }}"
-             onclick="window.location.href='/incident/{{ inc.id }}/overview'">
-            <div class="ic-sev-bar ic-sev-{{ inc.severity|lower }}"></div>
-            <div class="ic-body">
+             data-status="{{ inc.status }}">
+            <!-- Checkbox for batch selection -->
+            <label class="ic-checkbox-wrap" onclick="event.stopPropagation()">
+                <input type="checkbox" class="ic-checkbox" value="{{ inc.id }}"
+                       onchange="onCardCheck(this)">
+            </label>
+            <!-- Severity bar -->
+            <div class="ic-sev-bar ic-sev-{{ inc.severity|lower }}"
+                 onclick="window.location.href='/incident/{{ inc.id }}/overview'"></div>
+            <!-- Body -->
+            <div class="ic-body" onclick="window.location.href='/incident/{{ inc.id }}/overview'">
                 <div class="ic-top">
                     <span class="ic-name">{{ inc.name }}</span>
                     <span class="ic-status-pill ic-status-{{ inc.status|lower }}">{{ inc.get_status_display }}</span>
+                    {% if inc.resolution %}
+                    <span class="ic-resolution-badge ic-res-{{ inc.resolution|lower }}">{{ inc.get_resolution_display }}</span>
+                    {% endif %}
                 </div>
                 {% with cats=inc.categories.all %}
                 {% if cats %}
@@ -98,7 +109,8 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="ic-sev-badge ic-sev-{{ inc.severity|lower }}">{{ inc.severity }}</div>
+            <div class="ic-sev-badge ic-sev-{{ inc.severity|lower }}"
+                 onclick="window.location.href='/incident/{{ inc.id }}/overview'">{{ inc.severity }}</div>
         </div>
         {% empty %}
         <div class="home-empty">
@@ -134,8 +146,222 @@
 </div>
 </main>
 
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- BATCH ACTION BAR (appears at bottom when incidents are selected)          -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div class="batch-bar" id="batchBar" style="display:none;">
+    <span class="batch-count" id="batchCount">0 selected</span>
+    <div class="batch-actions">
+        <button class="batch-btn" onclick="batchAction('status')">
+            <i class="fa-solid fa-arrow-right-arrow-left"></i> Status
+        </button>
+        <button class="batch-btn batch-btn-close" onclick="batchAction('close')">
+            <i class="fa-solid fa-circle-check"></i> Close
+        </button>
+        <button class="batch-btn" onclick="batchAction('severity')">
+            <i class="fa-solid fa-triangle-exclamation"></i> Severity
+        </button>
+        <button class="batch-btn" onclick="batchAction('campaign')">
+            <i class="fa-solid fa-folder-tree"></i> Campaign
+        </button>
+        <button class="batch-btn" onclick="batchAction('categories')">
+            <i class="fa-solid fa-tags"></i> Categories
+        </button>
+        <button class="batch-btn" id="batchMergeBtn" onclick="batchAction('merge')" style="display:none;">
+            <i class="fa-solid fa-code-merge"></i> Merge
+        </button>
+        <button class="batch-btn batch-btn-danger" onclick="batchAction('delete')">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    </div>
+    <button class="batch-clear" onclick="clearSelection()" title="Clear selection">
+        <i class="fa-solid fa-xmark"></i>
+    </button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- BATCH MODALS                                                              -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- Resolution + close modal -->
+<div class="home-modal-overlay" id="closeModal">
+    <div class="home-modal">
+        <div class="home-modal-header">
+            <h3><i class="fa-solid fa-circle-check"></i> Close Incidents</h3>
+            <button class="home-modal-close" onclick="closeModal('closeModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="home-modal-body">
+            <p class="home-modal-hint" id="closeModalHint"></p>
+            <div class="home-field">
+                <label>Resolution *</label>
+                <div class="home-resolution-grid" id="resolutionGrid">
+                    {% for val, label in INCIDENT_RESOLUTION_CHOICES %}
+                    <label class="res-option">
+                        <input type="radio" name="batchResolution" value="{{ val }}">
+                        <span class="res-label res-{{ val|lower }}">{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="home-field">
+                <label>Note <span style="font-weight:400;color:var(--text-color-2);">(optional)</span></label>
+                <textarea id="resolutionNote" placeholder="Additional context…" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="home-modal-footer">
+            <button class="home-btn-cancel" onclick="closeModal('closeModal')">Cancel</button>
+            <button class="home-btn-primary" onclick="submitClose()">
+                <i class="fa-solid fa-circle-check"></i> Close Incidents
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Status change modal -->
+<div class="home-modal-overlay" id="statusModal">
+    <div class="home-modal home-modal-sm">
+        <div class="home-modal-header">
+            <h3><i class="fa-solid fa-arrow-right-arrow-left"></i> Change Status</h3>
+            <button class="home-modal-close" onclick="closeModal('statusModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="home-modal-body">
+            <p class="home-modal-hint" id="statusModalHint"></p>
+            <div class="home-field">
+                <label>New status</label>
+                <select id="batchStatus" class="home-field-select">
+                    {% for val, label in INCIDENT_STATUS_CHOICES %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="home-modal-footer">
+            <button class="home-btn-cancel" onclick="closeModal('statusModal')">Cancel</button>
+            <button class="home-btn-primary" onclick="submitStatus()">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- Severity change modal -->
+<div class="home-modal-overlay" id="severityModal">
+    <div class="home-modal home-modal-sm">
+        <div class="home-modal-header">
+            <h3><i class="fa-solid fa-triangle-exclamation"></i> Change Severity</h3>
+            <button class="home-modal-close" onclick="closeModal('severityModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="home-modal-body">
+            <p class="home-modal-hint" id="severityModalHint"></p>
+            <div class="home-field">
+                <label>New severity</label>
+                <select id="batchSeverity" class="home-field-select">
+                    {% for val, label in INCIDENT_SEVERITY_CHOICES %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="home-modal-footer">
+            <button class="home-btn-cancel" onclick="closeModal('severityModal')">Cancel</button>
+            <button class="home-btn-primary" onclick="submitSeverity()">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- Campaign assignment modal -->
+<div class="home-modal-overlay" id="campaignModal">
+    <div class="home-modal home-modal-sm">
+        <div class="home-modal-header">
+            <h3><i class="fa-solid fa-folder-tree"></i> Assign Campaign</h3>
+            <button class="home-modal-close" onclick="closeModal('campaignModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="home-modal-body">
+            <p class="home-modal-hint" id="campaignModalHint"></p>
+            <div class="home-field">
+                <label>Campaign</label>
+                <select id="batchCampaign" class="home-field-select">
+                    <option value="">— select —</option>
+                    {% for c in campaigns %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="home-field">
+                <label>Action</label>
+                <div style="display:flex;gap:10px;">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                        <input type="radio" name="campAction" value="assign" checked> Add to campaign
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                        <input type="radio" name="campAction" value="remove"> Remove from campaign
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="home-modal-footer">
+            <button class="home-btn-cancel" onclick="closeModal('campaignModal')">Cancel</button>
+            <button class="home-btn-primary" onclick="submitCampaign()">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- Categories modal -->
+<div class="home-modal-overlay" id="categoriesModal">
+    <div class="home-modal home-modal-sm">
+        <div class="home-modal-header">
+            <h3><i class="fa-solid fa-tags"></i> Assign Categories</h3>
+            <button class="home-modal-close" onclick="closeModal('categoriesModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="home-modal-body">
+            <p class="home-modal-hint" id="categoriesModalHint"></p>
+            <div class="home-field">
+                <label>Categories to add</label>
+                <div class="home-cat-checklist">
+                    {% for cat in categories %}
+                    <label class="home-cat-row">
+                        <input type="checkbox" class="cat-batch-cb" value="{{ cat.id }}">
+                        <span class="home-cat-dot" style="background:{{ cat.color }}"></span>
+                        {{ cat.name }}
+                    </label>
+                    {% empty %}
+                    <span style="color:var(--text-color-2);font-size:.82rem;">No categories defined.</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="home-modal-footer">
+            <button class="home-btn-cancel" onclick="closeModal('categoriesModal')">Cancel</button>
+            <button class="home-btn-primary" onclick="submitCategories()">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- Merge modal -->
+<div class="home-modal-overlay" id="mergeModal">
+    <div class="home-modal">
+        <div class="home-modal-header">
+            <h3><i class="fa-solid fa-code-merge"></i> Merge Incidents</h3>
+            <button class="home-modal-close" onclick="closeModal('mergeModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="home-modal-body">
+            <p class="home-modal-hint">All selected incidents will be merged into the primary. IOCs, actions, notes, tasks, and files move to the primary. Non-primary incidents are then deleted.</p>
+            <div class="home-field">
+                <label>Primary incident (keeps its name and data)</label>
+                <select id="mergePrimary" class="home-field-select">
+                    <option value="">— select primary —</option>
+                </select>
+            </div>
+        </div>
+        <div class="home-modal-footer">
+            <button class="home-btn-cancel" onclick="closeModal('mergeModal')">Cancel</button>
+            <button class="home-btn-danger" onclick="submitMerge()">
+                <i class="fa-solid fa-code-merge"></i> Merge &amp; delete others
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
-// ─── Incident Filtering ───────────────────────────────
+// ─── Incident Filtering ───────────────────────────────────────────────────────
 const searchInput = document.getElementById('incidentSearch');
 const sevFilter   = document.getElementById('severityFilter');
 const statFilter  = document.getElementById('statusFilter');
@@ -158,23 +384,191 @@ function applyFilters() {
     });
 }
 
-// Apply default filter on load
 applyFilters();
 
 searchInput.addEventListener('input', applyFilters);
 sevFilter.addEventListener('change', applyFilters);
 statFilter.addEventListener('change', applyFilters);
 
-// ─── Charts ──────────────────────────────────────────
+// ─── Batch selection ──────────────────────────────────────────────────────────
+let _selectedIds = new Set();
+
+function onCardCheck(cb) {
+    const id = parseInt(cb.value);
+    if (cb.checked) {
+        _selectedIds.add(id);
+        cb.closest('.incident-card').classList.add('ic-selected');
+    } else {
+        _selectedIds.delete(id);
+        cb.closest('.incident-card').classList.remove('ic-selected');
+    }
+    updateBatchBar();
+}
+
+function updateBatchBar() {
+    const n   = _selectedIds.size;
+    const bar = document.getElementById('batchBar');
+    bar.style.display = n > 0 ? 'flex' : 'none';
+    document.getElementById('batchCount').textContent = `${n} selected`;
+    // Merge only makes sense with ≥2 incidents
+    document.getElementById('batchMergeBtn').style.display = n >= 2 ? '' : 'none';
+}
+
+function clearSelection() {
+    _selectedIds.clear();
+    document.querySelectorAll('.ic-checkbox').forEach(cb => {
+        cb.checked = false;
+        cb.closest('.incident-card').classList.remove('ic-selected');
+    });
+    updateBatchBar();
+}
+
+function selectedHint() {
+    return `Applying to ${_selectedIds.size} selected incident${_selectedIds.size !== 1 ? 's' : ''}.`;
+}
+
+// ─── Batch action dispatch ────────────────────────────────────────────────────
+function batchAction(type) {
+    if (_selectedIds.size === 0) return;
+
+    if (type === 'close') {
+        document.getElementById('closeModalHint').textContent = selectedHint();
+        document.querySelectorAll('input[name="batchResolution"]').forEach(r => r.checked = false);
+        document.getElementById('resolutionNote').value = '';
+        showModal('closeModal');
+
+    } else if (type === 'status') {
+        document.getElementById('statusModalHint').textContent = selectedHint();
+        showModal('statusModal');
+
+    } else if (type === 'severity') {
+        document.getElementById('severityModalHint').textContent = selectedHint();
+        showModal('severityModal');
+
+    } else if (type === 'campaign') {
+        document.getElementById('campaignModalHint').textContent = selectedHint();
+        showModal('campaignModal');
+
+    } else if (type === 'categories') {
+        document.getElementById('categoriesModalHint').textContent = selectedHint();
+        document.querySelectorAll('.cat-batch-cb').forEach(cb => cb.checked = false);
+        showModal('categoriesModal');
+
+    } else if (type === 'merge') {
+        // Populate primary selector with currently selected incidents
+        const sel = document.getElementById('mergePrimary');
+        sel.innerHTML = '<option value="">— select primary —</option>';
+        document.querySelectorAll('.incident-card').forEach(card => {
+            if (_selectedIds.has(parseInt(card.dataset.id))) {
+                const opt = document.createElement('option');
+                opt.value = card.dataset.id;
+                opt.textContent = card.querySelector('.ic-name').textContent.trim();
+                sel.appendChild(opt);
+            }
+        });
+        showModal('mergeModal');
+
+    } else if (type === 'delete') {
+        if (!confirm(`Delete ${_selectedIds.size} incident${_selectedIds.size !== 1 ? 's' : ''}? This cannot be undone. You need INCIDENT_LEAD role on each.`)) return;
+        submitBatch({ action: 'delete' });
+    }
+}
+
+// ─── Modal helpers ────────────────────────────────────────────────────────────
+function showModal(id) {
+    document.getElementById(id).style.display = 'flex';
+}
+function closeModal(id) {
+    document.getElementById(id).style.display = 'none';
+}
+document.querySelectorAll('.home-modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) overlay.style.display = 'none';
+    });
+});
+
+// ─── Submit helpers ───────────────────────────────────────────────────────────
+function csrfToken() {
+    return document.cookie.split('; ')
+        .find(r => r.startsWith('csrftoken='))?.split('=')[1] ?? '';
+}
+
+async function submitBatch(payload) {
+    const body = { ids: [..._selectedIds], ...payload };
+    try {
+        const resp = await fetch('/api/incidents/batch/', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+            body:    JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || data.error || 'Error');
+            return;
+        }
+        // Reload to reflect changes
+        window.location.reload();
+    } catch (e) {
+        alert('Network error: ' + e.message);
+    }
+}
+
+function submitClose() {
+    const resolution = document.querySelector('input[name="batchResolution"]:checked')?.value;
+    if (!resolution) { alert('Please select a resolution.'); return; }
+    const note = document.getElementById('resolutionNote').value;
+    closeModal('closeModal');
+    submitBatch({ action: 'status', status: 'CLOSED', resolution, resolution_note: note });
+}
+
+function submitStatus() {
+    const status = document.getElementById('batchStatus').value;
+    if (status === 'CLOSED') {
+        // Redirect to the close modal which requires a resolution
+        closeModal('statusModal');
+        batchAction('close');
+        return;
+    }
+    closeModal('statusModal');
+    submitBatch({ action: 'status', status });
+}
+
+function submitSeverity() {
+    const severity = document.getElementById('batchSeverity').value;
+    closeModal('severityModal');
+    submitBatch({ action: 'severity', severity });
+}
+
+function submitCampaign() {
+    const campaign_id = document.getElementById('batchCampaign').value;
+    if (!campaign_id) { alert('Please select a campaign.'); return; }
+    const action = document.querySelector('input[name="campAction"]:checked').value === 'assign'
+        ? 'assign_campaign' : 'remove_campaign';
+    closeModal('campaignModal');
+    submitBatch({ action, campaign_id: parseInt(campaign_id) });
+}
+
+function submitCategories() {
+    const category_ids = [...document.querySelectorAll('.cat-batch-cb:checked')].map(cb => parseInt(cb.value));
+    if (!category_ids.length) { alert('Select at least one category.'); return; }
+    closeModal('categoriesModal');
+    submitBatch({ action: 'assign_categories', category_ids });
+}
+
+function submitMerge() {
+    const primary_id = parseInt(document.getElementById('mergePrimary').value);
+    if (!primary_id) { alert('Select a primary incident.'); return; }
+    if (!confirm('This will permanently delete all non-primary incidents and move their data to the primary. Continue?')) return;
+    closeModal('mergeModal');
+    submitBatch({ action: 'merge', primary_id });
+}
+
+// ─── Charts ──────────────────────────────────────────────────────────────────
 const severityColors = {
-    CRITICAL: '#dc2626',
-    HIGH:     '#ea580c',
-    MEDIUM:   '#d97706',
-    LOW:      '#16a34a',
+    CRITICAL: '#dc2626', HIGH: '#ea580c', MEDIUM: '#d97706', LOW: '#16a34a',
 };
 const ochreGradient = ['#c49840','#d4b06e','#e8cc8e','#f0dba8','#f5e8cc'];
 
-// Incidents over time (stacked bar)
 const lineCtx = document.getElementById('incidentsChart').getContext('2d');
 new Chart(lineCtx, {
     type: 'bar',
@@ -188,35 +582,22 @@ new Chart(lineCtx, {
         })),
     },
     options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         scales: {
             x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
             y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
         },
-        plugins: {
-            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-        },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
     },
 });
 
-// ── Shared: set a dropdown value and re-apply filters ────────────────────────
 function filterByChart(selectEl, label) {
-    // Toggle off if clicking the already-active segment
-    if (selectEl.value === label) {
-        selectEl.value = '';
-    } else {
-        // Try setting the value; if the option doesn't exist the browser keeps
-        // the previous value, so fall back to empty (show all)
-        const prev = selectEl.value;
-        selectEl.value = label;
-        if (selectEl.value !== label) selectEl.value = '';
-    }
+    if (selectEl.value === label) { selectEl.value = ''; }
+    else { selectEl.value = label; if (selectEl.value !== label) selectEl.value = ''; }
     applyFilters();
     document.getElementById('incidentList').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Status donut
 const statusCtx   = document.getElementById('statusChart').getContext('2d');
 const statusChart = new Chart(statusCtx, {
     type: 'doughnut',
@@ -225,24 +606,16 @@ const statusChart = new Chart(statusCtx, {
         datasets: [{ data: {{ status_counts.values|safe }}, backgroundColor: ochreGradient, borderWidth: 0 }],
     },
     options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '60%',
-        plugins: {
-            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-        },
+        responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
         onClick(evt, elements) {
             if (!elements.length) return;
-            const label = statusChart.data.labels[elements[0].index];
-            filterByChart(statFilter, label);
+            filterByChart(statFilter, statusChart.data.labels[elements[0].index]);
         },
-        onHover(evt, elements) {
-            evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
-        },
+        onHover(evt, elements) { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
     },
 });
 
-// Severity donut
 const sevCtx   = document.getElementById('severityChart').getContext('2d');
 const sevChart = new Chart(sevCtx, {
     type: 'doughnut',
@@ -255,20 +628,13 @@ const sevChart = new Chart(sevCtx, {
         }],
     },
     options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '60%',
-        plugins: {
-            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-        },
+        responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
         onClick(evt, elements) {
             if (!elements.length) return;
-            const label = sevChart.data.labels[elements[0].index];
-            filterByChart(sevFilter, label);
+            filterByChart(sevFilter, sevChart.data.labels[elements[0].index]);
         },
-        onHover(evt, elements) {
-            evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
-        },
+        onHover(evt, elements) { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
     },
 });
 </script>

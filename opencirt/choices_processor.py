@@ -1,3 +1,13 @@
+INCIDENT_RESOLUTION_CHOICES = [
+    ('TRUE_POSITIVE',    'True Positive'),
+    ('FALSE_POSITIVE',   'False Positive'),
+    ('SECURITY_TESTING', 'Security Testing'),
+    ('AUTHORIZED_SCAN',  'Authorized Scan'),
+    ('DUPLICATE',        'Duplicate'),
+    ('INFORMATIONAL',    'Informational'),
+    ('UNDETERMINED',     'Undetermined'),
+]
+
 def choices_context(request):
     return {
         # Incident related choices
@@ -7,6 +17,7 @@ def choices_context(request):
             ('RESOLVED', 'Resolved'),
             ('CLOSED', 'Closed'),
         ],
+        'INCIDENT_RESOLUTION_CHOICES': INCIDENT_RESOLUTION_CHOICES,
         'INCIDENT_SEVERITY_CHOICES': [
             ('LOW', 'Low'),
             ('MEDIUM', 'Medium'),

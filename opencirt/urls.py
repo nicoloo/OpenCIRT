@@ -90,6 +90,7 @@ urlpatterns = [
     path('api/threat-intel/export/pdf/', views.api_ti_export_pdf, name='api_ti_export_pdf'),
     path('api/threat-intel/campaign-stats/', views.api_ti_campaign_stats, name='api_ti_campaign_stats'),
     path('api/threat-intel/export/campaign-pdf/', views.api_ti_campaign_report_pdf, name='api_ti_campaign_report_pdf'),
+    path('api/incidents/batch/', views.api_incidents_batch, name='api_incidents_batch'),
 
     # Campaigns
     path('api/campaigns/', views.api_campaigns_list, name='api_campaigns_list'),

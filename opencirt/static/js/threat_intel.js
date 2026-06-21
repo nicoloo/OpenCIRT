@@ -897,6 +897,7 @@ async function loadCampaignStats() {
         document.getElementById('campKpiDur').textContent      = data.avg_duration ?? '—';
 
         renderMonthlyBars(data.monthly || []);
+        renderResolutionBars(data.resolution_breakdown || [], data.tp_rate);
     } catch (e) {
         console.error('Campaign stats error:', e);
     }
@@ -923,6 +924,59 @@ function renderMonthlyBars(monthly) {
                 <span class="ti-monthly-label">${label}</span>
             </div>
         `;
+    }).join('');
+}
+
+const RESOLUTION_LABELS = {
+    TRUE_POSITIVE:    'True Positive',
+    FALSE_POSITIVE:   'False Positive',
+    SECURITY_TESTING: 'Security Testing',
+    AUTHORIZED_SCAN:  'Authorized Scan',
+    DUPLICATE:        'Duplicate',
+    INFORMATIONAL:    'Informational',
+    UNDETERMINED:     'Undetermined',
+};
+
+const RESOLUTION_COLORS = {
+    TRUE_POSITIVE:    '#991b1b',
+    FALSE_POSITIVE:   '#166534',
+    SECURITY_TESTING: '#1e40af',
+    AUTHORIZED_SCAN:  '#3730a3',
+    DUPLICATE:        '#4b5563',
+    INFORMATIONAL:    '#92400e',
+    UNDETERMINED:     '#6b7280',
+};
+
+function renderResolutionBars(breakdown, tp_rate) {
+    const wrap   = document.getElementById('campResolutionBars');
+    const chip   = document.getElementById('campTpRateChip');
+
+    if (!breakdown.length) {
+        wrap.innerHTML = '<div class="ti-monthly-empty">No resolution data for this period.</div>';
+        chip.style.display = 'none';
+        return;
+    }
+
+    if (tp_rate != null) {
+        chip.textContent   = `TP: ${tp_rate}%`;
+        chip.style.display = '';
+    } else {
+        chip.style.display = 'none';
+    }
+
+    const maxVal = Math.max(...breakdown.map(r => r.count), 1);
+    wrap.innerHTML = breakdown.map(r => {
+        const label = RESOLUTION_LABELS[r.resolution] || r.resolution;
+        const color = RESOLUTION_COLORS[r.resolution] || '#c49840';
+        const widthPct = Math.max(3, Math.round((r.count / maxVal) * 100));
+        return `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="flex:0 0 120px;font-size:0.73rem;color:var(--text-color-2);text-align:right;">${label}</span>
+            <div style="flex:1;height:14px;background:var(--border-color);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${widthPct}%;background:${color};border-radius:3px;"></div>
+            </div>
+            <span style="flex:0 0 24px;font-size:0.75rem;font-weight:700;color:var(--text-color-1);">${r.count}</span>
+        </div>`;
     }).join('');
 }
 

@@ -75,6 +75,18 @@ class Incident(models.Model):
     ai_rephrase_enabled = models.BooleanField(default=False)
     categories = models.ManyToManyField(IncidentCategory, blank=True, related_name='incidents')
 
+    RESOLUTION_CHOICES = [
+        ('TRUE_POSITIVE',    'True Positive'),
+        ('FALSE_POSITIVE',   'False Positive'),
+        ('SECURITY_TESTING', 'Security Testing'),
+        ('AUTHORIZED_SCAN',  'Authorized Scan'),
+        ('DUPLICATE',        'Duplicate'),
+        ('INFORMATIONAL',    'Informational'),
+        ('UNDETERMINED',     'Undetermined'),
+    ]
+    resolution      = models.CharField(max_length=30, choices=RESOLUTION_CHOICES, blank=True, default='')
+    resolution_note = models.TextField(blank=True, default='')
+
     def __str__(self):
         return self.name
     

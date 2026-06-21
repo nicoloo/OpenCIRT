@@ -165,6 +165,8 @@ def home(request):
         'values': list(severity_counter.values()),
     }
 
+    from .choices_processor import INCIDENT_RESOLUTION_CHOICES
+
     return render(request, 'home.html', {
         'incidents': incidents_list,
         'user': request.user,
@@ -176,6 +178,17 @@ def home(request):
         'critical_count': critical_count,
         'total_iocs': total_iocs,
         'severity_chart_data': severity_chart_data,
+        'INCIDENT_RESOLUTION_CHOICES': INCIDENT_RESOLUTION_CHOICES,
+        'INCIDENT_STATUS_CHOICES': [
+            ('OPEN', 'Open'), ('IN_PROGRESS', 'In Progress'),
+            ('RESOLVED', 'Resolved'), ('CLOSED', 'Closed'),
+        ],
+        'INCIDENT_SEVERITY_CHOICES': [
+            ('LOW', 'Low'), ('MEDIUM', 'Medium'),
+            ('HIGH', 'High'), ('CRITICAL', 'Critical'),
+        ],
+        'campaigns': Campaign.objects.all().order_by('name'),
+        'categories': IncidentCategory.objects.all().order_by('name'),
     })
 
 
@@ -549,13 +562,15 @@ def incident_settings(request, id):
 
     platform = PlatformSettings.get()
     all_incidents = _accessible_incidents(request.user).order_by('name')
+    from .choices_processor import INCIDENT_RESOLUTION_CHOICES
     return render(request, 'incidents/incident_settings.html', {
-        'incident':          incident,
-        'user':              request.user,
-        'user_role':         user_role.role,
-        'current_user_role': user_role,
-        'ai_configured':     platform.ai_provider != 'NONE' and bool(platform.ai_api_key),
-        'all_incidents':     all_incidents,
+        'incident':                    incident,
+        'user':                        request.user,
+        'user_role':                   user_role.role,
+        'current_user_role':           user_role,
+        'ai_configured':               platform.ai_provider != 'NONE' and bool(platform.ai_api_key),
+        'all_incidents':               all_incidents,
+        'INCIDENT_RESOLUTION_CHOICES': INCIDENT_RESOLUTION_CHOICES,
     })
 
 @login_required(login_url='login')
@@ -2104,9 +2119,25 @@ def update_incident(request, id):
             if 'external_reference' in data:
                 incident.external_reference = (data['external_reference'] or '')[:255]
             if 'status' in data:
-                incident.status = data['status']
-                if data['status'] == 'CLOSED':
+                new_status = data['status']
+                valid_res = {r[0] for r in Incident.RESOLUTION_CHOICES}
+                if new_status == 'CLOSED':
+                    resolution = data.get('resolution', '').strip()
+                    if not resolution:
+                        resolution = incident.resolution  # keep existing if already set
+                    if not resolution:
+                        return JsonResponse({'error': 'resolution_required', 'message': 'A resolution is required to close an incident.'}, status=400)
+                    if resolution not in valid_res:
+                        return JsonResponse({'error': 'Invalid resolution.'}, status=400)
+                    incident.resolution = resolution
+                    incident.resolution_note = data.get('resolution_note', incident.resolution_note)[:2000]
                     sync_incident_times(incident)
+                incident.status = new_status
+            if 'resolution' in data and 'status' not in data:
+                valid_res = {r[0] for r in Incident.RESOLUTION_CHOICES}
+                if data['resolution'] in valid_res:
+                    incident.resolution = data['resolution']
+                    incident.resolution_note = data.get('resolution_note', '')[:2000]
             if 'severity' in data:
                 incident.severity = data['severity']
             if 'export_include_timeline' in data:
@@ -3556,6 +3587,22 @@ def api_ti_campaign_stats(request):
         if row['month']
     ]
 
+    # Resolution breakdown for closed/resolved incidents
+    from django.db.models import Count as _Count
+    resolution_qs = (
+        incidents.exclude(resolution='')
+        .values('resolution')
+        .annotate(count=_Count('id'))
+        .order_by('-count')
+    )
+    resolution_breakdown = [
+        {'resolution': r['resolution'], 'count': r['count']}
+        for r in resolution_qs
+    ]
+    tp_count = next((r['count'] for r in resolution_breakdown if r['resolution'] == 'TRUE_POSITIVE'), 0)
+    closed_total = resolved + closed
+    tp_rate = round(tp_count / closed_total * 100) if closed_total else None
+
     return JsonResponse({
         'total':       total,
         'open':        open_,
@@ -3568,6 +3615,8 @@ def api_ti_campaign_stats(request):
         'avg_ttd':     fmt_td(sla['avg_ttd']),
         'avg_ttr':     fmt_td(sla['avg_ttr']),
         'avg_duration': fmt_td(sla['avg_dur']),
+        'resolution_breakdown': resolution_breakdown,
+        'tp_rate':     tp_rate,
     })
 
 
@@ -3652,24 +3701,43 @@ def api_ti_campaign_report_pdf(request):
             return f"{d}d {h}h"
         return f"{h}h {m:02d}m"
 
+    # Resolution breakdown
+    res_qs = (
+        incidents.exclude(resolution='')
+        .values('resolution')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+    resolution_breakdown = [{'resolution': r['resolution'], 'count': r['count']} for r in res_qs]
+    closed_total = sum(r['count'] for r in resolution_breakdown)
+    tp_count = next((r['count'] for r in resolution_breakdown if r['resolution'] == 'TRUE_POSITIVE'), 0)
+    tp_rate = round(tp_count / closed_total * 100) if closed_total else None
+    res_max = max((r['count'] for r in resolution_breakdown), default=1)
+
+    RESOLUTION_LABELS = dict(Incident.RESOLUTION_CHOICES)
+
     html = render_to_string('threat_intel_campaign_report.html', {
-        'incidents':     incidents_list,
-        'campaigns':     campaigns,
-        'total':         total,
-        'open':          open_cnt,
-        'in_progress':   inprog,
-        'resolved':      resolved,
-        'crit_high':     crit_high,
-        'period_label':  period_label,
-        'date_from':     date_from,
-        'date_to':       date_to,
-        'generated_at':  tz.now(),
-        'user':          request.user,
-        'monthly':       monthly,
-        'max_monthly':   max_monthly,
-        'avg_ttd':       fmt_td_pdf(sla['avg_ttd']),
-        'avg_ttr':       fmt_td_pdf(sla['avg_ttr']),
-        'avg_duration':  fmt_td_pdf(sla['avg_dur']),
+        'incidents':            incidents_list,
+        'campaigns':            campaigns,
+        'total':                total,
+        'open':                 open_cnt,
+        'in_progress':          inprog,
+        'resolved':             resolved,
+        'crit_high':            crit_high,
+        'period_label':         period_label,
+        'date_from':            date_from,
+        'date_to':              date_to,
+        'generated_at':         tz.now(),
+        'user':                 request.user,
+        'monthly':              monthly,
+        'max_monthly':          max_monthly,
+        'avg_ttd':              fmt_td_pdf(sla['avg_ttd']),
+        'avg_ttr':              fmt_td_pdf(sla['avg_ttr']),
+        'avg_duration':         fmt_td_pdf(sla['avg_dur']),
+        'resolution_breakdown': resolution_breakdown,
+        'res_max':              res_max,
+        'tp_rate':              tp_rate,
+        'RESOLUTION_LABELS':    RESOLUTION_LABELS,
     })
 
     buffer = BytesIO()
@@ -3683,6 +3751,177 @@ def api_ti_campaign_report_pdf(request):
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{fname}"'
     return response
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BATCH INCIDENT OPERATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+_VALID_STATUSES    = {'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'}
+_VALID_SEVERITIES  = {'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'}
+_VALID_RESOLUTIONS = {r[0] for r in Incident.RESOLUTION_CHOICES}
+
+
+@login_required(login_url='login')
+def api_incidents_batch(request):
+    """
+    POST /api/incidents/batch/
+    Body: { ids: [1,2,3], action: 'status'|'severity'|'resolution'|
+                                   'assign_campaign'|'remove_campaign'|
+                                   'assign_categories'|'merge'|'delete',
+            ...action-specific fields... }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required.'}, status=405)
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+
+    raw_ids = body.get('ids', [])
+    try:
+        ids = [int(i) for i in raw_ids]
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'ids must be integers.'}, status=400)
+
+    if not ids:
+        return JsonResponse({'error': 'No incidents selected.'}, status=400)
+    if len(ids) > 200:
+        return JsonResponse({'error': 'Batch limited to 200 incidents.'}, status=400)
+
+    action = body.get('action', '')
+
+    # Scope to incidents the user can access
+    accessible = _accessible_incidents(request.user)
+    incidents  = accessible.filter(id__in=ids)
+
+    # For mutations that need INCIDENT_LEAD on each incident, we check per-incident
+    def _is_lead(inc):
+        return (request.user.is_superuser or
+                UserRole.objects.filter(user=request.user, incident=inc, role='INCIDENT_LEAD').exists())
+
+    # ── Status change ─────────────────────────────────────────────────────────
+    if action == 'status':
+        new_status = body.get('status', '').strip().upper()
+        if new_status not in _VALID_STATUSES:
+            return JsonResponse({'error': 'Invalid status.'}, status=400)
+
+        if new_status == 'CLOSED':
+            resolution = body.get('resolution', '').strip()
+            if not resolution:
+                return JsonResponse({'error': 'resolution_required', 'message': 'Resolution required to close.'}, status=400)
+            if resolution not in _VALID_RESOLUTIONS:
+                return JsonResponse({'error': 'Invalid resolution.'}, status=400)
+            resolution_note = body.get('resolution_note', '')[:2000]
+            incidents.update(status=new_status, resolution=resolution, resolution_note=resolution_note)
+        else:
+            incidents.update(status=new_status)
+
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Severity change ───────────────────────────────────────────────────────
+    if action == 'severity':
+        new_sev = body.get('severity', '').strip().upper()
+        if new_sev not in _VALID_SEVERITIES:
+            return JsonResponse({'error': 'Invalid severity.'}, status=400)
+        incidents.update(severity=new_sev)
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Resolution update (without status change) ─────────────────────────────
+    if action == 'resolution':
+        resolution = body.get('resolution', '').strip()
+        if not resolution:
+            incidents.update(resolution='', resolution_note='')
+        elif resolution in _VALID_RESOLUTIONS:
+            incidents.update(resolution=resolution, resolution_note=body.get('resolution_note', '')[:2000])
+        else:
+            return JsonResponse({'error': 'Invalid resolution.'}, status=400)
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Assign to campaign ────────────────────────────────────────────────────
+    if action == 'assign_campaign':
+        try:
+            cid = int(body['campaign_id'])
+        except (KeyError, ValueError, TypeError):
+            return JsonResponse({'error': 'campaign_id required.'}, status=400)
+        campaign = get_object_or_404(Campaign, pk=cid)
+        for inc in incidents:
+            campaign.incidents.add(inc)
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Remove from campaign ──────────────────────────────────────────────────
+    if action == 'remove_campaign':
+        try:
+            cid = int(body['campaign_id'])
+        except (KeyError, ValueError, TypeError):
+            return JsonResponse({'error': 'campaign_id required.'}, status=400)
+        campaign = get_object_or_404(Campaign, pk=cid)
+        for inc in incidents:
+            campaign.incidents.remove(inc)
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Assign categories ──────────────────────────────────────────────────────
+    if action == 'assign_categories':
+        cat_ids = body.get('category_ids', [])
+        try:
+            cat_ids = [int(c) for c in cat_ids]
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'category_ids must be integers.'}, status=400)
+        cats = IncidentCategory.objects.filter(id__in=cat_ids)
+        for inc in incidents:
+            for cat in cats:
+                inc.categories.add(cat)
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Merge all into primary ────────────────────────────────────────────────
+    if action == 'merge':
+        try:
+            primary_id = int(body['primary_id'])
+        except (KeyError, ValueError, TypeError):
+            return JsonResponse({'error': 'primary_id required.'}, status=400)
+        if primary_id not in ids:
+            return JsonResponse({'error': 'primary_id must be one of the selected incidents.'}, status=400)
+
+        primary = get_object_or_404(Incident, pk=primary_id)
+        if not _is_lead(primary):
+            return JsonResponse({'error': 'INCIDENT_LEAD role required on the primary incident.'}, status=403)
+
+        targets = incidents.exclude(pk=primary_id)
+        merged = 0
+        for target in targets:
+            target.genericiocs.all().update(incident=primary)
+            target.actions.all().update(incident=primary)
+            target.notes.all().update(incident=primary)
+            target.tasks.all().update(incident=primary)
+            target.impacts.all().update(incident=primary)
+            target.messages.all().update(incident=primary)
+            target.shared_files.all().update(incident=primary)
+            target.audit_logs.all().update(incident=primary)
+            target.tags.all().update(incident=primary)
+            for cat in target.categories.all():
+                primary.categories.add(cat)
+            for camp in target.campaigns.all():
+                camp.incidents.add(primary)
+            for ur in target.incident_roles.all():
+                if not UserRole.objects.filter(user=ur.user, incident=primary).exists():
+                    UserRole.objects.create(user=ur.user, incident=primary, role=ur.role)
+            target.delete()
+            merged += 1
+
+        return JsonResponse({'status': 'ok', 'merged': merged, 'primary_id': primary_id})
+
+    # ── Delete ────────────────────────────────────────────────────────────────
+    if action == 'delete':
+        deleted = 0
+        for inc in list(incidents):
+            if _is_lead(inc):
+                inc.delete()
+                deleted += 1
+        if deleted == 0:
+            return JsonResponse({'error': 'No incidents deleted. INCIDENT_LEAD role required.'}, status=403)
+        return JsonResponse({'status': 'ok', 'deleted': deleted})
+
+    return JsonResponse({'error': f'Unknown action: {action}'}, status=400)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

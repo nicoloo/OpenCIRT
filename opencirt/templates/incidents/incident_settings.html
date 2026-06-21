@@ -393,11 +393,34 @@
             <div class="settings-field">
                 <label for="field-status">Status</label>
                 <select id="field-status"
-                    {% if current_user_role.role == 'READER' or current_user_role.role == 'PUBLIC_VIEWER' %}disabled{% endif %}>
+                    {% if current_user_role.role == 'READER' or current_user_role.role == 'PUBLIC_VIEWER' %}disabled{% endif %}
+                    onchange="toggleResolutionField(this.value)">
                     {% for v, l in INCIDENT_STATUS_CHOICES %}
                         <option value="{{ v }}" {% if incident.status == v %}selected{% endif %}>{{ l }}</option>
                     {% endfor %}
                 </select>
+            </div>
+
+            <div class="settings-field" id="resolution-field"
+                 {% if incident.status != 'CLOSED' and incident.status != 'RESOLVED' %}style="display:none"{% endif %}>
+                <label for="field-resolution">Resolution</label>
+                <select id="field-resolution"
+                    {% if current_user_role.role == 'READER' or current_user_role.role == 'PUBLIC_VIEWER' %}disabled{% endif %}>
+                    <option value="">— Select resolution —</option>
+                    {% if INCIDENT_RESOLUTION_CHOICES %}
+                    {% for v, l in INCIDENT_RESOLUTION_CHOICES %}
+                        <option value="{{ v }}" {% if incident.resolution == v %}selected{% endif %}>{{ l }}</option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+
+            <div class="settings-field full-width" id="resolution-note-field"
+                 {% if incident.status != 'CLOSED' and incident.status != 'RESOLVED' %}style="display:none"{% endif %}>
+                <label for="field-resolution-note">Resolution note <span style="font-weight:400;color:var(--text-color-2);">(optional)</span></label>
+                <textarea id="field-resolution-note" rows="2"
+                    placeholder="Additional context about the resolution…"
+                    {% if current_user_role.role == 'READER' or current_user_role.role == 'PUBLIC_VIEWER' %}disabled{% endif %}>{{ incident.resolution_note }}</textarea>
             </div>
 
             <div class="settings-field">
@@ -793,6 +816,12 @@
 </div>
 
 <script>
+function toggleResolutionField(status) {
+    const show = status === 'CLOSED' || status === 'RESOLVED';
+    document.getElementById('resolution-field').style.display = show ? '' : 'none';
+    document.getElementById('resolution-note-field').style.display = show ? '' : 'none';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const csrf       = document.getElementById('csrf-token').value;
     const incidentId = {{ incident.id }};
@@ -808,12 +837,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveGenBtn = document.getElementById('save-general');
     if (saveGenBtn) {
         saveGenBtn.addEventListener('click', async () => {
+            const status = document.getElementById('field-status').value;
             const payload = {
                 title:    document.getElementById('field-name').value,
-                status:   document.getElementById('field-status').value,
+                status,
                 severity: document.getElementById('field-severity').value,
                 external_reference: document.getElementById('field-external-reference').value,
+                resolution:      document.getElementById('field-resolution')?.value ?? '',
+                resolution_note: document.getElementById('field-resolution-note')?.value ?? '',
             };
+            if (status === 'CLOSED' && !payload.resolution) {
+                alert('A resolution is required when closing an incident.');
+                return;
+            }
             try {
                 const r = await fetch(`/api/incident/${incidentId}/update/`, {
                     method: 'POST',

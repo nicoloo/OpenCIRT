@@ -134,6 +134,9 @@
                 <div class="header-badges">
                     <span class="badge badge-status badge-{{ incident.status|lower }}">{{ incident.status }}</span>
                     <span class="badge badge-severity badge-{{ incident.severity|lower }}">{{ incident.severity }}</span>
+                    {% if incident.resolution %}
+                    <span class="badge badge-resolution badge-res-{{ incident.resolution|lower }}">{{ incident.get_resolution_display }}</span>
+                    {% endif %}
                 </div>
             </div>
         </div>

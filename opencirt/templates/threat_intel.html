@@ -286,11 +286,19 @@
             </a>
         </div>
 
-        <!-- Monthly Activity -->
-        <div class="ti-chart-card ti-monthly-card" id="campMonthlyCard">
-            <h3>Monthly incident activity</h3>
-            <div id="campMonthlyBars" class="ti-monthly-bars">
-                <div class="ti-monthly-empty">Select a period to see the activity breakdown.</div>
+        <!-- Monthly Activity + Resolution Breakdown -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+            <div class="ti-chart-card ti-monthly-card" id="campMonthlyCard">
+                <h3>Monthly incident activity</h3>
+                <div id="campMonthlyBars" class="ti-monthly-bars">
+                    <div class="ti-monthly-empty">Select a period to see the activity breakdown.</div>
+                </div>
+            </div>
+            <div class="ti-chart-card">
+                <h3>Resolution breakdown <span id="campTpRateChip" style="display:none;font-size:0.72rem;font-weight:600;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;margin-left:8px;"></span></h3>
+                <div id="campResolutionBars" style="padding-top:4px;">
+                    <div class="ti-monthly-empty">No resolution data for this period.</div>
+                </div>
             </div>
         </div>
 

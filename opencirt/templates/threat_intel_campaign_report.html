@@ -344,6 +344,20 @@
     </tr>
 </table>
 
+<!-- Resolution Breakdown -->
+{% if resolution_breakdown %}
+<h2>Resolution Breakdown {% if tp_rate %}<span style="font-size:8pt;font-weight:normal;color:#5b6b76;">(True Positive rate: {{ tp_rate }}%)</span>{% endif %}</h2>
+{% for r in resolution_breakdown %}
+<div class="activity-row">
+    <span class="act-label">{% for k,v in RESOLUTION_LABELS.items %}{% if k == r.resolution %}{{ v }}{% endif %}{% endfor %}</span>
+    <span class="act-track">
+        <div class="act-fill" style="width:{% widthratio r.count res_max 300 %}pt;"></div>
+    </span>
+    <span class="act-count">{{ r.count }}</span>
+</div>
+{% endfor %}
+{% endif %}
+
 <!-- Open Incidents -->
 {% if open or in_progress %}
 <div class="page-break"></div>
