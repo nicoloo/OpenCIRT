@@ -315,3 +315,32 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"[{self.timestamp:%Y-%m-%d %H:%M}] {self.action} {self.object_type} by {self.user}"
+
+
+class PlatformAuditLog(models.Model):
+    """Records platform-level events not tied to a specific incident."""
+    ACTION_CHOICES = [
+        ('LOGIN',            'Login'),
+        ('LOGOUT',           'Logout'),
+        ('REGISTER',         'Register'),
+        ('SETTINGS_CHANGE',  'Settings Change'),
+        ('ROLE_CHANGE',      'Role Change'),
+        ('INCIDENT_CREATE',  'Incident Create'),
+        ('INCIDENT_DELETE',  'Incident Delete'),
+        ('USER_DELETE',      'User Delete'),
+        ('CTI_CHANGE',       'CTI Change'),
+        ('AI_CHANGE',        'AI Change'),
+        ('OTHER',            'Other'),
+    ]
+    timestamp   = models.DateTimeField(auto_now_add=True)
+    user        = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='platform_audit_logs')
+    ip_address  = models.CharField(max_length=45, blank=True, default='')
+    action      = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    object_type = models.CharField(max_length=50, blank=True, default='')
+    description = models.TextField()
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"[{self.timestamp:%Y-%m-%d %H:%M}] {self.action} by {self.user}"

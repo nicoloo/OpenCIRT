@@ -578,5 +578,241 @@
     </div>
 
 </form>
+
+{% if user.is_admin %}
+<!-- ── Platform Audit Logs ──────────────────────────────────────────── -->
+<div class="settings-section" id="audit-logs-section" style="margin-top:28px;">
+    <div class="settings-section-header" style="display:flex;align-items:center;gap:8px;">
+        <i class="fa-solid fa-scroll"></i>
+        <h2>Platform Audit Logs</h2>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-color-2);margin:0 0 18px 0;">
+        Combined log of all incident-level and platform-level events.
+    </p>
+
+    <!-- Filters -->
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:flex-end;">
+        <div>
+            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Source</label>
+            <select id="al-source" class="home-filter-select" style="font-size:0.82rem;padding:6px 10px;">
+                <option value="all">All</option>
+                <option value="platform">Platform</option>
+                <option value="incident">Incident</option>
+            </select>
+        </div>
+        <div>
+            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Action</label>
+            <select id="al-action" class="home-filter-select" style="font-size:0.82rem;padding:6px 10px;">
+                <option value="">All actions</option>
+                <optgroup label="Platform">
+                    <option value="LOGIN">Login</option>
+                    <option value="LOGOUT">Logout</option>
+                    <option value="REGISTER">Register</option>
+                    <option value="SETTINGS_CHANGE">Settings Change</option>
+                    <option value="ROLE_CHANGE">Role Change</option>
+                    <option value="INCIDENT_CREATE">Incident Create</option>
+                    <option value="INCIDENT_DELETE">Incident Delete</option>
+                    <option value="CTI_CHANGE">CTI Change</option>
+                    <option value="AI_CHANGE">AI Change</option>
+                </optgroup>
+                <optgroup label="Incident">
+                    <option value="CREATE">Create</option>
+                    <option value="UPDATE">Update</option>
+                    <option value="DELETE">Delete</option>
+                    <option value="EXPORT">Export</option>
+                    <option value="ACCESS">Access</option>
+                </optgroup>
+            </select>
+        </div>
+        <div>
+            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">User</label>
+            <input id="al-user" type="text" placeholder="Username…" class="home-filter-select"
+                   style="font-size:0.82rem;padding:6px 10px;border:1px solid var(--border-color);border-radius:6px;background:var(--widget-background-color);color:var(--text-color-1);">
+        </div>
+        <div>
+            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Search</label>
+            <input id="al-search" type="text" placeholder="Keyword in description…" class="home-filter-select"
+                   style="font-size:0.82rem;padding:6px 10px;border:1px solid var(--border-color);border-radius:6px;background:var(--widget-background-color);color:var(--text-color-1);min-width:200px;">
+        </div>
+        <div>
+            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">From</label>
+            <input id="al-date-from" type="date" class="home-filter-select" style="font-size:0.82rem;padding:6px 10px;">
+        </div>
+        <div>
+            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">To</label>
+            <input id="al-date-to" type="date" class="home-filter-select" style="font-size:0.82rem;padding:6px 10px;">
+        </div>
+        <button id="al-apply" class="home-btn-primary" style="align-self:flex-end;">
+            <i class="fa-solid fa-filter"></i> Apply
+        </button>
+        <button id="al-export-csv" class="home-btn-cancel" style="align-self:flex-end;" title="Export to CSV">
+            <i class="fa-solid fa-download"></i> CSV
+        </button>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;" id="al-table">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border-color);">
+                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Timestamp</th>
+                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Source</th>
+                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Action</th>
+                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">User</th>
+                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">IP</th>
+                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Object</th>
+                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Description</th>
+                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Incident</th>
+                </tr>
+            </thead>
+            <tbody id="al-tbody">
+                <tr><td colspan="8" style="padding:24px;text-align:center;color:var(--text-color-2);">Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;font-size:0.82rem;color:var(--text-color-2);">
+        <span id="al-count"></span>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <button id="al-prev" class="home-btn-cancel" style="padding:5px 14px;font-size:0.8rem;" disabled>
+                <i class="fa-solid fa-chevron-left"></i> Prev
+            </button>
+            <span id="al-page-info"></span>
+            <button id="al-next" class="home-btn-cancel" style="padding:5px 14px;font-size:0.8rem;">
+                Next <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+#audit-logs-section .al-badge {
+    display: inline-block; font-size: 0.68rem; font-weight: 700;
+    padding: 2px 7px; border-radius: 20px; letter-spacing: .03em; white-space: nowrap;
+}
+.al-src-platform { background: #ede9fe; color: #5b21b6; }
+.al-src-incident { background: #dbeafe; color: #1e40af; }
+.al-act-login, .al-act-logout, .al-act-register { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.al-act-role_change, .al-act-settings_change { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.al-act-incident_create { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.al-act-incident_delete, .al-act-delete { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.al-act-create { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.al-act-update { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+.al-act-export { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }
+.al-act-access { background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }
+.al-act-cti_change, .al-act-ai_change { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+</style>
+
+<script>
+(function() {
+    const csrf = document.getElementById('csrf-token')?.value
+        ?? document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] ?? '';
+
+    let currentPage = 1;
+
+    function fmtTs(iso) {
+        const d = new Date(iso);
+        return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    }
+
+    function actionBadge(action) {
+        const cls = 'al-badge al-act-' + action.toLowerCase();
+        return `<span class="${cls}">${action}</span>`;
+    }
+
+    function srcBadge(src) {
+        const cls = 'al-badge al-src-' + src;
+        const icon = src === 'platform' ? 'fa-server' : 'fa-shield-halved';
+        return `<span class="${cls}"><i class="fa-solid ${icon}"></i> ${src}</span>`;
+    }
+
+    async function loadLogs(page) {
+        currentPage = page;
+        const params = new URLSearchParams({
+            page,
+            source:    document.getElementById('al-source').value,
+            action:    document.getElementById('al-action').value,
+            user:      document.getElementById('al-user').value.trim(),
+            search:    document.getElementById('al-search').value.trim(),
+            date_from: document.getElementById('al-date-from').value,
+            date_to:   document.getElementById('al-date-to').value,
+        });
+
+        const tbody = document.getElementById('al-tbody');
+        tbody.innerHTML = '<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--text-color-2);">Loading…</td></tr>';
+
+        try {
+            const r    = await fetch('/api/platform/audit-logs/?' + params);
+            const data = await r.json();
+
+            document.getElementById('al-count').textContent =
+                `${data.total} entr${data.total === 1 ? 'y' : 'ies'}`;
+            document.getElementById('al-page-info').textContent =
+                `Page ${data.page} / ${data.num_pages}`;
+            document.getElementById('al-prev').disabled = data.page <= 1;
+            document.getElementById('al-next').disabled = data.page >= data.num_pages;
+
+            if (!data.logs.length) {
+                tbody.innerHTML = '<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--text-color-2);">No log entries found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.logs.map(row => `
+                <tr style="border-bottom:1px solid var(--border-color);">
+                    <td style="padding:8px 10px;white-space:nowrap;font-size:0.78rem;color:var(--text-color-2);">${fmtTs(row.timestamp)}</td>
+                    <td style="padding:8px 10px;">${srcBadge(row.source)}</td>
+                    <td style="padding:8px 10px;">${actionBadge(row.action)}</td>
+                    <td style="padding:8px 10px;font-weight:600;">${row.user}</td>
+                    <td style="padding:8px 10px;font-size:0.76rem;color:var(--text-color-2);">${row.ip_address || '—'}</td>
+                    <td style="padding:8px 10px;font-size:0.78rem;color:var(--text-color-2);">${row.object_type || '—'}</td>
+                    <td style="padding:8px 10px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${row.description.replace(/"/g,'&quot;')}">${row.description}</td>
+                    <td style="padding:8px 10px;font-size:0.78rem;">${
+                        row.incident_id
+                            ? `<a href="/incident/${row.incident_id}/overview" style="color:var(--main-color-3);text-decoration:none;">${row.incident_name}</a>`
+                            : '—'
+                    }</td>
+                </tr>`).join('');
+        } catch(e) {
+            tbody.innerHTML = '<tr><td colspan="8" style="padding:24px;text-align:center;color:#dc2626;">Failed to load logs.</td></tr>';
+        }
+    }
+
+    document.getElementById('al-apply').addEventListener('click', () => loadLogs(1));
+    document.getElementById('al-prev').addEventListener('click', () => loadLogs(currentPage - 1));
+    document.getElementById('al-next').addEventListener('click', () => loadLogs(currentPage + 1));
+
+    // CSV export
+    document.getElementById('al-export-csv').addEventListener('click', async () => {
+        const params = new URLSearchParams({
+            page: 1, page_size: 5000,
+            source:    document.getElementById('al-source').value,
+            action:    document.getElementById('al-action').value,
+            user:      document.getElementById('al-user').value.trim(),
+            search:    document.getElementById('al-search').value.trim(),
+            date_from: document.getElementById('al-date-from').value,
+            date_to:   document.getElementById('al-date-to').value,
+        });
+        const r    = await fetch('/api/platform/audit-logs/?' + params);
+        const data = await r.json();
+        const header = ['timestamp','source','action','user','ip_address','object_type','description','incident'];
+        const rows   = data.logs.map(l => [
+            l.timestamp, l.source, l.action, l.user, l.ip_address,
+            l.object_type, '"' + l.description.replace(/"/g,'""') + '"',
+            l.incident_name || '',
+        ].join(','));
+        const blob = new Blob([header.join(',') + '\n' + rows.join('\n')], {type:'text/csv'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'platform_audit_logs.csv';
+        a.click();
+    });
+
+    // Auto-load on page open
+    loadLogs(1);
+})();
+</script>
+{% endif %}
+
 </main>
 {% endblock %}

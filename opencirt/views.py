@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import login, logout, authenticate
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
-from opencirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformSettings, CtiProvider, IncidentCategory, Campaign
+from opencirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformAuditLog, PlatformSettings, CtiProvider, IncidentCategory, Campaign
 from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, sync_incident_times, get_incidents_by_day_and_severity
 from .threat_intel import schedule_lookup, ELIGIBLE_TYPES as THREAT_INTEL_ELIGIBLE_TYPES
 import json
@@ -61,6 +61,19 @@ def _audit(incident, request, action, object_type, description):
         AuditLog.objects.create(
             incident=incident,
             user=request.user if request.user.is_authenticated else None,
+            ip_address=_get_client_ip(request),
+            action=action,
+            object_type=object_type,
+            description=description,
+        )
+    except Exception:
+        pass
+
+def _platform_audit(request, action, object_type, description, user=None):
+    """Create a PlatformAuditLog entry. Never raises — logs silently on error."""
+    try:
+        PlatformAuditLog.objects.create(
+            user=user if user is not None else (request.user if request.user.is_authenticated else None),
             ip_address=_get_client_ip(request),
             action=action,
             object_type=object_type,
@@ -210,6 +223,7 @@ def register(request):
             return render(request, 'register.html', {'error': 'Password must be at least 8 characters.', 'username': username})
         user = User.objects.create_user(username=username, password=password)
         login(request, user)
+        _platform_audit(request, 'REGISTER', 'User', f'New account created: {username}', user=user)
         return redirect('/home')
     return render(request, 'register.html')
 
@@ -226,6 +240,7 @@ def custom_login(request):
         if user is not None:
             _login_rate_limit_reset(ip)
             login(request, user)
+            _platform_audit(request, 'LOGIN', 'User', f'User logged in: {username}', user=user)
             next_url = request.GET.get('next', '/home')
             if not url_has_allowed_host_and_scheme(
                 next_url,
@@ -238,6 +253,8 @@ def custom_login(request):
     return render(request, 'login.html')
 
 def custom_logout(request):
+    if request.user.is_authenticated:
+        _platform_audit(request, 'LOGOUT', 'User', f'User logged out: {request.user.username}')
     logout(request)
     return redirect('login')
 
@@ -746,6 +763,8 @@ def create_incident(request):
             display_role='Incident Lead',
         )
 
+        _platform_audit(request, 'INCIDENT_CREATE', 'Incident',
+                        f'Incident created: "{name}" (id={incident.id}, severity={severity})')
         return redirect('incident_invite', id=incident.id)
 
     return render(request, 'incidents/create_incident.html', {'user': request.user})
@@ -808,6 +827,8 @@ def settings_view(request):
         prefs['chart_period'] = request.POST.get('chart_period', '30d')
         user.preferences = prefs
         user.save()
+        _platform_audit(request, 'SETTINGS_CHANGE', 'UserPreferences',
+                        f'User preferences updated by {user.username}')
         return redirect('/settings?saved=1')
 
     platform      = PlatformSettings.get()
@@ -844,9 +865,115 @@ def api_admin_set_platform_role(request, user_id):
     if new_role not in valid:
         return JsonResponse({'error': 'Invalid platform_role.'}, status=400)
 
+    old_role = target.platform_role or 'None'
     target.platform_role = new_role
     target.save(update_fields=['platform_role'])
+    _platform_audit(request, 'ROLE_CHANGE', 'User',
+                    f'Platform role changed for {target.username}: {old_role} → {new_role or "None"} '
+                    f'(by {request.user.username})')
     return JsonResponse({'status': 'ok', 'platform_role': new_role})
+
+
+@login_required(login_url='login')
+def api_platform_audit_logs(request):
+    """
+    GET /api/platform/audit-logs/
+    Admin-only. Returns paginated combined audit logs (incident + platform level).
+    Query params: page, page_size, user, action, source (incident|platform|all), search, date_from, date_to
+    """
+    if not request.user.is_admin:
+        return JsonResponse({'error': 'Admin only.'}, status=403)
+
+    PAGE_SIZE = int(request.GET.get('page_size', 50))
+    PAGE_SIZE = min(max(PAGE_SIZE, 1), 200)
+    page = max(1, int(request.GET.get('page', 1)))
+
+    filter_user   = request.GET.get('user', '').strip()
+    filter_action = request.GET.get('action', '').strip()
+    filter_source = request.GET.get('source', 'all')   # 'incident', 'platform', 'all'
+    filter_search = request.GET.get('search', '').strip()
+    date_from     = request.GET.get('date_from', '').strip()
+    date_to       = request.GET.get('date_to', '').strip()
+
+    rows = []
+
+    # ── Incident-level audit logs ─────────────────────────────────────────────
+    if filter_source in ('all', 'incident'):
+        qs = AuditLog.objects.select_related('user', 'incident')
+        if filter_user:
+            qs = qs.filter(user__username__icontains=filter_user)
+        if filter_action:
+            qs = qs.filter(action=filter_action)
+        if filter_search:
+            qs = qs.filter(description__icontains=filter_search)
+        if date_from:
+            try:
+                qs = qs.filter(timestamp__date__gte=date_from)
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                qs = qs.filter(timestamp__date__lte=date_to)
+            except ValueError:
+                pass
+        for entry in qs:
+            rows.append({
+                'source':      'incident',
+                'timestamp':   entry.timestamp.isoformat(),
+                'user':        entry.user.username if entry.user else '—',
+                'ip_address':  entry.ip_address,
+                'action':      entry.action,
+                'object_type': entry.object_type,
+                'description': entry.description,
+                'incident_id': entry.incident_id,
+                'incident_name': entry.incident.name if entry.incident else '—',
+            })
+
+    # ── Platform-level audit logs ─────────────────────────────────────────────
+    if filter_source in ('all', 'platform'):
+        qs = PlatformAuditLog.objects.select_related('user')
+        if filter_user:
+            qs = qs.filter(user__username__icontains=filter_user)
+        if filter_action:
+            qs = qs.filter(action=filter_action)
+        if filter_search:
+            qs = qs.filter(description__icontains=filter_search)
+        if date_from:
+            try:
+                qs = qs.filter(timestamp__date__gte=date_from)
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                qs = qs.filter(timestamp__date__lte=date_to)
+            except ValueError:
+                pass
+        for entry in qs:
+            rows.append({
+                'source':      'platform',
+                'timestamp':   entry.timestamp.isoformat(),
+                'user':        entry.user.username if entry.user else '—',
+                'ip_address':  entry.ip_address,
+                'action':      entry.action,
+                'object_type': entry.object_type,
+                'description': entry.description,
+                'incident_id': None,
+                'incident_name': None,
+            })
+
+    # Sort combined by timestamp desc, then paginate
+    rows.sort(key=lambda r: r['timestamp'], reverse=True)
+    total   = len(rows)
+    offset  = (page - 1) * PAGE_SIZE
+    page_rows = rows[offset: offset + PAGE_SIZE]
+
+    return JsonResponse({
+        'logs':       page_rows,
+        'total':      total,
+        'page':       page,
+        'page_size':  PAGE_SIZE,
+        'num_pages':  max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE),
+    })
 
 
 @login_required(login_url='login')
@@ -2706,6 +2833,8 @@ def save_platform_settings(request):
         ps.ai_api_key = ''
 
     ps.save()
+    _platform_audit(request, 'AI_CHANGE', 'PlatformSettings',
+                    f'AI provider set to {ps.ai_provider} by {request.user.username}')
     return JsonResponse({
         'status':      'saved',
         'ai_provider': ps.ai_provider,
@@ -2754,6 +2883,8 @@ def save_cti_provider(request):
         provider.enabled = bool(body['enabled'])
 
     provider.save()
+    _platform_audit(request, 'CTI_CHANGE', 'CtiProvider',
+                    f'CTI provider {provider.name} saved (enabled={provider.enabled}) by {request.user.username}')
     return JsonResponse({
         'status':  'saved',
         'name':    provider.name,
@@ -2777,6 +2908,8 @@ def delete_cti_provider(request):
 
     name = body.get('name', '').upper()
     CtiProvider.objects.filter(name=name).delete()
+    _platform_audit(request, 'CTI_CHANGE', 'CtiProvider',
+                    f'CTI provider {name} deleted by {request.user.username}')
     return JsonResponse({'status': 'deleted', 'name': name})
 
 
@@ -3915,6 +4048,8 @@ def api_incidents_batch(request):
         deleted = 0
         for inc in list(incidents):
             if _is_lead(inc):
+                _platform_audit(request, 'INCIDENT_DELETE', 'Incident',
+                                f'Incident deleted: "{inc.name}" (id={inc.id})')
                 inc.delete()
                 deleted += 1
         if deleted == 0:
