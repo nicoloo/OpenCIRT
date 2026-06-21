@@ -69,6 +69,10 @@ body {
     text-decoration: none;
 }
 .topbar-link i { font-size: 0.82rem; }
+.topbar-link-active {
+    background: var(--main-color-2);
+    color: var(--text-color-1);
+}
 
 .topbar-divider {
     width: 1px;
@@ -115,6 +119,19 @@ body {
     cursor: pointer;
 }
 .topbar-avatar:hover { border-color: var(--accent-color); opacity: 0.9; }
+
+.topbar-platform-role {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.topbar-pr-soc_analyst { background: #dbeafe; color: #1e40af; }
+.topbar-pr-soc_lead    { background: #fef3c7; color: #92400e; }
 .topbar-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .topbar-avatar-initial {
     font-size: 0.88rem;
@@ -796,9 +813,17 @@ p { margin: 5px !important;}
 /* Tablet (≤900px) */
 @media (max-width: 900px) {
     .home-page, .settings-page, .main-frame-vertical {
-        padding-left: 20px;
-        padding-right: 20px;
+        padding-left: 16px;
+        padding-right: 16px;
     }
+}
+
+/* Narrow tablet (≤768px) — hide nav link labels except primary two */
+@media (max-width: 768px) {
+    .topbar { padding: 0 16px; }
+    .topbar-link { padding: 7px 10px; }
+    /* Hide text for lower-priority links (About, Settings) */
+    .topbar-link:not(.topbar-link-primary) span { display: none; }
 }
 
 /* Mobile (≤640px) */
@@ -811,11 +836,4 @@ p { margin: 5px !important;}
     .topbar-divider { display: none; }
 
     main, .main { padding: 14px 14px; }
-
-    .home-page { padding: 16px 14px; }
-    .home-toolbar { flex-direction: column; align-items: stretch; }
-    .home-toolbar .home-search-wrap, .home-toolbar .home-filter-select { width: 100%; }
-    .home-stats-bar { gap: 8px; }
-    .home-stat-chip { min-width: 80px; padding: 12px 14px; }
-    .home-stat-chip .stat-value { font-size: 1.3rem; }
 }

@@ -25,7 +25,10 @@
       "export_include_timeline": true,
       "export_include_iocs": true,
       "export_include_attachements": true,
-      "categories": [1, 2]
+      "categories": [
+        1,
+        2
+      ]
     }
   },
   {
@@ -54,7 +57,10 @@
       "export_include_timeline": true,
       "export_include_iocs": true,
       "export_include_attachements": true,
-      "categories": [3, 11]
+      "categories": [
+        3,
+        11
+      ]
     }
   },
   {
@@ -83,7 +89,10 @@
       "export_include_timeline": true,
       "export_include_iocs": true,
       "export_include_attachements": true,
-      "categories": [4, 10]
+      "categories": [
+        4,
+        10
+      ]
     }
   },
   {
@@ -119,62 +128,98 @@
   {
     "model": "opencirt.incidentcategory",
     "pk": 1,
-    "fields": { "name": "Malware", "color": "#ef4444" }
+    "fields": {
+      "name": "Malware",
+      "color": "#ef4444"
+    }
   },
   {
     "model": "opencirt.incidentcategory",
     "pk": 2,
-    "fields": { "name": "Ransomware", "color": "#dc2626" }
+    "fields": {
+      "name": "Ransomware",
+      "color": "#dc2626"
+    }
   },
   {
     "model": "opencirt.incidentcategory",
     "pk": 3,
-    "fields": { "name": "Phishing", "color": "#f97316" }
+    "fields": {
+      "name": "Phishing",
+      "color": "#f97316"
+    }
   },
   {
     "model": "opencirt.incidentcategory",
     "pk": 4,
-    "fields": { "name": "Data Breach", "color": "#8b5cf6" }
+    "fields": {
+      "name": "Data Breach",
+      "color": "#8b5cf6"
+    }
   },
   {
     "model": "opencirt.incidentcategory",
     "pk": 5,
-    "fields": { "name": "Insider Threat", "color": "#b91c1c" }
+    "fields": {
+      "name": "Insider Threat",
+      "color": "#b91c1c"
+    }
   },
   {
     "model": "opencirt.incidentcategory",
     "pk": 6,
-    "fields": { "name": "Fraud", "color": "#d97706" }
+    "fields": {
+      "name": "Fraud",
+      "color": "#d97706"
+    }
   },
   {
     "model": "opencirt.incidentcategory",
     "pk": 7,
-    "fields": { "name": "DDoS", "color": "#3b82f6" }
+    "fields": {
+      "name": "DDoS",
+      "color": "#3b82f6"
+    }
   },
   {
     "model": "opencirt.incidentcategory",
     "pk": 8,
-    "fields": { "name": "Supply Chain Attack", "color": "#10b981" }
+    "fields": {
+      "name": "Supply Chain Attack",
+      "color": "#10b981"
+    }
   },
   {
     "model": "opencirt.incidentcategory",
     "pk": 9,
-    "fields": { "name": "Social Engineering", "color": "#f59e0b" }
+    "fields": {
+      "name": "Social Engineering",
+      "color": "#f59e0b"
+    }
   },
   {
     "model": "opencirt.incidentcategory",
     "pk": 10,
-    "fields": { "name": "Vulnerability Exploitation", "color": "#06b6d4" }
+    "fields": {
+      "name": "Vulnerability Exploitation",
+      "color": "#06b6d4"
+    }
   },
   {
     "model": "opencirt.incidentcategory",
     "pk": 11,
-    "fields": { "name": "APT", "color": "#7c3aed" }
+    "fields": {
+      "name": "APT",
+      "color": "#7c3aed"
+    }
   },
   {
     "model": "opencirt.incidentcategory",
     "pk": 12,
-    "fields": { "name": "Unauthorized Access", "color": "#6b7280" }
+    "fields": {
+      "name": "Unauthorized Access",
+      "color": "#6b7280"
+    }
   },
   {
     "model": "opencirt.action",
@@ -454,7 +499,7 @@
       "updated_at": "2026-06-08T15:00:00Z",
       "created_by": 1,
       "tag": "C2 Beacon Domain",
-      "status": "MALICIOUS",
+      "status": "COMPROMISED",
       "description": "Cobalt Strike C2 beacon domain. Used for command and control of compromised endpoints.",
       "type": "DOMAIN",
       "incident": 1,
@@ -471,7 +516,7 @@
       "updated_at": "2026-06-08T15:10:00Z",
       "created_by": 1,
       "tag": "C2 Beacon IP",
-      "status": "MALICIOUS",
+      "status": "COMPROMISED",
       "description": "Cobalt Strike C2 server IP address. Hosted on VPS provider in Eastern Europe.",
       "type": "IPADRESS",
       "incident": 1,
@@ -488,7 +533,7 @@
       "updated_at": "2026-06-08T15:20:00Z",
       "created_by": 1,
       "tag": "Ransomware File Extension",
-      "status": "MALICIOUS",
+      "status": "COMPROMISED",
       "description": "File extension appended by LockBit ransomware during encryption process.",
       "type": "FILENAME",
       "incident": 1,
@@ -505,7 +550,7 @@
       "updated_at": "2026-06-08T15:30:00Z",
       "created_by": 1,
       "tag": "Beacon Process Name",
-      "status": "MALICIOUS",
+      "status": "COMPROMISED",
       "description": "Process name used by Cobalt Strike beacon for command execution. Masqueraded as legitimate Windows process.",
       "type": "FILENAME",
       "incident": 1,
@@ -522,7 +567,7 @@
       "updated_at": "2026-06-05T09:00:00Z",
       "created_by": 1,
       "tag": "Phishing Domain - Typosquat",
-      "status": "MALICIOUS",
+      "status": "COMPROMISED",
       "description": "Typosquatted domain used for credential harvesting. Closely resembled legitimate finance portal domain.",
       "type": "DOMAIN",
       "incident": 2,
@@ -539,7 +584,7 @@
       "updated_at": "2026-06-05T10:00:00Z",
       "created_by": 1,
       "tag": "Attacker IP - Phishing Campaign",
-      "status": "MALICIOUS",
+      "status": "COMPROMISED",
       "description": "Source IP of credential harvesting attempt. Routed through Tor exit node.",
       "type": "IPADRESS",
       "incident": 2,
@@ -556,7 +601,7 @@
       "updated_at": "2026-06-05T11:00:00Z",
       "created_by": 1,
       "tag": "Secondary Attacker IP",
-      "status": "MALICIOUS",
+      "status": "COMPROMISED",
       "description": "Secondary IP used by APT28 for unauthorized access attempts after credential compromise.",
       "type": "IPADRESS",
       "incident": 2,
@@ -573,7 +618,7 @@
       "updated_at": "2026-06-05T12:00:00Z",
       "created_by": 1,
       "tag": "Malicious Email Header - SMTP Relay",
-      "status": "MALICIOUS",
+      "status": "COMPROMISED",
       "description": "Compromised SMTP relay server used to send phishing emails. Origin of email campaign.",
       "type": "DOMAIN",
       "incident": 2,
@@ -590,7 +635,7 @@
       "updated_at": "2026-06-09T18:30:00Z",
       "created_by": 1,
       "tag": "SQL Injection Source IP",
-      "status": "MALICIOUS",
+      "status": "COMPROMISED",
       "description": "Source IP of SQL injection attack against customer portal. Attempted data exfiltration.",
       "type": "IPADRESS",
       "incident": 3,
@@ -607,7 +652,7 @@
       "updated_at": "2026-06-09T19:00:00Z",
       "created_by": 1,
       "tag": "SQL Injection Payload Hash",
-      "status": "MALICIOUS",
+      "status": "COMPROMISED",
       "description": "MD5 hash of SQL injection payload. Detected in WAF logs.",
       "type": "HASH",
       "incident": 3,

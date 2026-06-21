@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create account</title>
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/join.css">
+    <link rel="icon" href="/static/images/logo.png" type="image/png">
+    <style>
+        .auth-switch { margin-top: 18px; font-size: 0.9em; color: var(--text-color-2); }
+        .auth-switch a { color: var(--main-color-3); text-decoration: none; }
+        .auth-switch a:hover { text-decoration: underline; }
+        .error-msg { color: #e53e3e; font-size: 0.88em; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="join-container">
+        <a class="logo"><img src="{% static 'logo.png' %}"></a>
+        <h1 class="incident-name">Create account</h1>
+        <p class="invitation-message">You'll be able to join incidents once an admin invites you or assigns you a platform role.</p>
+
+        <form method="POST" class="join-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" value="{{ username|default:'' }}" placeholder="Choose a username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="At least 8 characters" required>
+            </div>
+            <div class="form-group">
+                <label for="password2">Confirm password</label>
+                <input type="password" id="password2" name="password2" placeholder="Repeat your password" required>
+            </div>
+            {% if error %}
+            <p class="error-msg">{{ error }}</p>
+            {% endif %}
+            <button type="submit" class="btn-join">Create account</button>
+        </form>
+        <p class="auth-switch">Already have an account? <a href="/login/">Log in</a></p>
+    </div>
+</body>
+</html>

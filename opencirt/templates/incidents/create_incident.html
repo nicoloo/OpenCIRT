@@ -193,6 +193,9 @@
         </div>
         {% endif %}
 
+        {% if no_access %}
+        <a href="/home" class="btn-create-cancel" style="display:inline-block;margin-top:12px;">Back to home</a>
+        {% else %}
         <form class="create-form" method="POST">
             {% csrf_token %}
 
@@ -242,6 +245,7 @@
                 <a href="/home" class="btn-create-cancel">Cancel</a>
             </div>
         </form>
+        {% endif %}
 
     </div>
 </main>

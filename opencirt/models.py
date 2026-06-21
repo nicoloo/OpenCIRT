@@ -7,6 +7,11 @@ from .choices_processor import choices_context
 choices = choices_context(HttpRequest())
     
 class User(AbstractUser):
+    PLATFORM_ROLE_CHOICES = [
+        ('',            'None'),
+        ('SOC_ANALYST', 'SOC Analyst'),
+        ('SOC_LEAD',    'SOC Lead'),
+    ]
     is_admin = models.BooleanField(default=False)
     first_connection_time = models.DateTimeField(auto_now_add=True)
     last_connection_time = models.DateTimeField(null=True, blank=True)
@@ -14,6 +19,7 @@ class User(AbstractUser):
     profile_picture = models.ImageField(upload_to='profile_pics/', default='profile_pics/default.jpg')
     light_mode = models.CharField(max_length=15, default='light_mode')
     preferences = models.JSONField(default=dict, blank=True)
+    platform_role = models.CharField(max_length=15, choices=PLATFORM_ROLE_CHOICES, blank=True, default='')
     groups = models.ManyToManyField(
         Group,
         related_name='custom_user_groups',
@@ -74,6 +80,18 @@ class Incident(models.Model):
     tlp = models.CharField(max_length=10, choices=TLP_CHOICES, default='CLEAR')
     ai_rephrase_enabled = models.BooleanField(default=False)
     categories = models.ManyToManyField(IncidentCategory, blank=True, related_name='incidents')
+
+    RESOLUTION_CHOICES = [
+        ('TRUE_POSITIVE',    'True Positive'),
+        ('FALSE_POSITIVE',   'False Positive'),
+        ('SECURITY_TESTING', 'Security Testing'),
+        ('AUTHORIZED_SCAN',  'Authorized Scan'),
+        ('DUPLICATE',        'Duplicate'),
+        ('INFORMATIONAL',    'Informational'),
+        ('UNDETERMINED',     'Undetermined'),
+    ]
+    resolution      = models.CharField(max_length=30, choices=RESOLUTION_CHOICES, blank=True, default='')
+    resolution_note = models.TextField(blank=True, default='')
 
     def __str__(self):
         return self.name
@@ -215,6 +233,22 @@ class Impact(models.Model):
     starting_time = models.DateTimeField(null=True)
     ending_time = models.DateTimeField(null=True)
     duration = models.DurationField(null=True)
+
+
+class Campaign(models.Model):
+    """Groups incidents that belong to the same threat campaign (e.g. a phishing wave)."""
+    name        = models.CharField(max_length=100)
+    description = models.TextField(blank=True, default='')
+    color       = models.CharField(max_length=7, default='#c49840')
+    created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='campaigns_created')
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+    incidents   = models.ManyToManyField(Incident, blank=True, related_name='campaigns')
+    start_date  = models.DateField(null=True, blank=True)
+    end_date    = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return self.name
 
 
 class CtiProvider(models.Model):

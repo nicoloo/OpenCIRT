@@ -121,6 +121,40 @@
 
 {% block content %}
 {{ all_categories|json_script:"all-cats-data" }}
+
+{# Resolution modal — shown when user sets status to CLOSED #}
+<div id="closeResolutionModal" class="home-modal-overlay">
+    <div class="home-modal">
+        <div class="home-modal-header">
+            <h3><i class="fa-solid fa-circle-check"></i> Close Incident</h3>
+            <button class="home-modal-close" id="ovCancelClose"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="home-modal-body">
+            <div class="home-field">
+                <label>Resolution <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-color-2);">(optional)</span></label>
+                <div class="home-resolution-grid">
+                    {% for val, label in INCIDENT_RESOLUTION_CHOICES %}
+                    <label class="res-option">
+                        <input type="radio" name="ovResolution" value="{{ val }}">
+                        <span class="res-label res-{{ val|lower }}">{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="home-field">
+                <label>Note <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-color-2);">(optional)</span></label>
+                <textarea id="ovResolutionNote" placeholder="Additional context…" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="home-modal-footer">
+            <button class="home-btn-cancel" id="ovCancelCloseBtn">Cancel</button>
+            <button class="home-btn-primary" id="ovConfirmClose">
+                <i class="fa-solid fa-circle-check"></i> Close Incident
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="overview-page">
     <form id="incident-form">
 
@@ -134,6 +168,9 @@
                 <div class="header-badges">
                     <span class="badge badge-status badge-{{ incident.status|lower }}">{{ incident.status }}</span>
                     <span class="badge badge-severity badge-{{ incident.severity|lower }}">{{ incident.severity }}</span>
+                    {% if incident.resolution %}
+                    <span class="badge badge-resolution badge-res-{{ incident.resolution|lower }}">{{ incident.get_resolution_display }}</span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -362,6 +399,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    async function patchIncident(data) {
+        try {
+            const response = await fetch(`/api/incident/${incidentId}/update/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify(data),
+            });
+            if (response.ok) showSaved();
+        } catch (err) {
+            console.error('Save failed:', err);
+        }
+    }
+
+    // Resolution modal wiring
+    const closeResModal = document.getElementById('closeResolutionModal');
+    function openResModal()  { closeResModal.style.display = 'flex'; }
+    function closeResModalFn() {
+        closeResModal.style.display = 'none';
+        document.getElementById('status').value = '{{ incident.status }}';
+    }
+    document.getElementById('ovCancelClose').addEventListener('click', closeResModalFn);
+    document.getElementById('ovCancelCloseBtn').addEventListener('click', closeResModalFn);
+    document.getElementById('ovConfirmClose').addEventListener('click', async () => {
+        const resolution = document.querySelector('input[name="ovResolution"]:checked')?.value || '';
+        const note = document.getElementById('ovResolutionNote').value;
+        closeResModal.style.display = 'none';
+        await patchIncident({ status: 'CLOSED', resolution, resolution_note: note });
+    });
+
     form.querySelectorAll('input, textarea, select').forEach(field => {
         field.addEventListener('blur', async (event) => {
             const f = event.target;
@@ -379,26 +445,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (f.name === 'technical-details' && formData.get('technical-details') !== '{{ incident.technical_details|escapejs }}') {
                 data.technical_details = formData.get('technical-details');
             } else if (f.name === 'status' && formData.get('status') !== '{{ incident.status|escapejs }}') {
+                if (formData.get('status') === 'CLOSED') {
+                    openResModal();
+                    return;
+                }
                 data.status = formData.get('status');
             } else if (f.name === 'severity' && formData.get('severity') !== '{{ incident.severity|escapejs }}') {
                 data.severity = formData.get('severity');
             }
 
-            if (Object.keys(data).length > 0) {
-                try {
-                    const response = await fetch(`/api/incident/${incidentId}/update/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrfToken
-                        },
-                        body: JSON.stringify(data)
-                    });
-                    if (response.ok) showSaved();
-                } catch (err) {
-                    console.error('Save failed:', err);
-                }
-            }
+            if (Object.keys(data).length > 0) await patchIncident(data);
         });
     });
 

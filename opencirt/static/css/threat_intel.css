@@ -1,0 +1,1205 @@
+/* ── Threat Intelligence Hub ─────────────────────────────────────────────── */
+
+.ti-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px 28px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
+
+.ti-tabs-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: -8px;
+}
+
+.ti-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    background: transparent;
+    color: var(--text-color-2);
+    font-size: 0.88rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.ti-tab-btn:hover { color: var(--text-color-1); }
+
+.ti-tab-btn.active {
+    color: var(--main-color-3);
+    border-bottom-color: var(--main-color-3);
+}
+
+.ti-tab-panel { display: flex; flex-direction: column; gap: 20px; }
+
+/* ── Toolbar label ───────────────────────────────────────────────────────── */
+
+.ti-toolbar-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-color-2);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ── Export bar ──────────────────────────────────────────────────────────── */
+
+.ti-export-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-color-2);
+}
+
+.ti-export-btn-primary {
+    background: var(--main-color-3) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+    font-weight: 700;
+}
+
+.ti-export-btn-primary:hover {
+    opacity: 0.88;
+}
+
+/* ── Monthly bar chart (campaign tab) ────────────────────────────────────── */
+
+.ti-monthly-card {
+    padding: 18px 22px;
+}
+
+.ti-monthly-bars {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    min-height: 100px;
+    flex-wrap: wrap;
+}
+
+.ti-monthly-empty {
+    font-size: 0.82rem;
+    color: var(--text-color-2);
+    padding: 20px 0;
+}
+
+.ti-monthly-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 36px;
+}
+
+.ti-monthly-bar-wrap {
+    display: flex;
+    align-items: flex-end;
+    height: 80px;
+    width: 100%;
+    justify-content: center;
+}
+
+.ti-monthly-bar {
+    background: var(--main-color-3);
+    border-radius: 3px 3px 0 0;
+    width: 70%;
+    min-height: 3px;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+}
+
+.ti-monthly-bar:hover { opacity: 1; }
+
+.ti-monthly-count {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+}
+
+.ti-monthly-label {
+    font-size: 0.65rem;
+    color: var(--text-color-2);
+    text-align: center;
+}
+
+/* ── KPI Bar ─────────────────────────────────────────────────────────────── */
+
+.ti-kpi-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.ti-kpi {
+    flex: 1;
+    min-width: 140px;
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ti-kpi-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    line-height: 1;
+}
+
+.ti-kpi-value.kpi-bad   { color: #dc2626; }
+.ti-kpi-value.kpi-warn  { color: #d97706; }
+.ti-kpi-value.kpi-good  { color: #16a34a; }
+.ti-kpi-value.ti-kpi-mono { font-size: 1.3rem; font-family: monospace; letter-spacing: -0.03em; }
+
+.ti-kpi-sla { background: var(--main-color-1); }
+
+/* TLP filter emphasis */
+.ti-tlp-filter { font-weight: 600; border-left: 3px solid var(--main-color-3); }
+
+.ti-kpi-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-color-2);
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.ti-toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+
+.ti-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 200px;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    padding: 6px 12px;
+    color: var(--text-color-2);
+}
+
+.ti-search-wrap input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.87rem;
+    color: var(--text-color-1);
+    width: 100%;
+}
+
+.ti-filter-select {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    padding: 6px 10px;
+    font-size: 0.84rem;
+    color: var(--text-color-1);
+    cursor: pointer;
+    min-width: 130px;
+}
+
+.ti-quarter-btns {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.ti-qbtn {
+    padding: 5px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--background-color);
+    color: var(--text-color-2);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+    white-space: nowrap;
+}
+
+.ti-qbtn:hover,
+.ti-qbtn.active {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: #fff;
+}
+
+.ti-date-range {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--text-color-2);
+}
+
+.ti-date-range input[type="date"] {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 0.82rem;
+    color: var(--text-color-1);
+    cursor: pointer;
+}
+
+/* ── Export bar ──────────────────────────────────────────────────────────── */
+
+.ti-export-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.ti-export-bar span {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-color-2);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.ti-export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--widget-background-color);
+    color: var(--text-color-1);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .15s, border-color .15s;
+}
+
+.ti-export-btn:hover {
+    background: var(--main-color-1);
+    border-color: var(--accent-color);
+    color: var(--text-color-1);
+    text-decoration: none;
+}
+
+.ti-export-btn i { font-size: 0.82rem; }
+
+/* ── Charts row ──────────────────────────────────────────────────────────── */
+
+.ti-charts-row {
+    display: grid;
+    grid-template-columns: 1fr 220px 220px;
+    gap: 16px;
+    /* prevent grid blowout from heatmap overflow */
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .ti-charts-row { grid-template-columns: 1fr; }
+}
+
+.ti-chart-card {
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px 18px;
+    /* critical: allow grid children to shrink below content size */
+    min-width: 0;
+    overflow: hidden;
+}
+
+.ti-chart-card h3 {
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.ti-chart-wrap {
+    position: relative;
+    height: 180px;
+}
+
+/* ── Heatmap ─────────────────────────────────────────────────────────────── */
+
+.ti-heatmap-outer {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.ti-heatmap-outer::-webkit-scrollbar { height: 4px; }
+.ti-heatmap-outer::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+
+/* Centers when content is narrower than the card; scrolls cleanly when wider */
+.ti-heatmap-inner {
+    width: max-content;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.ti-heatmap {
+    display: grid;
+    grid-template-rows: repeat(7, 13px);
+    grid-auto-flow: column;
+    gap: 3px;
+}
+
+.ti-hm-cell {
+    width: 13px;
+    height: 13px;
+    border-radius: 2px;
+    background: var(--main-color-1);
+    cursor: default;
+    transition: opacity .1s;
+    position: relative;
+}
+
+.ti-hm-cell:hover { opacity: .75; }
+
+.ti-hm-cell[data-level="1"] { background: #f0dba8; }
+.ti-hm-cell[data-level="2"] { background: #e8cc8e; }
+.ti-hm-cell[data-level="3"] { background: #d4a84b; }
+.ti-hm-cell[data-level="4"] { background: #c49840; }
+.ti-hm-cell[data-level="5"] { background: #8b6b00; }
+
+.ti-hm-month-labels {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 4px;
+    font-size: 0.67rem;
+    color: var(--text-color-2);
+    font-weight: 600;
+}
+
+.ti-heatmap-legend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    font-size: 0.7rem;
+    color: var(--text-color-2);
+}
+
+.ti-hm-legend-cell {
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+}
+
+/* ── Heatmap tooltip ─────────────────────────────────────────────────────── */
+
+.ti-hm-tooltip {
+    position: fixed;
+    background: var(--text-color-1);
+    color: #fff;
+    font-size: 0.72rem;
+    padding: 5px 9px;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .1s;
+    z-index: 9999;
+    white-space: nowrap;
+}
+
+.ti-hm-tooltip.visible { opacity: 1; }
+
+/* ── Main split layout ───────────────────────────────────────────────────── */
+
+.ti-main {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+    align-items: start;
+}
+
+@media (max-width: 1100px) {
+    .ti-main { grid-template-columns: 1fr; }
+}
+
+/* ── IOC Table ───────────────────────────────────────────────────────────── */
+
+.ti-table-card {
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.ti-table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 10px;
+}
+
+.ti-table-header h2 {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+}
+
+.ti-total-badge {
+    background: var(--main-color-1);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-color-2);
+}
+
+.ti-table-wrap {
+    overflow-x: auto;
+    max-height: 560px;
+    overflow-y: auto;
+}
+
+table.ti-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+
+table.ti-table th {
+    position: sticky;
+    top: 0;
+    background: var(--widget-background-color);
+    border-bottom: 2px solid var(--border-color);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-color-2);
+    white-space: nowrap;
+    z-index: 1;
+}
+
+table.ti-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+table.ti-table tr:last-child td { border-bottom: none; }
+
+table.ti-table tr.ti-row {
+    cursor: pointer;
+    transition: background .1s;
+}
+
+table.ti-table tr.ti-row:hover { background: var(--hover-color); }
+table.ti-table tr.ti-row.selected { background: var(--main-color-1); }
+table.ti-table tr.ti-row-stale td:first-child { opacity: 0.75; }
+
+.ti-stale-icon {
+    color: #d97706;
+    font-size: 0.72rem;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+.ti-value-cell {
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    color: var(--text-color-1);
+    max-width: 200px;
+}
+
+.ti-occ-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(196,152,64,.18);
+    color: var(--accent-color);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.ti-type-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: var(--main-color-1);
+    color: var(--text-color-2);
+    border: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.ti-verdict-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ti-verdict-malicious  { background: rgba(220,38,38,.12);   color: #dc2626; }
+.ti-verdict-suspicious { background: rgba(217,119,6,.12);   color: #d97706; }
+.ti-verdict-clean      { background: rgba(22,163,74,.12);   color: #16a34a; }
+.ti-verdict-unknown,
+.ti-verdict-pending    { background: rgba(107,114,128,.1);  color: #6b7280; }
+
+.ti-status-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.ti-status-COMPROMISED           { background: rgba(220,38,38,.12);  color: #dc2626; }
+.ti-status-POTENTIALLY_COMPROMISED { background: rgba(217,119,6,.12); color: #d97706; }
+.ti-status-SAFE                  { background: rgba(22,163,74,.12);  color: #16a34a; }
+
+.ti-inc-link {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-size: 0.78rem;
+}
+
+.ti-inc-link:hover { text-decoration: underline; }
+
+/* ── Pagination ──────────────────────────────────────────────────────────── */
+
+.ti-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.82rem;
+    color: var(--text-color-2);
+}
+
+.ti-page-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--background-color);
+    color: var(--text-color-1);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background .12s;
+}
+
+.ti-page-btn:hover:not(:disabled) { background: var(--main-color-1); }
+.ti-page-btn:disabled { opacity: .4; cursor: default; }
+
+/* ── Pivot Panel ─────────────────────────────────────────────────────────── */
+
+.ti-pivot-panel {
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.ti-pivot-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    color: var(--text-color-2);
+    text-align: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.ti-pivot-empty i {
+    font-size: 2rem;
+    color: var(--border-color);
+}
+
+.ti-pivot-empty p {
+    font-size: 0.82rem;
+    margin: 0;
+}
+
+.ti-pivot-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ti-pivot-value {
+    font-family: 'Courier New', monospace;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    word-break: break-all;
+    margin: 0 0 6px;
+}
+
+.ti-pivot-meta {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.ti-pivot-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: transparent;
+    font-size: 0.72rem;
+    color: var(--text-color-2);
+    cursor: pointer;
+    transition: background .12s;
+}
+
+.ti-pivot-copy:hover { background: var(--main-color-1); }
+.ti-pivot-copy.copied { color: #16a34a; }
+
+.ti-pivot-rep {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ti-pivot-rep h4 {
+    margin: 0 0 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-color-2);
+}
+
+.ti-pivot-rep-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.ti-pivot-rep-item {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ti-pivot-rep-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-color-2);
+}
+
+.ti-pivot-rep-val {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+}
+
+.rep-mal  { color: #dc2626; }
+.rep-susp { color: #d97706; }
+.rep-clean { color: #16a34a; }
+
+.ti-pivot-incidents {
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    max-height: 300px;
+}
+
+.ti-pivot-incidents h4 {
+    margin: 0 0 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-color-2);
+}
+
+.ti-pivot-inc-row {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 9px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-decoration: none;
+    transition: background .12s;
+}
+
+.ti-pivot-inc-row:hover { background: var(--hover-color); text-decoration: none; }
+
+.ti-pivot-inc-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-color-1);
+}
+
+.ti-pivot-inc-meta {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 0.7rem;
+    color: var(--text-color-2);
+}
+
+.ti-sev-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.ti-sev-CRITICAL { background: rgba(240,102,84,.15); color: #c0392b; }
+.ti-sev-HIGH     { background: rgba(220,124,115,.15); color: #c0392b; }
+.ti-sev-MEDIUM   { background: rgba(227,207,152,.3);  color: #8a6d00; }
+.ti-sev-LOW      { background: rgba(197,206,174,.3);  color: #3d6b3d; }
+
+/* ── Campaigns Section ───────────────────────────────────────────────────── */
+
+.ti-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.ti-section-header h2 {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.ti-new-campaign-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s;
+    white-space: nowrap;
+}
+
+.ti-new-campaign-btn:hover { opacity: .88; }
+
+.ti-campaign-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.ti-campaign-card {
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: box-shadow .15s;
+    display: flex;
+    flex-direction: column;
+}
+
+.ti-campaign-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+.ti-campaign-card.active-campaign { border-color: var(--accent-color); box-shadow: 0 0 0 2px rgba(196,152,64,.25); }
+
+.ti-campaign-stripe {
+    height: 4px;
+    width: 100%;
+}
+
+.ti-campaign-body {
+    padding: 12px 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ti-campaign-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+}
+
+.ti-campaign-desc {
+    font-size: 0.78rem;
+    color: var(--text-color-2);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.ti-campaign-stats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.ti-campaign-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: var(--text-color-2);
+    font-weight: 600;
+}
+
+.ti-campaign-stat i { color: var(--accent-color); }
+
+.ti-campaign-dates {
+    font-size: 0.68rem;
+    color: var(--muted-color);
+}
+
+.ti-campaign-incidents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 6px;
+}
+
+.ti-camp-inc-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: var(--background-color);
+    font-size: 0.7rem;
+    color: var(--text-color-1);
+    text-decoration: none;
+    white-space: nowrap;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background .12s;
+}
+
+.ti-camp-inc-tag:hover { background: var(--hover-color); text-decoration: none; color: var(--text-color-1); }
+
+.ti-camp-inc-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.ti-campaign-actions {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.ti-camp-action-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: transparent;
+    font-size: 0.73rem;
+    color: var(--text-color-2);
+    cursor: pointer;
+    transition: background .12s, color .12s;
+}
+
+.ti-camp-action-btn:hover { background: var(--main-color-1); color: var(--text-color-1); }
+.ti-camp-action-btn.delete:hover { background: rgba(220,38,38,.1); color: #dc2626; border-color: #dc2626; }
+
+/* ── Modals ──────────────────────────────────────────────────────────────── */
+
+.ti-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+}
+
+.ti-modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.ti-modal {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    width: 540px;
+    max-width: 95vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,.18);
+    transform: scale(.96);
+    transition: transform .2s;
+}
+
+.ti-modal-overlay.open .ti-modal { transform: scale(1); }
+
+.ti-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ti-modal-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-color-1);
+}
+
+.ti-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    color: var(--text-color-2);
+    cursor: pointer;
+    padding: 2px 6px;
+}
+
+.ti-modal-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+
+.ti-field label {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-color-2);
+    margin-bottom: 5px;
+}
+
+.ti-field input,
+.ti-field textarea,
+.ti-field select {
+    width: 100%;
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-size: 0.87rem;
+    color: var(--text-color-1);
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.ti-field textarea { min-height: 70px; resize: vertical; }
+
+.ti-color-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ti-color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color .12s;
+}
+
+.ti-color-swatch.selected { border-color: var(--text-color-1); }
+
+.ti-incident-checklist {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--widget-background-color);
+}
+
+.ti-inc-check-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background .1s;
+}
+
+.ti-inc-check-row:last-child { border-bottom: none; }
+.ti-inc-check-row:hover { background: var(--hover-color); }
+
+.ti-inc-check-row input[type="checkbox"] { cursor: pointer; }
+
+.ti-inc-check-name {
+    flex: 1;
+    font-size: 0.83rem;
+    color: var(--text-color-1);
+}
+
+.ti-inc-check-sev {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 6px;
+}
+
+.ti-modal-footer {
+    padding: 14px 22px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.ti-btn-cancel {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: transparent;
+    font-size: 0.85rem;
+    color: var(--text-color-2);
+    cursor: pointer;
+}
+
+.ti-btn-save {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 7px;
+    background: var(--accent-color);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s;
+}
+
+.ti-btn-save:hover { opacity: .88; }
+
+/* ── Loading / empty states ──────────────────────────────────────────────── */
+
+.ti-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--text-color-2);
+    font-size: 0.85rem;
+    gap: 10px;
+}
+
+.ti-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: ti-spin .7s linear infinite;
+}
+
+@keyframes ti-spin { to { transform: rotate(360deg); } }
+
+.ti-empty-row td {
+    text-align: center;
+    padding: 36px;
+    color: var(--text-color-2);
+    font-size: 0.85rem;
+}
+
+.ti-no-campaigns {
+    background: var(--widget-background-color);
+    border: 1px dashed var(--border-color);
+    border-radius: 10px;
+    padding: 36px;
+    text-align: center;
+    color: var(--text-color-2);
+    font-size: 0.85rem;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 700px) {
+    .ti-page { padding: 14px; gap: 14px; }
+    .ti-kpi-value { font-size: 1.4rem; }
+    .ti-toolbar { gap: 6px; }
+}

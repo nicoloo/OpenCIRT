@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import login, logout, authenticate
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
-from opencirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformSettings, CtiProvider, IncidentCategory
+from opencirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformSettings, CtiProvider, IncidentCategory, Campaign
 from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, sync_incident_times, get_incidents_by_day_and_severity
 from .threat_intel import schedule_lookup, ELIGIBLE_TYPES as THREAT_INTEL_ELIGIBLE_TYPES
 import json
@@ -79,21 +79,11 @@ TLP_COLORS = {
 
 @login_required(login_url='login')
 def home(request):
-    # Get incidents where the user has a role OR the incident is public
-    user_roles = UserRole.objects.filter(user=request.user).select_related('incident')
-    
-    user_incidents = Incident.objects.filter(
-        id__in=[user_role.incident.id for user_role in user_roles]
-    )
-    public_incidents = Incident.objects.filter(is_public=True)
-    # Combine both sets of incidents
-
-    # Average KPI don't take into account the public incidents
+    incidents_list = list(_accessible_incidents(request.user).order_by('-created_at'))
 
     total_time_to_detect, total_time_to_respond, total_duration, total_genericiocs, incident_count = 0, 0, 0, 0, 0
 
-    # Accumulate values for each incident, converting timedelta to seconds for simplicity
-    for incident in user_incidents:
+    for incident in incidents_list:
         if incident.time_to_detect:
             total_time_to_detect += incident.time_to_detect.total_seconds()
         if incident.time_to_respond:
@@ -103,25 +93,21 @@ def home(request):
         total_genericiocs += incident.genericiocs.count()
         incident_count += 1
 
-    # Calculate averages (avoid division by zero)
     kpis = [
-        {'label': "Time to detect (TTD)",'value': timedelta(seconds=total_time_to_detect / incident_count) if incident_count else timedelta()},
-        {'label': "Time to respond (TTR)",'value': timedelta(seconds=total_time_to_respond / incident_count) if incident_count else timedelta()},
-        {'label': "Duration",'value': timedelta(seconds=total_duration / incident_count) if incident_count else timedelta()},
-        {'label': 'Iocs found', 'value': total_genericiocs},
+        {'label': "Time to detect (TTD)",  'value': timedelta(seconds=total_time_to_detect / incident_count) if incident_count else timedelta()},
+        {'label': "Time to respond (TTR)",  'value': timedelta(seconds=total_time_to_respond / incident_count) if incident_count else timedelta()},
+        {'label': "Duration",               'value': timedelta(seconds=total_duration / incident_count) if incident_count else timedelta()},
+        {'label': 'Iocs found',             'value': total_genericiocs},
     ]
-
-
-    incidents = (user_incidents | public_incidents).order_by('-created_at')
 
 
     
     # Prepare graphs data
     # Pie chart
     piechart_data = {
-        'labels': list(Counter(incident.status for incident in incidents).keys()),
-        'values': list(Counter(incident.status for incident in incidents).values()),
-    }   
+        'labels': list(Counter(inc.status for inc in incidents_list).keys()),
+        'values': list(Counter(inc.status for inc in incidents_list).values()),
+    }
     # Get sorted unique dates
     timechart_data = get_incidents_by_day_and_severity()
 
@@ -152,7 +138,6 @@ def home(request):
     }
 
     # Stats bar
-    incidents_list = list(incidents)
     total_count = len(incidents_list)
     active_count = sum(1 for inc in incidents_list if inc.status in ('OPEN', 'IN_PROGRESS'))
     critical_count = sum(1 for inc in incidents_list if inc.severity == 'CRITICAL')
@@ -165,6 +150,8 @@ def home(request):
         'values': list(severity_counter.values()),
     }
 
+    from .choices_processor import INCIDENT_RESOLUTION_CHOICES
+
     return render(request, 'home.html', {
         'incidents': incidents_list,
         'user': request.user,
@@ -176,6 +163,17 @@ def home(request):
         'critical_count': critical_count,
         'total_iocs': total_iocs,
         'severity_chart_data': severity_chart_data,
+        'INCIDENT_RESOLUTION_CHOICES': INCIDENT_RESOLUTION_CHOICES,
+        'INCIDENT_STATUS_CHOICES': [
+            ('OPEN', 'Open'), ('IN_PROGRESS', 'In Progress'),
+            ('RESOLVED', 'Resolved'), ('CLOSED', 'Closed'),
+        ],
+        'INCIDENT_SEVERITY_CHOICES': [
+            ('LOW', 'Low'), ('MEDIUM', 'Medium'),
+            ('HIGH', 'High'), ('CRITICAL', 'Critical'),
+        ],
+        'campaigns': Campaign.objects.all().order_by('name') if _has_platform_access(request.user) else Campaign.objects.none(),
+        'categories': IncidentCategory.objects.all().order_by('name'),
     })
 
 
@@ -194,6 +192,26 @@ def _login_rate_limit_reset(ip: str) -> None:
     """Clear the failed-login counter for an IP on successful login."""
     cache.delete(f'login_fail_{ip}')
 
+
+def register(request):
+    if request.user.is_authenticated:
+        return redirect('/home')
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        password2 = request.POST.get('password2', '')
+        if not username or not password:
+            return render(request, 'register.html', {'error': 'Username and password are required.'})
+        if password != password2:
+            return render(request, 'register.html', {'error': 'Passwords do not match.', 'username': username})
+        if User.objects.filter(username=username).exists():
+            return render(request, 'register.html', {'error': 'Username already taken.', 'username': username})
+        if len(password) < 8:
+            return render(request, 'register.html', {'error': 'Password must be at least 8 characters.', 'username': username})
+        user = User.objects.create_user(username=username, password=password)
+        login(request, user)
+        return redirect('/home')
+    return render(request, 'register.html')
 
 def custom_login(request):
     if request.method == 'POST':
@@ -247,73 +265,48 @@ def profile(request):
 @user_is_incident_responder_orpublic
 def overview(request, id):
     incident = get_object_or_404(Incident, id=id)
-    try:
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
 
     platform = PlatformSettings.get()
+    from .choices_processor import INCIDENT_RESOLUTION_CHOICES
     return render(request, 'incidents/overview.html', {
         'incident':           incident,
         'user':               request.user,
         'current_user_role':  user_role,
         'ai_configured':      platform.ai_provider != 'NONE' and bool(platform.ai_api_key),
         'all_categories':     list(IncidentCategory.objects.order_by('name').values('id', 'name', 'color')),
+        'INCIDENT_RESOLUTION_CHOICES': INCIDENT_RESOLUTION_CHOICES,
     })
 
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def activity(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-        incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
-        
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-            incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
+    incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
     return render(request,'incidents/activity.html', {'incident': incident, 'user': request.user,'current_user_role': user_role, 'incident_leads': incident_leads})
 
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def impacts(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-        incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
-        
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-            incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
+    incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
     return render(request,'incidents/impacts.html', {'incident': incident, 'user': request.user,'current_user_role': user_role, 'incident_leads': incident_leads})
 
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def notes(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     shared_files = list(incident.shared_files.all().order_by('-created_at'))
     for sf in shared_files:
         sf.is_executable = _get_extension(sf.original_name) in _EXECUTABLE_EXTENSIONS
@@ -327,16 +320,10 @@ def notes(request, id):
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def tasks(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     return render(request,'incidents/tasks.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
 
 @login_required(login_url='login')
@@ -534,25 +521,25 @@ def delete_file(request, id):
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def incident_settings(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        return _not_found(request, 'This incident does not exist.')
-    if user_role.role not in ('INCIDENT_LEAD',) and not request.user.is_admin:
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
+    pr = getattr(request.user, 'platform_role', '') or ''
+    if user_role.role not in ('INCIDENT_LEAD',) and not request.user.is_admin and pr != 'SOC_LEAD':
         return _forbidden(request, 'Only Incident Leads and platform admins can access incident settings.', incident=incident)
 
     platform = PlatformSettings.get()
+    all_incidents = _accessible_incidents(request.user).order_by('name')
+    from .choices_processor import INCIDENT_RESOLUTION_CHOICES
     return render(request, 'incidents/incident_settings.html', {
-        'incident':         incident,
-        'user':             request.user,
-        'current_user_role': user_role,
-        'ai_configured':    platform.ai_provider != 'NONE' and bool(platform.ai_api_key),
+        'incident':                    incident,
+        'user':                        request.user,
+        'user_role':                   user_role.role,
+        'current_user_role':           user_role,
+        'ai_configured':               platform.ai_provider != 'NONE' and bool(platform.ai_api_key),
+        'all_incidents':               all_incidents,
+        'INCIDENT_RESOLUTION_CHOICES': INCIDENT_RESOLUTION_CHOICES,
     })
 
 @login_required(login_url='login')
@@ -586,16 +573,10 @@ def report_preview(request, id):
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def report(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        return _not_found(request, 'This incident does not exist.')
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
 
     return render(request, 'incidents/report.html', {
         'incident': incident,
@@ -608,18 +589,10 @@ def report(request, id):
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def iocs(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if request.user.is_superuser:
-            user_role = UserRole(user=request.user, incident=incident, role="INCIDENT_LEAD")
-        elif incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     cti_configured      = CtiProvider.objects.filter(enabled=True).exclude(api_key='').exists()
     supported_ioc_types = _cti_supported_types()
     return render(request, 'incidents/evidence.html', {
@@ -633,18 +606,10 @@ def iocs(request, id):
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def timeline(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if request.user.is_superuser:
-            user_role = UserRole(user=request.user, incident=incident, role="INCIDENT_LEAD")
-        elif incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     return render(request,'incidents/timeline.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
 
 def join(request, id):
@@ -724,6 +689,12 @@ def generate_invite_code():
 
 @login_required(login_url='login')
 def create_incident(request):
+    if not _has_platform_access(request.user):
+        return render(request, 'incidents/create_incident.html', {
+            'user': request.user,
+            'error': 'You need a platform role (SOC Analyst or SOC Lead) to create incidents.',
+            'no_access': True,
+        })
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
@@ -810,11 +781,8 @@ def regenerate_invite(request, id):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     try:
         incident = Incident.objects.get(pk=id)
-        try:
-            user_role = UserRole.objects.get(user=request.user, incident=incident)
-            if user_role.role not in ('INCIDENT_LEAD', 'RESPONDER'):
-                return JsonResponse({'error': 'Permission denied'}, status=403)
-        except UserRole.DoesNotExist:
+        user_role = _get_user_role(request.user, incident)
+        if user_role is None or user_role.role not in ('INCIDENT_LEAD', 'RESPONDER'):
             return JsonResponse({'error': 'Permission denied'}, status=403)
         incident.invite_code = generate_invite_code()
         incident.save()
@@ -844,12 +812,41 @@ def settings_view(request):
 
     platform      = PlatformSettings.get()
     cti_providers = CtiProvider.objects.all().order_by('name')
+    all_users     = User.objects.order_by('username')
     return render(request, 'settings.html', {
         'user':          user,
         'prefs':         prefs,
         'platform':      platform,
         'cti_providers': cti_providers,
+        'all_users':     all_users,
     })
+
+
+@login_required(login_url='login')
+def api_admin_set_platform_role(request, user_id):
+    """POST /api/admin/users/<user_id>/set-platform-role/ — admin only."""
+    if not request.user.is_admin:
+        return JsonResponse({'error': 'Admin only.'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+    try:
+        target = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found.'}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except (ValueError, KeyError):
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+
+    new_role = data.get('platform_role', '')
+    valid = {'', 'SOC_ANALYST', 'SOC_LEAD'}
+    if new_role not in valid:
+        return JsonResponse({'error': 'Invalid platform_role.'}, status=400)
+
+    target.platform_role = new_role
+    target.save(update_fields=['platform_role'])
+    return JsonResponse({'status': 'ok', 'platform_role': new_role})
 
 
 @login_required(login_url='login')
@@ -2074,7 +2071,8 @@ def update_incident(request, id):
             data = json.loads(request.body)
 
             # Verify the user role inside the update_incident function
-            user_role = UserRole.objects.get(user=request.user, incident_id=id).role
+            _ur = _get_user_role(request.user, incident)
+            user_role = _ur.role if _ur else 'RESPONDER'
 
             if user_role == 'INCIDENT_LEAD':
                 # If user is INCIDENT_LEAD, they can modify the title as well
@@ -2101,9 +2099,21 @@ def update_incident(request, id):
             if 'external_reference' in data:
                 incident.external_reference = (data['external_reference'] or '')[:255]
             if 'status' in data:
-                incident.status = data['status']
-                if data['status'] == 'CLOSED':
+                new_status = data['status']
+                valid_res = {r[0] for r in Incident.RESOLUTION_CHOICES}
+                if new_status == 'CLOSED':
+                    resolution = data.get('resolution', '').strip() or incident.resolution or ''
+                    if resolution and resolution not in valid_res:
+                        return JsonResponse({'error': 'Invalid resolution.'}, status=400)
+                    incident.resolution = resolution
+                    incident.resolution_note = data.get('resolution_note', incident.resolution_note)[:2000]
                     sync_incident_times(incident)
+                incident.status = new_status
+            if 'resolution' in data and 'status' not in data:
+                valid_res = {r[0] for r in Incident.RESOLUTION_CHOICES}
+                if data['resolution'] in valid_res:
+                    incident.resolution = data['resolution']
+                    incident.resolution_note = data.get('resolution_note', '')[:2000]
             if 'severity' in data:
                 incident.severity = data['severity']
             if 'export_include_timeline' in data:
@@ -2303,12 +2313,9 @@ def ai_rephrase(request, id):
         return JsonResponse({'error': 'AI rephrase is not enabled for this incident.'}, status=403)
 
     # Restrict to write-capable roles
-    try:
-        user_role = UserRole.objects.get(user=request.user, incident_id=id).role
-        if user_role in ('READER', 'PUBLIC_VIEWER'):
-            return JsonResponse({'error': 'Permission denied: read-only role.'}, status=403)
-    except UserRole.DoesNotExist:
-        pass  # Public incident — logged-in non-responder; allow (already passed decorator)
+    _ur = _get_user_role(request.user, incident)
+    if _ur and _ur.role in ('READER', 'PUBLIC_VIEWER'):
+        return JsonResponse({'error': 'Permission denied: read-only role.'}, status=403)
 
     if _ai_rephrase_rate_limit_exceeded(request.user.pk):
         return JsonResponse(
@@ -2475,13 +2482,9 @@ def refresh_ioc_reputation(request, id, ioc_id):
 @user_is_incident_responder_orpublic
 def warroom(request, id):
     incident = get_object_or_404(Incident, pk=id)
-    try:
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role='PUBLIC_VIEWER')
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     return render(request, 'incidents/warroom.html', {
         'incident': incident,
         'user': request.user,
@@ -2922,3 +2925,1089 @@ def ioc_reputation(request, id, ioc_id):
     _audit(incident, request, 'UPDATE', 'IoC', f'Reputation checked for IoC #{ioc.id} ({ioc.value}) — verdict: {status}')
 
     return JsonResponse({'status': 'ok', 'reputation': reputation})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THREAT INTELLIGENCE HUB
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _has_platform_access(user):
+    """True if user has any platform-level role (not a bare new account)."""
+    if user.is_superuser:
+        return True
+    pr = getattr(user, 'platform_role', '') or ''
+    return pr in ('SOC_ANALYST', 'SOC_LEAD')
+
+def _accessible_incidents(user):
+    """Return QS of incidents the user can read (any role, or public, or platform role)."""
+    from django.db.models import Q
+    pr = getattr(user, 'platform_role', '') or ''
+    if user.is_superuser or pr in ('SOC_ANALYST', 'SOC_LEAD'):
+        return Incident.objects.all()
+    role_incident_ids = UserRole.objects.filter(user=user).values_list('incident_id', flat=True)
+    return Incident.objects.filter(
+        Q(id__in=role_incident_ids) | Q(is_public=True)
+    )
+
+
+def _get_user_role(user, incident):
+    """
+    Return the effective UserRole for a user on an incident.
+    For platform-role users with no explicit incident role, returns a synthetic
+    (unsaved) UserRole so callers can check .role uniformly.
+    Returns None if the user has no access at all.
+    """
+    try:
+        return UserRole.objects.get(user=user, incident=incident)
+    except UserRole.DoesNotExist:
+        pr = getattr(user, 'platform_role', '') or ''
+        if user.is_superuser or pr == 'SOC_LEAD':
+            return UserRole(user=user, incident=incident, role='INCIDENT_LEAD')
+        if pr == 'SOC_ANALYST':
+            return UserRole(user=user, incident=incident, role='RESPONDER')
+        if incident.is_public:
+            return UserRole(user=user, incident=incident, role='PUBLIC_VIEWER')
+        return None
+
+
+def _ti_ioc_queryset(user, params):
+    """
+    Build a filtered GenericIoc queryset scoped to accessible incidents.
+    params is a dict-like (request.GET).
+    """
+    from django.db.models import Q
+    incidents = _accessible_incidents(user)
+
+    date_from = params.get('date_from', '')
+    date_to   = params.get('date_to',   '')
+    ioc_type  = params.get('type',      '')
+    ioc_status = params.get('status',   '')
+    verdict   = params.get('verdict',   '')
+    tlp       = params.get('tlp',       '')
+    campaign_id = params.get('campaign', '')
+    search    = params.get('search',    '').strip()
+    incident_id = params.get('incident', '')
+
+    if campaign_id:
+        try:
+            campaign = Campaign.objects.get(pk=int(campaign_id))
+            incidents = incidents.filter(id__in=campaign.incidents.values_list('id', flat=True))
+        except (Campaign.DoesNotExist, ValueError):
+            pass
+
+    if incident_id:
+        try:
+            incidents = incidents.filter(pk=int(incident_id))
+        except ValueError:
+            pass
+
+    qs = GenericIoc.objects.filter(incident__in=incidents).select_related('incident', 'created_by')
+
+    if date_from:
+        try:
+            from datetime import date
+            qs = qs.filter(created_at__date__gte=date.fromisoformat(date_from))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            from datetime import date
+            qs = qs.filter(created_at__date__lte=date.fromisoformat(date_to))
+        except ValueError:
+            pass
+    if ioc_type:
+        qs = qs.filter(type=ioc_type)
+    if ioc_status:
+        qs = qs.filter(status=ioc_status)
+    if verdict:
+        # Filter on the JSON reputation.status field
+        qs = qs.filter(reputation__status=verdict)
+    if tlp:
+        VALID_TLP = {'CLEAR', 'GREEN', 'AMBER', 'RED'}
+        if tlp.upper() in VALID_TLP:
+            qs = qs.filter(incident__tlp=tlp.upper())
+    if search:
+        qs = qs.filter(value__icontains=search)
+
+    return qs
+
+
+@login_required(login_url='login')
+def threat_intel(request):
+    """GET /threat-intel/ — Threat Intelligence Hub page."""
+    from django.db.models import Count
+
+    incidents   = _accessible_incidents(request.user)
+    campaigns   = Campaign.objects.all().prefetch_related('incidents') if _has_platform_access(request.user) else Campaign.objects.none()
+    all_iocs    = GenericIoc.objects.filter(incident__in=incidents)
+    total_iocs  = all_iocs.count()
+    unique_iocs = all_iocs.values('value').distinct().count()
+
+    malicious_count = all_iocs.filter(reputation__status='malicious').count()
+    pct_malicious   = round(malicious_count / total_iocs * 100, 1) if total_iocs else 0
+
+    from .choices_processor import choices_context
+    from django.http import HttpRequest
+    req = HttpRequest()
+    choices = choices_context(req)
+
+    context = {
+        'incidents':       incidents.order_by('-created_at'),
+        'campaigns':       campaigns,
+        'total_iocs':      total_iocs,
+        'unique_iocs':     unique_iocs,
+        'pct_malicious':   pct_malicious,
+        'incident_count':  incidents.count(),
+        'campaign_count':  campaigns.count(),
+        'IOC_TYPE_CHOICES':   choices['GENERIC_IOC_TYPE_CHOICES'],
+        'IOC_STATUS_CHOICES': choices['GENERIC_IOC_STATUS_CHOICES'],
+        'cti_configured':  CtiProvider.objects.filter(enabled=True).exclude(api_key='').exists(),
+    }
+    return render(request, 'threat_intel.html', context)
+
+
+@login_required(login_url='login')
+def api_ti_iocs(request):
+    """
+    GET /api/threat-intel/iocs/
+    Returns paginated IOC list with cross-incident occurrence counts.
+    """
+    from django.db.models import Count, Value
+    from django.db.models.functions import Lower
+
+    PAGE_SIZE = 50
+    try:
+        page = max(1, int(request.GET.get('page', 1)))
+    except ValueError:
+        page = 1
+
+    qs = _ti_ioc_queryset(request.user, request.GET).order_by('-created_at')
+
+    # Annotate with how many accessible incidents share the same value
+    accessible_ids = list(_accessible_incidents(request.user).values_list('id', flat=True))
+
+    total = qs.count()
+    offset = (page - 1) * PAGE_SIZE
+    iocs = qs[offset: offset + PAGE_SIZE]
+
+    # Build value → occurrence count map for this page's values
+    page_values = [i.value for i in iocs]
+    occ_map = {}
+    if page_values:
+        rows = (
+            GenericIoc.objects
+            .filter(incident_id__in=accessible_ids, value__in=page_values)
+            .values('value')
+            .annotate(cnt=Count('id'))
+        )
+        occ_map = {r['value']: r['cnt'] for r in rows}
+
+    data = []
+    for ioc in iocs:
+        rep = ioc.reputation or {}
+        data.append({
+            'id':          ioc.id,
+            'value':       ioc.value,
+            'type':        ioc.type,
+            'status':      ioc.status,
+            'verdict':     rep.get('status', 'unknown'),
+            'vt_score':    rep.get('vt', {}).get('malicious', 0) if rep.get('vt') else None,
+            'incident_id': ioc.incident_id,
+            'incident':    ioc.incident.name,
+            'created_at':  ioc.created_at.isoformat(),
+            'occurrences': occ_map.get(ioc.value, 1),
+        })
+
+    return JsonResponse({
+        'iocs':      data,
+        'total':     total,
+        'page':      page,
+        'page_size': PAGE_SIZE,
+        'pages':     max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE),
+    })
+
+
+@login_required(login_url='login')
+def api_ti_stats(request):
+    """GET /api/threat-intel/stats/ — KPI numbers."""
+    from django.db.models import Count
+
+    qs = _ti_ioc_queryset(request.user, request.GET)
+    total   = qs.count()
+    unique  = qs.values('value').distinct().count()
+    mal     = qs.filter(reputation__status='malicious').count()
+    susp    = qs.filter(reputation__status='suspicious').count()
+    clean   = qs.filter(reputation__status='clean').count()
+    inc_cnt = qs.values('incident_id').distinct().count()
+
+    by_type = list(
+        qs.values('type').annotate(cnt=Count('id')).order_by('-cnt')
+    )
+
+    return JsonResponse({
+        'total':           total,
+        'unique':          unique,
+        'malicious':       mal,
+        'suspicious':      susp,
+        'clean':           clean,
+        'incident_count':  inc_cnt,
+        'by_type':         by_type,
+    })
+
+
+@login_required(login_url='login')
+def api_ti_heatmap(request):
+    """
+    GET /api/threat-intel/heatmap/
+    Returns daily IOC counts for the calendar heatmap.
+    Response: { days: [ {date, count}, … ] }  — last 365 days by default.
+    """
+    from django.db.models import Count
+    from datetime import date, timedelta
+
+    qs = _ti_ioc_queryset(request.user, request.GET)
+
+    rows = (
+        qs.extra(select={'day': "DATE(created_at)"})
+          .values('day')
+          .annotate(count=Count('id'))
+          .order_by('day')
+    )
+
+    days = {str(r['day']): r['count'] for r in rows}
+
+    # Fill all days in range so JS gets a complete grid
+    date_from_str = request.GET.get('date_from', '')
+    date_to_str   = request.GET.get('date_to',   '')
+    try:
+        d_from = date.fromisoformat(date_from_str)
+    except ValueError:
+        d_from = date.today() - timedelta(days=364)
+    try:
+        d_to = date.fromisoformat(date_to_str)
+    except ValueError:
+        d_to = date.today()
+
+    result = []
+    cur = d_from
+    while cur <= d_to:
+        key = cur.isoformat()
+        result.append({'date': key, 'count': days.get(key, 0)})
+        cur += timedelta(days=1)
+
+    return JsonResponse({'days': result})
+
+
+@login_required(login_url='login')
+def api_ti_pivot(request):
+    """
+    GET /api/threat-intel/pivot/?value=<ioc_value>
+    Returns all accessible incidents that contain an IOC with this exact value,
+    plus aggregated reputation data.
+    """
+    value = request.GET.get('value', '').strip()
+    if not value:
+        return JsonResponse({'error': 'value required'}, status=400)
+
+    incidents = _accessible_incidents(request.user)
+    iocs = (
+        GenericIoc.objects
+        .filter(incident__in=incidents, value=value)
+        .select_related('incident')
+        .order_by('-created_at')
+    )
+
+    results = []
+    best_rep = None
+    SEVERITY = {'malicious': 3, 'suspicious': 2, 'clean': 1, 'unknown': 0}
+    for ioc in iocs:
+        rep = ioc.reputation or {}
+        verdict = rep.get('status', 'unknown')
+        if best_rep is None or SEVERITY.get(verdict, 0) > SEVERITY.get(best_rep.get('status', 'unknown'), 0):
+            best_rep = rep
+        results.append({
+            'ioc_id':      ioc.id,
+            'incident_id': ioc.incident_id,
+            'incident':    ioc.incident.name,
+            'severity':    ioc.incident.severity,
+            'type':        ioc.type,
+            'status':      ioc.status,
+            'verdict':     verdict,
+            'created_at':  ioc.created_at.isoformat(),
+        })
+
+    return JsonResponse({
+        'value':      value,
+        'count':      len(results),
+        'reputation': best_rep,
+        'incidents':  results,
+    })
+
+
+# ── Campaign CRUD ─────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+def api_campaigns_list(request):
+    """GET /api/campaigns/ — list campaigns with summary stats."""
+    from django.db.models import Count
+
+    if not _has_platform_access(request.user):
+        return JsonResponse({'campaigns': []})
+
+    accessible_ids = list(_accessible_incidents(request.user).values_list('id', flat=True))
+    campaigns = Campaign.objects.prefetch_related('incidents').order_by('-created_at')
+
+    data = []
+    for c in campaigns:
+        accessible_incidents = c.incidents.filter(id__in=accessible_ids).select_related()
+        incident_ids = [i.id for i in accessible_incidents]
+        ioc_count = GenericIoc.objects.filter(incident_id__in=incident_ids).count()
+        data.append({
+            'id':           c.id,
+            'name':         c.name,
+            'description':  c.description,
+            'color':        c.color,
+            'start_date':   c.start_date.isoformat() if c.start_date else None,
+            'end_date':     c.end_date.isoformat() if c.end_date else None,
+            'incident_count': len(incident_ids),
+            'ioc_count':    ioc_count,
+            'created_at':   c.created_at.isoformat(),
+            'incidents':    [{'id': i.id, 'name': i.name, 'severity': i.severity, 'status': i.status}
+                             for i in accessible_incidents],
+        })
+
+    return JsonResponse({'campaigns': data})
+
+
+_HEX_COLOR_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+def _safe_color(val, default='#c49840'):
+    """Validate a CSS hex color string before storing."""
+    if val and _HEX_COLOR_RE.match(str(val)):
+        return str(val)
+    return default
+
+def _safe_date(val):
+    """Parse a YYYY-MM-DD string or return None; never raises."""
+    if not val:
+        return None
+    try:
+        from datetime import date as _date
+        return _date.fromisoformat(str(val)[:10])
+    except ValueError:
+        return None
+
+def _can_mutate_campaign(user, campaign):
+    """True if user may edit/delete this campaign (creator or superuser)."""
+    return user.is_superuser or campaign.created_by_id == user.pk
+
+
+@login_required(login_url='login')
+def api_campaign_create(request):
+    """POST /api/campaigns/create/"""
+    if not _has_platform_access(request.user):
+        return JsonResponse({'error': 'Platform role required.'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+
+    name = body.get('name', '').strip()
+    if not name:
+        return JsonResponse({'error': 'name is required.'}, status=400)
+
+    campaign = Campaign.objects.create(
+        name=name[:100],
+        description=body.get('description', '')[:2000],
+        color=_safe_color(body.get('color')),
+        created_by=request.user,
+        start_date=_safe_date(body.get('start_date')),
+        end_date=_safe_date(body.get('end_date')),
+    )
+
+    incident_ids = body.get('incident_ids', [])
+    if incident_ids:
+        accessible = _accessible_incidents(request.user).filter(id__in=incident_ids)
+        campaign.incidents.set(accessible)
+
+    return JsonResponse({'status': 'created', 'id': campaign.id, 'name': campaign.name})
+
+
+@login_required(login_url='login')
+def api_campaign_update(request, campaign_id):
+    """POST /api/campaigns/<id>/update/"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+    campaign = get_object_or_404(Campaign, pk=campaign_id)
+    if not _can_mutate_campaign(request.user, campaign):
+        return JsonResponse({'error': 'Only the campaign creator can update it.'}, status=403)
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+
+    if 'name' in body:
+        campaign.name = (body['name'].strip() or campaign.name)[:100]
+    if 'description' in body:
+        campaign.description = body['description'][:2000]
+    if 'color' in body:
+        campaign.color = _safe_color(body['color'], campaign.color)
+    if 'start_date' in body:
+        campaign.start_date = _safe_date(body['start_date'])
+    if 'end_date' in body:
+        campaign.end_date = _safe_date(body['end_date'])
+    campaign.save()
+
+    if 'incident_ids' in body:
+        accessible = _accessible_incidents(request.user).filter(id__in=body['incident_ids'])
+        campaign.incidents.set(accessible)
+
+    return JsonResponse({'status': 'updated', 'id': campaign.id})
+
+
+@login_required(login_url='login')
+def api_campaign_delete(request, campaign_id):
+    """POST /api/campaigns/<id>/delete/"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+    campaign = get_object_or_404(Campaign, pk=campaign_id)
+    if not _can_mutate_campaign(request.user, campaign):
+        return JsonResponse({'error': 'Only the campaign creator can delete it.'}, status=403)
+    campaign.delete()
+    return JsonResponse({'status': 'deleted'})
+
+
+@login_required(login_url='login')
+def api_campaign_add_incident(request, campaign_id):
+    """POST /api/campaigns/<id>/add-incident/  Body: { incident_id }"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+    campaign = get_object_or_404(Campaign, pk=campaign_id)
+    try:
+        body = json.loads(request.body)
+        inc_id = int(body['incident_id'])
+    except (json.JSONDecodeError, KeyError, ValueError, TypeError):
+        return JsonResponse({'error': 'incident_id required.'}, status=400)
+
+    accessible = _accessible_incidents(request.user)
+    if not accessible.filter(pk=inc_id).exists():
+        return JsonResponse({'error': 'Incident not found or not accessible.'}, status=404)
+
+    campaign.incidents.add(inc_id)
+    return JsonResponse({'status': 'added'})
+
+
+@login_required(login_url='login')
+def api_campaign_remove_incident(request, campaign_id):
+    """POST /api/campaigns/<id>/remove-incident/  Body: { incident_id }"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+    campaign = get_object_or_404(Campaign, pk=campaign_id)
+    try:
+        body = json.loads(request.body)
+        inc_id = int(body['incident_id'])
+    except (json.JSONDecodeError, KeyError, ValueError, TypeError):
+        return JsonResponse({'error': 'incident_id required.'}, status=400)
+
+    # Verify the user can see the incident before removing it from the campaign
+    if not _accessible_incidents(request.user).filter(pk=inc_id).exists():
+        return JsonResponse({'error': 'Incident not found or not accessible.'}, status=404)
+
+    campaign.incidents.remove(inc_id)
+    return JsonResponse({'status': 'removed'})
+
+
+# ── Exports ───────────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+def api_ti_export_csv(request):
+    """GET /api/threat-intel/export/csv/ — export filtered IOCs as CSV."""
+    import csv as csv_mod
+
+    qs = _ti_ioc_queryset(request.user, request.GET).select_related('incident').order_by('-created_at')
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="threat_intel_iocs.csv"'
+
+    writer = csv_mod.writer(response)
+    writer.writerow(['value', 'type', 'status', 'verdict', 'vt_malicious', 'vt_suspicious',
+                     'vt_total', 'incident', 'incident_id', 'created_at', 'description'])
+    for ioc in qs:
+        rep = ioc.reputation or {}
+        vt  = rep.get('vt', {}) or {}
+        writer.writerow([
+            ioc.value,
+            ioc.type,
+            ioc.status,
+            rep.get('status', ''),
+            vt.get('malicious', ''),
+            vt.get('suspicious', ''),
+            vt.get('total', ''),
+            ioc.incident.name,
+            ioc.incident_id,
+            ioc.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            ioc.description,
+        ])
+    return response
+
+
+@login_required(login_url='login')
+def api_ti_export_json(request):
+    """GET /api/threat-intel/export/json/ — export filtered IOCs as JSON."""
+    qs = _ti_ioc_queryset(request.user, request.GET).select_related('incident').order_by('-created_at')
+
+    data = []
+    for ioc in qs:
+        rep = ioc.reputation or {}
+        data.append({
+            'value':       ioc.value,
+            'type':        ioc.type,
+            'status':      ioc.status,
+            'reputation':  rep,
+            'incident':    {'id': ioc.incident_id, 'name': ioc.incident.name},
+            'created_at':  ioc.created_at.isoformat(),
+            'description': ioc.description,
+        })
+
+    content = json.dumps({'iocs': data, 'total': len(data)}, indent=2)
+    response = HttpResponse(content, content_type='application/json')
+    response['Content-Disposition'] = 'attachment; filename="threat_intel_iocs.json"'
+    return response
+
+
+@login_required(login_url='login')
+def api_ti_export_pdf(request):
+    """GET /api/threat-intel/export/pdf/ — export intelligence report as PDF."""
+    from django.utils import timezone as tz
+
+    qs  = _ti_ioc_queryset(request.user, request.GET).select_related('incident').order_by('-created_at')
+    iocs = list(qs[:500])
+
+    total   = len(iocs)
+    mal_cnt = sum(1 for i in iocs if (i.reputation or {}).get('status') == 'malicious')
+    susp_cnt = sum(1 for i in iocs if (i.reputation or {}).get('status') == 'suspicious')
+
+    # Counts by type
+    type_counts: dict = {}
+    for ioc in iocs:
+        type_counts[ioc.type] = type_counts.get(ioc.type, 0) + 1
+
+    # Counts by incident
+    inc_counts: dict = {}
+    for ioc in iocs:
+        key = ioc.incident.name
+        inc_counts[key] = inc_counts.get(key, 0) + 1
+
+    # Active filters for context
+    filters = {k: v for k, v in request.GET.items() if v}
+
+    html_string = render_to_string('threat_intel_report.html', {
+        'iocs':        iocs,
+        'total':       total,
+        'malicious':   mal_cnt,
+        'suspicious':  susp_cnt,
+        'type_counts': sorted(type_counts.items(), key=lambda x: -x[1]),
+        'inc_counts':  sorted(inc_counts.items(), key=lambda x: -x[1]),
+        'filters':     filters,
+        'generated_at': tz.now(),
+        'user':        request.user,
+    })
+
+    buffer = BytesIO()
+    pisa.CreatePDF(html_string, dest=buffer)
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="threat_intel_report.pdf"'
+    return response
+
+
+@login_required(login_url='login')
+def api_ti_campaign_stats(request):
+    """GET /api/threat-intel/campaign-stats/ — incident stats for the campaign tab."""
+    from django.db.models import Count
+    from django.db.models.functions import TruncMonth
+
+    incidents = _accessible_incidents(request.user)
+
+    date_from = request.GET.get('date_from', '').strip()
+    date_to   = request.GET.get('date_to', '').strip()
+
+    if date_from:
+        try:
+            incidents = incidents.filter(created_at__date__gte=date_from)
+        except Exception:
+            pass
+    if date_to:
+        try:
+            incidents = incidents.filter(created_at__date__lte=date_to)
+        except Exception:
+            pass
+
+    from django.db.models import Avg
+
+    total     = incidents.count()
+    open_     = incidents.filter(status='OPEN').count()
+    in_prog   = incidents.filter(status='IN_PROGRESS').count()
+    resolved  = incidents.filter(status='RESOLVED').count()
+    closed    = incidents.filter(status='CLOSED').count()
+    crit_high = incidents.filter(severity__in=['CRITICAL', 'HIGH']).count()
+    camp_cnt  = Campaign.objects.count()
+
+    # SLA metrics — only from incidents that have been resolved/closed
+    closed_qs = incidents.filter(status__in=['RESOLVED', 'CLOSED'])
+    sla = closed_qs.aggregate(
+        avg_ttd=Avg('time_to_detect'),
+        avg_ttr=Avg('time_to_respond'),
+        avg_dur=Avg('duration'),
+    )
+
+    def fmt_td(td):
+        if not td:
+            return None
+        secs = int(td.total_seconds())
+        if secs <= 0:
+            return None
+        h, m = divmod(secs // 60, 60)
+        d, h = divmod(h, 24)
+        if d:
+            return f"{d}d {h}h"
+        return f"{h}h {m:02d}m"
+
+    monthly_qs = (
+        incidents
+        .annotate(month=TruncMonth('created_at'))
+        .values('month')
+        .annotate(count=Count('id'))
+        .order_by('month')
+    )
+    monthly = [
+        {'month': row['month'].strftime('%Y-%m'), 'count': row['count']}
+        for row in monthly_qs
+        if row['month']
+    ]
+
+    # Resolution breakdown for closed/resolved incidents
+    from django.db.models import Count as _Count
+    resolution_qs = (
+        incidents.exclude(resolution='')
+        .values('resolution')
+        .annotate(count=_Count('id'))
+        .order_by('-count')
+    )
+    resolution_breakdown = [
+        {'resolution': r['resolution'], 'count': r['count']}
+        for r in resolution_qs
+    ]
+    tp_count = next((r['count'] for r in resolution_breakdown if r['resolution'] == 'TRUE_POSITIVE'), 0)
+    closed_total = resolved + closed
+    tp_rate = round(tp_count / closed_total * 100) if closed_total else None
+
+    return JsonResponse({
+        'total':       total,
+        'open':        open_,
+        'in_progress': in_prog,
+        'resolved':    resolved,
+        'closed':      closed,
+        'crit_high':   crit_high,
+        'campaigns':   camp_cnt,
+        'monthly':     monthly,
+        'avg_ttd':     fmt_td(sla['avg_ttd']),
+        'avg_ttr':     fmt_td(sla['avg_ttr']),
+        'avg_duration': fmt_td(sla['avg_dur']),
+        'resolution_breakdown': resolution_breakdown,
+        'tp_rate':     tp_rate,
+    })
+
+
+@login_required(login_url='login')
+def api_ti_campaign_report_pdf(request):
+    """GET /api/threat-intel/export/campaign-pdf/ — management incident report PDF."""
+    from django.utils import timezone as tz
+    from django.db.models import Count
+    from django.db.models.functions import TruncMonth
+
+    incidents = _accessible_incidents(request.user)
+
+    date_from = request.GET.get('date_from', '').strip()
+    date_to   = request.GET.get('date_to', '').strip()
+
+    if date_from:
+        try:
+            incidents = incidents.filter(created_at__date__gte=date_from)
+        except Exception:
+            pass
+    if date_to:
+        try:
+            incidents = incidents.filter(created_at__date__lte=date_to)
+        except Exception:
+            pass
+
+    if date_from and date_to:
+        period_label = f"{date_from} → {date_to}"
+    elif date_from:
+        period_label = f"From {date_from}"
+    elif date_to:
+        period_label = f"Until {date_to}"
+    else:
+        period_label = 'All time'
+
+    incidents_list = list(
+        incidents
+        .prefetch_related('campaigns')
+        .order_by('-created_at')[:200]
+    )
+
+    total     = len(incidents_list)
+    open_cnt  = sum(1 for i in incidents_list if i.status == 'OPEN')
+    inprog    = sum(1 for i in incidents_list if i.status == 'IN_PROGRESS')
+    resolved  = sum(1 for i in incidents_list if i.status in ('RESOLVED', 'CLOSED'))
+    crit_high = sum(1 for i in incidents_list if i.severity in ('CRITICAL', 'HIGH'))
+
+    campaigns = Campaign.objects.prefetch_related('incidents').order_by('name')
+
+    monthly_qs = (
+        incidents
+        .annotate(month=TruncMonth('created_at'))
+        .values('month')
+        .annotate(count=Count('id'))
+        .order_by('month')
+    )
+    monthly = [
+        {'month': row['month'].strftime('%b %Y'), 'count': row['count']}
+        for row in monthly_qs
+        if row['month']
+    ]
+    max_monthly = max((m['count'] for m in monthly), default=1)
+
+    # SLA from resolved/closed incidents in the period
+    from django.db.models import Avg
+    closed_qs = incidents.filter(status__in=['RESOLVED', 'CLOSED'])
+    sla = closed_qs.aggregate(
+        avg_ttd=Avg('time_to_detect'),
+        avg_ttr=Avg('time_to_respond'),
+        avg_dur=Avg('duration'),
+    )
+
+    def fmt_td_pdf(td):
+        if not td:
+            return '—'
+        secs = int(td.total_seconds())
+        if secs <= 0:
+            return '—'
+        h, m = divmod(secs // 60, 60)
+        d, h = divmod(h, 24)
+        if d:
+            return f"{d}d {h}h"
+        return f"{h}h {m:02d}m"
+
+    # Resolution breakdown
+    res_qs = (
+        incidents.exclude(resolution='')
+        .values('resolution')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+    resolution_breakdown = [{'resolution': r['resolution'], 'count': r['count']} for r in res_qs]
+    closed_total = sum(r['count'] for r in resolution_breakdown)
+    tp_count = next((r['count'] for r in resolution_breakdown if r['resolution'] == 'TRUE_POSITIVE'), 0)
+    tp_rate = round(tp_count / closed_total * 100) if closed_total else None
+    res_max = max((r['count'] for r in resolution_breakdown), default=1)
+
+    RESOLUTION_LABELS = dict(Incident.RESOLUTION_CHOICES)
+
+    html = render_to_string('threat_intel_campaign_report.html', {
+        'incidents':            incidents_list,
+        'campaigns':            campaigns,
+        'total':                total,
+        'open':                 open_cnt,
+        'in_progress':          inprog,
+        'resolved':             resolved,
+        'crit_high':            crit_high,
+        'period_label':         period_label,
+        'date_from':            date_from,
+        'date_to':              date_to,
+        'generated_at':         tz.now(),
+        'user':                 request.user,
+        'monthly':              monthly,
+        'max_monthly':          max_monthly,
+        'avg_ttd':              fmt_td_pdf(sla['avg_ttd']),
+        'avg_ttr':              fmt_td_pdf(sla['avg_ttr']),
+        'avg_duration':         fmt_td_pdf(sla['avg_dur']),
+        'resolution_breakdown': resolution_breakdown,
+        'res_max':              res_max,
+        'tp_rate':              tp_rate,
+        'RESOLUTION_LABELS':    RESOLUTION_LABELS,
+    })
+
+    buffer = BytesIO()
+    pisa.CreatePDF(html, dest=buffer)
+    buffer.seek(0)
+
+    # Sanitise date strings before embedding in HTTP header
+    safe_from = re.sub(r'[^0-9\-]', '', date_from or 'all')[:10]
+    safe_to   = re.sub(r'[^0-9\-]', '', date_to   or 'all')[:10]
+    fname = f"incident_report_{safe_from}_{safe_to}.pdf"
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{fname}"'
+    return response
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BATCH INCIDENT OPERATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+_VALID_STATUSES    = {'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'}
+_VALID_SEVERITIES  = {'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'}
+_VALID_RESOLUTIONS = {r[0] for r in Incident.RESOLUTION_CHOICES}
+
+
+@login_required(login_url='login')
+def api_incidents_batch(request):
+    """
+    POST /api/incidents/batch/
+    Body: { ids: [1,2,3], action: 'status'|'severity'|'resolution'|
+                                   'assign_campaign'|'remove_campaign'|
+                                   'assign_categories'|'merge'|'delete',
+            ...action-specific fields... }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required.'}, status=405)
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+
+    raw_ids = body.get('ids', [])
+    try:
+        ids = [int(i) for i in raw_ids]
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'ids must be integers.'}, status=400)
+
+    if not ids:
+        return JsonResponse({'error': 'No incidents selected.'}, status=400)
+    if len(ids) > 200:
+        return JsonResponse({'error': 'Batch limited to 200 incidents.'}, status=400)
+
+    action = body.get('action', '')
+
+    # Scope to incidents the user can access
+    accessible = _accessible_incidents(request.user)
+    incidents  = accessible.filter(id__in=ids)
+
+    # For mutations that need INCIDENT_LEAD on each incident, we check per-incident
+    def _is_lead(inc):
+        return (request.user.is_superuser or
+                UserRole.objects.filter(user=request.user, incident=inc, role='INCIDENT_LEAD').exists())
+
+    # ── Status change ─────────────────────────────────────────────────────────
+    if action == 'status':
+        new_status = body.get('status', '').strip().upper()
+        if new_status not in _VALID_STATUSES:
+            return JsonResponse({'error': 'Invalid status.'}, status=400)
+
+        if new_status == 'CLOSED':
+            resolution = body.get('resolution', '').strip()
+            if resolution and resolution not in _VALID_RESOLUTIONS:
+                return JsonResponse({'error': 'Invalid resolution.'}, status=400)
+            resolution_note = body.get('resolution_note', '')[:2000]
+            incidents.update(status=new_status, resolution=resolution, resolution_note=resolution_note)
+        else:
+            incidents.update(status=new_status)
+
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Severity change ───────────────────────────────────────────────────────
+    if action == 'severity':
+        new_sev = body.get('severity', '').strip().upper()
+        if new_sev not in _VALID_SEVERITIES:
+            return JsonResponse({'error': 'Invalid severity.'}, status=400)
+        incidents.update(severity=new_sev)
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Resolution update (without status change) ─────────────────────────────
+    if action == 'resolution':
+        resolution = body.get('resolution', '').strip()
+        if not resolution:
+            incidents.update(resolution='', resolution_note='')
+        elif resolution in _VALID_RESOLUTIONS:
+            incidents.update(resolution=resolution, resolution_note=body.get('resolution_note', '')[:2000])
+        else:
+            return JsonResponse({'error': 'Invalid resolution.'}, status=400)
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Assign to campaign ────────────────────────────────────────────────────
+    if action == 'assign_campaign':
+        try:
+            cid = int(body['campaign_id'])
+        except (KeyError, ValueError, TypeError):
+            return JsonResponse({'error': 'campaign_id required.'}, status=400)
+        campaign = get_object_or_404(Campaign, pk=cid)
+        for inc in incidents:
+            campaign.incidents.add(inc)
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Remove from campaign ──────────────────────────────────────────────────
+    if action == 'remove_campaign':
+        try:
+            cid = int(body['campaign_id'])
+        except (KeyError, ValueError, TypeError):
+            return JsonResponse({'error': 'campaign_id required.'}, status=400)
+        campaign = get_object_or_404(Campaign, pk=cid)
+        for inc in incidents:
+            campaign.incidents.remove(inc)
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Assign categories ──────────────────────────────────────────────────────
+    if action == 'assign_categories':
+        cat_ids = body.get('category_ids', [])
+        try:
+            cat_ids = [int(c) for c in cat_ids]
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'category_ids must be integers.'}, status=400)
+        cats = IncidentCategory.objects.filter(id__in=cat_ids)
+        for inc in incidents:
+            for cat in cats:
+                inc.categories.add(cat)
+        return JsonResponse({'status': 'ok', 'updated': incidents.count()})
+
+    # ── Merge all into primary ────────────────────────────────────────────────
+    if action == 'merge':
+        try:
+            primary_id = int(body['primary_id'])
+        except (KeyError, ValueError, TypeError):
+            return JsonResponse({'error': 'primary_id required.'}, status=400)
+        if primary_id not in ids:
+            return JsonResponse({'error': 'primary_id must be one of the selected incidents.'}, status=400)
+
+        primary = get_object_or_404(Incident, pk=primary_id)
+        if not _is_lead(primary):
+            return JsonResponse({'error': 'INCIDENT_LEAD role required on the primary incident.'}, status=403)
+
+        targets = incidents.exclude(pk=primary_id)
+        merged = 0
+        for target in targets:
+            target.genericiocs.all().update(incident=primary)
+            target.actions.all().update(incident=primary)
+            target.notes.all().update(incident=primary)
+            target.tasks.all().update(incident=primary)
+            target.impacts.all().update(incident=primary)
+            target.messages.all().update(incident=primary)
+            target.shared_files.all().update(incident=primary)
+            target.audit_logs.all().update(incident=primary)
+            target.tags.all().update(incident=primary)
+            for cat in target.categories.all():
+                primary.categories.add(cat)
+            for camp in target.campaigns.all():
+                camp.incidents.add(primary)
+            for ur in target.incident_roles.all():
+                if not UserRole.objects.filter(user=ur.user, incident=primary).exists():
+                    UserRole.objects.create(user=ur.user, incident=primary, role=ur.role)
+            target.delete()
+            merged += 1
+
+        return JsonResponse({'status': 'ok', 'merged': merged, 'primary_id': primary_id})
+
+    # ── Delete ────────────────────────────────────────────────────────────────
+    if action == 'delete':
+        deleted = 0
+        for inc in list(incidents):
+            if _is_lead(inc):
+                inc.delete()
+                deleted += 1
+        if deleted == 0:
+            return JsonResponse({'error': 'No incidents deleted. INCIDENT_LEAD role required.'}, status=403)
+        return JsonResponse({'status': 'ok', 'deleted': deleted})
+
+    return JsonResponse({'error': f'Unknown action: {action}'}, status=400)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MERGE INCIDENTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+@verify_permissions(['INCIDENT_LEAD'])
+def merge_incident(request, id):
+    """
+    POST /api/incident/<id>/merge/
+    Body: { target_id: <int> }
+
+    Moves all data from <target_id> into <id> (primary), then deletes the target.
+    Requires INCIDENT_LEAD on the primary incident; user must also be able to see
+    the target incident (any role or public).
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required.'}, status=405)
+
+    try:
+        body       = json.loads(request.body)
+        target_id  = int(body['target_id'])
+    except (json.JSONDecodeError, KeyError, ValueError, TypeError):
+        return JsonResponse({'error': 'target_id required.'}, status=400)
+
+    if target_id == id:
+        return JsonResponse({'error': 'Cannot merge an incident with itself.'}, status=400)
+
+    primary = get_object_or_404(Incident, pk=id)
+    target  = get_object_or_404(Incident, pk=target_id)
+
+    # User must be able to see the target incident
+    accessible = _accessible_incidents(request.user)
+    if not accessible.filter(pk=target_id).exists():
+        return JsonResponse({'error': 'Target incident not found or not accessible.'}, status=404)
+
+    # ── Reassign all related objects ──────────────────────────────────────────
+
+    # Simple FK reassignments
+    target.genericiocs.all().update(incident=primary)
+    target.actions.all().update(incident=primary)
+    target.notes.all().update(incident=primary)
+    target.tasks.all().update(incident=primary)
+    target.impacts.all().update(incident=primary)
+    target.messages.all().update(incident=primary)
+    target.shared_files.all().update(incident=primary)
+    target.audit_logs.all().update(incident=primary)
+
+    # Tags — belong to the incident, move them over
+    target.tags.all().update(incident=primary)
+
+    # Categories — merge M2M
+    for cat in target.categories.all():
+        primary.categories.add(cat)
+
+    # UserRoles — add target's members to primary if not already there
+    ROLE_RANK = {'INCIDENT_LEAD': 3, 'RESPONDER': 2, 'READER': 1, 'PUBLIC_VIEWER': 0}
+    existing_roles = {ur.user_id: ur for ur in primary.incident_roles.all()}
+    for ur in target.incident_roles.all():
+        if ur.user_id not in existing_roles:
+            ur.incident = primary
+            ur.save()
+        else:
+            # Keep the higher-privilege role
+            if ROLE_RANK.get(ur.role, 0) > ROLE_RANK.get(existing_roles[ur.user_id].role, 0):
+                existing = existing_roles[ur.user_id]
+                existing.role = ur.role
+                existing.save()
+
+    # Campaigns — re-point to primary
+    for campaign in target.campaigns.all():
+        campaign.incidents.add(primary)
+        campaign.incidents.remove(target)
+
+    # ── Audit log on primary ──────────────────────────────────────────────────
+    _audit(primary, request, 'UPDATE', 'Incident',
+           f'Merged incident #{target.id} "{target.name}" into this incident. '
+           f'All IOCs, actions, notes, tasks, impacts and roles transferred.')
+
+    target_name = target.name
+    target.delete()
+
+    return JsonResponse({
+        'status':      'merged',
+        'primary_id':  primary.id,
+        'target_name': target_name,
+        'message':     f'"{target_name}" has been merged into "{primary.name}".',
+    })
