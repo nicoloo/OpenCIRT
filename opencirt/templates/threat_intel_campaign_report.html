@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+    /* xhtml2pdf compatible — no var(), no flex, no @page margin boxes */
+    @page {
+        margin: 1.8cm 2cm 1.8cm 2cm;
+        size: A4;
+    }
+
+    body {
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 10pt;
+        color: #1a1a2e;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* ── Cover ── */
+    .cover-block {
+        background: #0f2b3a;
+        padding: 28px 32px;
+        margin-bottom: 24px;
+    }
+
+    .cover-title {
+        font-size: 22pt;
+        font-weight: bold;
+        color: #ffffff;
+        margin: 0 0 8px 0;
+        letter-spacing: 0.5pt;
+    }
+
+    .cover-subtitle {
+        font-size: 11pt;
+        color: #c49840;
+        font-weight: bold;
+        margin: 0 0 6px 0;
+    }
+
+    .cover-meta {
+        font-size: 8.5pt;
+        color: #9aa6b2;
+        margin-top: 8px;
+        border-top: 1pt solid #2a4a5a;
+        padding-top: 8px;
+    }
+
+    /* ── Section headings ── */
+    h2 {
+        font-size: 12pt;
+        font-weight: bold;
+        color: #0f2b3a;
+        border-bottom: 2pt solid #c49840;
+        padding-bottom: 3px;
+        margin: 20px 0 10px 0;
+    }
+
+    h3 {
+        font-size: 9pt;
+        font-weight: bold;
+        color: #5b6b76;
+        margin: 14px 0 5px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5pt;
+    }
+
+    /* ── KPI table ── */
+    table.kpi-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 6px;
+        margin-bottom: 20px;
+    }
+
+    table.kpi-table td {
+        padding: 12px 14px;
+        text-align: center;
+        width: 20%;
+    }
+
+    table.kpi-table td.kpi-neutral { border: 1pt solid #dde3e8; background: #f8fafc; }
+    table.kpi-table td.kpi-alert   { border: 1pt solid #fca5a5; background: #fff5f5; }
+    table.kpi-table td.kpi-warn    { border: 1pt solid #fcd34d; background: #fffbeb; }
+    table.kpi-table td.kpi-good    { border: 1pt solid #86efac; background: #f0fdf4; }
+
+    .kpi-value {
+        font-size: 20pt;
+        font-weight: bold;
+        color: #0f2b3a;
+        display: block;
+    }
+
+    .kpi-value-alert  { color: #dc2626; }
+    .kpi-value-warn   { color: #d97706; }
+    .kpi-value-good   { color: #16a34a; }
+
+    .kpi-label {
+        font-size: 7.5pt;
+        color: #5b6b76;
+        text-transform: uppercase;
+        letter-spacing: 0.5pt;
+        display: block;
+        margin-top: 4px;
+    }
+
+    /* ── Activity chart (horizontal bars) ── */
+    .activity-row {
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .act-label {
+        font-size: 8pt;
+        color: #5b6b76;
+        display: inline-block;
+        width: 52pt;
+    }
+
+    .act-track {
+        display: inline-block;
+        background: #e5d0a0;
+        height: 10px;
+        width: 300pt;
+        vertical-align: middle;
+    }
+
+    .act-fill {
+        background: #c49840;
+        height: 10px;
+        display: block;
+    }
+
+    .act-count {
+        font-size: 8pt;
+        color: #0f2b3a;
+        font-weight: bold;
+        margin-left: 6pt;
+        display: inline-block;
+        vertical-align: middle;
+    }
+
+    /* ── Campaign cards ── */
+    .campaign-block {
+        border: 1pt solid #e5d0a0;
+        margin-bottom: 14px;
+        page-break-inside: avoid;
+    }
+
+    .campaign-header {
+        padding: 8px 12px;
+        background: #f5e8cc;
+        border-bottom: 1pt solid #e5d0a0;
+    }
+
+    .campaign-name {
+        font-size: 10pt;
+        font-weight: bold;
+        color: #0f2b3a;
+    }
+
+    .campaign-dates {
+        font-size: 7.5pt;
+        color: #5b6b76;
+        margin-top: 2px;
+    }
+
+    .campaign-desc {
+        font-size: 8.5pt;
+        color: #2a3a4a;
+        padding: 8px 12px 4px;
+        font-style: italic;
+    }
+
+    /* ── Incident table ── */
+    table.inc-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8pt;
+        margin-bottom: 8px;
+    }
+
+    table.inc-table th {
+        background: #f5e8cc;
+        padding: 4px 8px;
+        text-align: left;
+        font-size: 7pt;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.4pt;
+        color: #5b6b76;
+        border: 1pt solid #e5d0a0;
+    }
+
+    table.inc-table td {
+        padding: 5px 8px;
+        border-bottom: 1pt solid #ece4d0;
+    }
+
+    table.inc-table tr { page-break-inside: avoid; }
+    table.inc-table tr:nth-child(even) td { background: #faf4e5; }
+
+    /* ── Severity / Status badges (text-only for PDF) ── */
+    .sev { font-weight: bold; font-size: 7.5pt; }
+    .sev-critical { color: #dc2626; }
+    .sev-high     { color: #ea580c; }
+    .sev-medium   { color: #d97706; }
+    .sev-low      { color: #16a34a; }
+
+    .sts { font-size: 7.5pt; }
+    .sts-open        { color: #92400e; font-weight: bold; }
+    .sts-in_progress { color: #1e40af; font-weight: bold; }
+    .sts-resolved    { color: #166534; }
+    .sts-closed      { color: #4b5563; }
+
+    /* ── Open incidents table ── */
+    table.open-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8pt;
+        page-break-inside: auto;
+    }
+
+    table.open-table th {
+        background: #fff5f5;
+        padding: 4px 8px;
+        text-align: left;
+        font-size: 7pt;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.4pt;
+        color: #5b6b76;
+        border: 1pt solid #fca5a5;
+    }
+
+    table.open-table td {
+        padding: 5px 8px;
+        border-bottom: 1pt solid #fee2e2;
+    }
+
+    table.open-table tr { page-break-inside: avoid; }
+    table.open-table tr:nth-child(even) td { background: #fff9f9; }
+
+    /* ── Page break ── */
+    .page-break { page-break-before: always; }
+
+    /* ── Footer note ── */
+    .footer-note {
+        margin-top: 28px;
+        font-size: 7.5pt;
+        color: #9aa6b2;
+        border-top: 1pt solid #e5d0a0;
+        padding-top: 6px;
+    }
+
+    /* ── Confidential banner ── */
+    .confidential {
+        text-align: center;
+        font-size: 7.5pt;
+        font-weight: bold;
+        color: #dc2626;
+        letter-spacing: 1pt;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+    }
+</style>
+</head>
+<body>
+
+<!-- Confidential -->
+<div class="confidential">Confidential — Internal Use Only</div>
+
+<!-- Cover -->
+<div class="cover-block">
+    <div class="cover-title">Incident Management Report</div>
+    <div class="cover-subtitle">{{ period_label }}</div>
+    <div class="cover-meta">
+        Generated: {{ generated_at|date:"d M Y H:i" }} UTC
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        Prepared by: {{ user.get_full_name|default:user.username }}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        OpenCIRT
+    </div>
+</div>
+
+<!-- Executive Summary KPIs -->
+<h2>Executive Summary</h2>
+<table class="kpi-table">
+    <tr>
+        <td class="kpi-neutral">
+            <span class="kpi-value">{{ total }}</span>
+            <span class="kpi-label">Total Incidents</span>
+        </td>
+        <td class="kpi-alert">
+            <span class="kpi-value kpi-value-alert">{{ open }}</span>
+            <span class="kpi-label">Open</span>
+        </td>
+        <td class="kpi-warn">
+            <span class="kpi-value kpi-value-warn">{{ in_progress }}</span>
+            <span class="kpi-label">In Progress</span>
+        </td>
+        <td class="kpi-good">
+            <span class="kpi-value kpi-value-good">{{ resolved }}</span>
+            <span class="kpi-label">Resolved / Closed</span>
+        </td>
+        <td class="kpi-warn">
+            <span class="kpi-value kpi-value-warn">{{ crit_high }}</span>
+            <span class="kpi-label">Critical / High</span>
+        </td>
+    </tr>
+</table>
+
+<!-- Monthly Activity -->
+{% if monthly %}
+<h2>Incident Activity</h2>
+{% for m in monthly %}
+<div class="activity-row">
+    <span class="act-label">{{ m.month }}</span>
+    <span class="act-track">
+        <div class="act-fill" style="width:{% widthratio m.count max_monthly 300 %}pt;"></div>
+    </span>
+    <span class="act-count">{{ m.count }}</span>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Response Metrics -->
+<h2>Response Metrics <span style="font-size:8pt;font-weight:normal;color:#5b6b76;">(resolved &amp; closed incidents only)</span></h2>
+<table class="kpi-table">
+    <tr>
+        <td class="kpi-neutral" style="width:33%;">
+            <span class="kpi-value" style="font-size:15pt;">{{ avg_ttd }}</span>
+            <span class="kpi-label">Avg Time to Detect</span>
+        </td>
+        <td class="kpi-neutral" style="width:33%;">
+            <span class="kpi-value" style="font-size:15pt;">{{ avg_ttr }}</span>
+            <span class="kpi-label">Avg Time to Respond</span>
+        </td>
+        <td class="kpi-neutral" style="width:33%;">
+            <span class="kpi-value" style="font-size:15pt;">{{ avg_duration }}</span>
+            <span class="kpi-label">Avg Resolution Time</span>
+        </td>
+    </tr>
+</table>
+
+<!-- Open Incidents -->
+{% if open or in_progress %}
+<div class="page-break"></div>
+<h2>Open &amp; In-Progress Incidents</h2>
+<table class="open-table">
+    <thead>
+        <tr>
+            <th style="width:36%;">Name</th>
+            <th style="width:10%;">Severity</th>
+            <th style="width:12%;">Status</th>
+            <th style="width:22%;">Opened</th>
+            <th style="width:20%;">Campaigns</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for inc in incidents %}
+    {% if inc.status == 'OPEN' or inc.status == 'IN_PROGRESS' %}
+    <tr>
+        <td>{{ inc.name|truncatechars:50 }}</td>
+        <td>
+            <span class="sev sev-{{ inc.severity|lower }}">{{ inc.severity }}</span>
+        </td>
+        <td>
+            <span class="sts sts-{{ inc.status|lower }}">{{ inc.get_status_display }}</span>
+        </td>
+        <td>{{ inc.created_at|date:"d M Y" }}</td>
+        <td>
+            {% for c in inc.campaigns.all %}{{ c.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
+        </td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<!-- Campaign Breakdown -->
+{% if campaigns %}
+<div class="page-break"></div>
+<h2>Campaign Tracking</h2>
+{% for campaign in campaigns %}
+<div class="campaign-block">
+    <div class="campaign-header">
+        <div class="campaign-name">{{ campaign.name }}</div>
+        <div class="campaign-dates">
+            {% if campaign.start_date and campaign.end_date %}
+                {{ campaign.start_date|date:"d M Y" }} → {{ campaign.end_date|date:"d M Y" }}
+            {% elif campaign.start_date %}
+                From {{ campaign.start_date|date:"d M Y" }}
+            {% else %}
+                No date range set
+            {% endif %}
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            {{ campaign.incidents.count }} linked incident{{ campaign.incidents.count|pluralize }}
+        </div>
+    </div>
+    {% if campaign.description %}
+    <div class="campaign-desc">{{ campaign.description }}</div>
+    {% endif %}
+    {% if campaign.incidents.all %}
+    <table class="inc-table" style="margin:0;">
+        <thead>
+            <tr>
+                <th style="width:40%;">Incident</th>
+                <th style="width:12%;">Severity</th>
+                <th style="width:14%;">Status</th>
+                <th style="width:34%;">Opened</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for inc in campaign.incidents.all %}
+        <tr>
+            <td>{{ inc.name|truncatechars:45 }}</td>
+            <td><span class="sev sev-{{ inc.severity|lower }}">{{ inc.severity }}</span></td>
+            <td><span class="sts sts-{{ inc.status|lower }}">{{ inc.get_status_display }}</span></td>
+            <td>{{ inc.created_at|date:"d M Y" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- All Incidents -->
+<div class="page-break"></div>
+<h2>All Incidents in Period ({{ total }})</h2>
+<table class="inc-table">
+    <thead>
+        <tr>
+            <th style="width:38%;">Name</th>
+            <th style="width:11%;">Severity</th>
+            <th style="width:13%;">Status</th>
+            <th style="width:18%;">Opened</th>
+            <th style="width:20%;">Campaigns</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for inc in incidents %}
+    <tr>
+        <td>{{ inc.name|truncatechars:48 }}</td>
+        <td><span class="sev sev-{{ inc.severity|lower }}">{{ inc.severity }}</span></td>
+        <td><span class="sts sts-{{ inc.status|lower }}">{{ inc.get_status_display }}</span></td>
+        <td>{{ inc.created_at|date:"d M Y" }}</td>
+        <td>{% for c in inc.campaigns.all %}{{ c.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="5" style="text-align:center;color:#888;padding:12px;">No incidents in this period.</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<div class="footer-note">
+    Generated by OpenCIRT &nbsp;·&nbsp; Period: {{ period_label }}
+    &nbsp;·&nbsp; Prepared for internal distribution only.
+    Data is scoped to incidents accessible by {{ user.username }}.
+</div>
+
+</body>
+</html>

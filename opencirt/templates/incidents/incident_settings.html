@@ -618,6 +618,81 @@
         </div>
     </div>
 
+    <!-- ── Section: Merge Incident ──────────────────────────────── -->
+    {% if user_role == 'INCIDENT_LEAD' or request.user.is_superuser %}
+    <div class="settings-section" id="section-merge">
+        <h2 class="settings-section-title">
+            <i class="fa-solid fa-code-merge"></i> Merge Incidents
+        </h2>
+        <p style="font-size:0.85rem;color:var(--text-color-2);margin:0 0 14px;">
+            Merge another incident into this one. All its IOCs, actions, notes, tasks, impacts, and team members
+            will be transferred here. The merged incident will be permanently deleted.
+            This action cannot be undone.
+        </p>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+                <label style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-color-2);display:block;margin-bottom:5px;">
+                    Select incident to absorb
+                </label>
+                <select id="mergeTargetSelect" style="width:100%;background:var(--widget-background-color);border:1px solid var(--border-color);border-radius:7px;padding:8px 12px;font-size:0.87rem;color:var(--text-color-1);">
+                    <option value="">— choose incident —</option>
+                    {% for inc in all_incidents %}
+                    {% if inc.id != incident.id %}
+                    <option value="{{ inc.id }}">{{ inc.name }} ({{ inc.severity }})</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <button id="mergeBtn" onclick="confirmMerge()"
+                    style="padding:8px 18px;background:#dc2626;color:#fff;border:none;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+                <i class="fa-solid fa-code-merge"></i> Merge into this incident
+            </button>
+        </div>
+        <div id="mergeMsg" style="margin-top:10px;font-size:0.83rem;display:none;"></div>
+    </div>
+    <script>
+    function confirmMerge() {
+        const sel = document.getElementById('mergeTargetSelect');
+        const targetId = sel.value;
+        if (!targetId) { alert('Please select an incident to merge.'); return; }
+        const targetName = sel.options[sel.selectedIndex].text;
+        if (!confirm(`Merge "${targetName}" into "{{ incident.name }}"?\n\nAll data from the selected incident will be moved here and the selected incident will be permanently deleted. This cannot be undone.`)) return;
+
+        const btn = document.getElementById('mergeBtn');
+        btn.disabled = true;
+        btn.textContent = 'Merging…';
+
+        fetch('/api/incident/{{ incident.id }}/merge/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ target_id: parseInt(targetId) }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            const msg = document.getElementById('mergeMsg');
+            msg.style.display = 'block';
+            if (data.status === 'merged') {
+                msg.style.color = '#16a34a';
+                msg.innerHTML = `<i class="fa-solid fa-check"></i> ${data.message} Reloading…`;
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                msg.style.color = '#dc2626';
+                msg.textContent = data.error || 'Merge failed.';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-code-merge"></i> Merge into this incident';
+            }
+        })
+        .catch(e => {
+            const msg = document.getElementById('mergeMsg');
+            msg.style.display = 'block';
+            msg.style.color = '#dc2626';
+            msg.textContent = 'Network error: ' + e.message;
+            btn.disabled = false;
+        });
+    }
+    </script>
+    {% endif %}
+
     <!-- ── Section 4: Event Log ─────────────────────────────────── -->
     <div class="settings-section" id="section-audit">
         <div class="audit-log-header">

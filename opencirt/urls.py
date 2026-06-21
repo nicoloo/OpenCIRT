@@ -75,6 +75,29 @@ urlpatterns = [
     path('api/incident/<int:id>/ioc/<int:ioc_id>/reputation/refresh/', views.refresh_ioc_reputation, name='refresh_ioc_reputation'),
     path('incident/<int:id>/warroom', views.warroom, name='warroom'),
     path('api/incident/<int:id>/warroom-data/', views.warroom_data, name='warroom_data'),
+
+    # Merge
+    path('api/incident/<int:id>/merge/', views.merge_incident, name='merge_incident'),
+
+    # Threat Intelligence Hub
+    path('threat-intel', views.threat_intel, name='threat_intel'),
+    path('api/threat-intel/iocs/', views.api_ti_iocs, name='api_ti_iocs'),
+    path('api/threat-intel/stats/', views.api_ti_stats, name='api_ti_stats'),
+    path('api/threat-intel/heatmap/', views.api_ti_heatmap, name='api_ti_heatmap'),
+    path('api/threat-intel/pivot/', views.api_ti_pivot, name='api_ti_pivot'),
+    path('api/threat-intel/export/csv/', views.api_ti_export_csv, name='api_ti_export_csv'),
+    path('api/threat-intel/export/json/', views.api_ti_export_json, name='api_ti_export_json'),
+    path('api/threat-intel/export/pdf/', views.api_ti_export_pdf, name='api_ti_export_pdf'),
+    path('api/threat-intel/campaign-stats/', views.api_ti_campaign_stats, name='api_ti_campaign_stats'),
+    path('api/threat-intel/export/campaign-pdf/', views.api_ti_campaign_report_pdf, name='api_ti_campaign_report_pdf'),
+
+    # Campaigns
+    path('api/campaigns/', views.api_campaigns_list, name='api_campaigns_list'),
+    path('api/campaigns/create/', views.api_campaign_create, name='api_campaign_create'),
+    path('api/campaigns/<int:campaign_id>/update/', views.api_campaign_update, name='api_campaign_update'),
+    path('api/campaigns/<int:campaign_id>/delete/', views.api_campaign_delete, name='api_campaign_delete'),
+    path('api/campaigns/<int:campaign_id>/add-incident/', views.api_campaign_add_incident, name='api_campaign_add_incident'),
+    path('api/campaigns/<int:campaign_id>/remove-incident/', views.api_campaign_remove_incident, name='api_campaign_remove_incident'),
 ]
 # Serve media files in development mode
 if settings.DEBUG:

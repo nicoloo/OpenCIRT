@@ -31,6 +31,14 @@
         <div class="topbar-spacer"></div>
 
         <nav class="topbar-nav">
+            <a href="/home" class="topbar-link topbar-link-primary {% if request.path == '/home' %}topbar-link-active{% endif %}">
+                <i class="fa-solid fa-house"></i>
+                <span>Incidents</span>
+            </a>
+            <a href="/threat-intel" class="topbar-link topbar-link-primary {% if request.path == '/threat-intel' %}topbar-link-active{% endif %}">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Threat Intel</span>
+            </a>
             {% if user.is_admin %}
             <a href="/settings" class="topbar-link">
                 <i class="fa-solid fa-gear"></i>

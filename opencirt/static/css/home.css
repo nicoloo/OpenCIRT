@@ -300,6 +300,7 @@
     display: grid;
     grid-template-columns: 2fr 1fr 1fr;
     gap: 18px;
+    min-width: 0; /* prevent grid blowout */
 }
 
 .home-chart-card {
@@ -307,6 +308,7 @@
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 18px 22px 22px;
+    min-width: 0; /* allow shrinking below content size */
 }
 
 .home-chart-card h3 {
@@ -334,24 +336,60 @@
 
 /* ── Tablet (≤900px) ── */
 @media (max-width: 900px) {
-    .home-page { padding: 20px 20px; max-width: 100%; }
-    .home-charts-row { grid-template-columns: 1fr; }
+    .home-page { padding: 20px 16px; max-width: 100%; }
+    .home-charts-row { grid-template-columns: 1fr 1fr; }
     .home-stat-chip { min-width: 100px; }
+    .ic-sev-badge { display: none; } /* color bar already conveys severity */
+}
+
+/* ── Phablet (≤700px) ── */
+@media (max-width: 700px) {
+    .home-charts-row { grid-template-columns: 1fr; }
+    .ic-meta { gap: 10px; }
 }
 
 /* ── Mobile (≤640px) ── */
 @media (max-width: 640px) {
-    .home-page { padding: 14px 12px; }
-    .home-stats-bar { grid-template-columns: repeat(2, 1fr); display: grid; gap: 8px; }
+    .home-page { padding: 12px 12px; }
+
+    /* Stats: 2-column grid */
+    .home-stats-bar {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
     .home-stat-chip { min-width: unset; padding: 12px 14px; }
     .home-stat-chip .stat-value { font-size: 1.3rem; }
+
+    /* Toolbar: stacked */
     .home-toolbar {
         flex-direction: column;
         align-items: stretch;
+        gap: 8px;
     }
-    .home-search-wrap, .home-filter-select, .new-incident-btn {
-        width: 100%;
-        justify-content: center;
+    .home-search-wrap,
+    .home-filter-select { width: 100%; box-sizing: border-box; }
+    .new-incident-btn { width: 100%; justify-content: center; box-sizing: border-box; }
+
+    /* Incident cards */
+    .incident-card { align-items: flex-start; }
+    .ic-body { padding: 10px 12px; }
+    .ic-name {
+        white-space: normal;
+        word-break: break-word;
+        font-size: 0.87rem;
     }
+    .ic-top { flex-wrap: wrap; gap: 6px; }
+    .ic-meta { gap: 8px; font-size: 0.73rem; }
+    .ic-warroom-btn { padding: 4px 8px; font-size: 0.68rem; margin-right: 6px; }
     .home-chart-card .hcc-canvas-wrap { height: 160px; }
+}
+
+/* ── Narrow mobile (≤400px) ── */
+@media (max-width: 400px) {
+    .home-stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .home-stat-chip .stat-value { font-size: 1.1rem; }
+    .ic-categories { gap: 3px; }
+    .ic-cat-pill { font-size: 0.62rem; padding: 1px 6px; }
+    .ic-warroom-btn span { display: none; } /* icon only on very small screens */
 }

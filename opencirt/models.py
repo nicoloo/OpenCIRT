@@ -217,6 +217,22 @@ class Impact(models.Model):
     duration = models.DurationField(null=True)
 
 
+class Campaign(models.Model):
+    """Groups incidents that belong to the same threat campaign (e.g. a phishing wave)."""
+    name        = models.CharField(max_length=100)
+    description = models.TextField(blank=True, default='')
+    color       = models.CharField(max_length=7, default='#c49840')
+    created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='campaigns_created')
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+    incidents   = models.ManyToManyField(Incident, blank=True, related_name='campaigns')
+    start_date  = models.DateField(null=True, blank=True)
+    end_date    = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
 class CtiProvider(models.Model):
     """One row per enabled threat-intelligence source."""
     PROVIDER_CHOICES = [

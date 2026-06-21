@@ -1,0 +1,371 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/threat_intel.css' %}">
+{% endblock %}
+
+{% block content %}
+<main>
+<div class="ti-page">
+
+    <!-- ── Tab Bar ──────────────────────────────────────────────────────────── -->
+    <div class="ti-tabs-bar">
+        <button class="ti-tab-btn active" data-tab="ioc" onclick="switchTab('ioc',this)">
+            <i class="fa-solid fa-virus"></i>
+            <span>IOC Intelligence</span>
+        </button>
+        <button class="ti-tab-btn" data-tab="campaigns" onclick="switchTab('campaigns',this)">
+            <i class="fa-solid fa-folder-tree"></i>
+            <span>Incident Reports</span>
+        </button>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB 1 — IOC Intelligence (threat intel sharing)                       -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <div class="ti-tab-panel" id="tab-ioc">
+
+        <!-- KPI Bar -->
+        <div class="ti-kpi-bar">
+            <div class="ti-kpi">
+                <span class="ti-kpi-value" id="kpiTotal">{{ total_iocs }}</span>
+                <span class="ti-kpi-label">Total IOCs</span>
+            </div>
+            <div class="ti-kpi">
+                <span class="ti-kpi-value" id="kpiUnique">{{ unique_iocs }}</span>
+                <span class="ti-kpi-label">Unique values</span>
+            </div>
+            <div class="ti-kpi">
+                <span class="ti-kpi-value kpi-bad" id="kpiMalicious">—</span>
+                <span class="ti-kpi-label">Malicious</span>
+            </div>
+            <div class="ti-kpi">
+                <span class="ti-kpi-value kpi-warn" id="kpiSuspicious">—</span>
+                <span class="ti-kpi-label">Suspicious</span>
+            </div>
+            <div class="ti-kpi">
+                <span class="ti-kpi-value" id="kpiIncidents">{{ incident_count }}</span>
+                <span class="ti-kpi-label">Incidents</span>
+            </div>
+            <div class="ti-kpi">
+                <span class="ti-kpi-value" id="kpiCampaigns">{{ campaign_count }}</span>
+                <span class="ti-kpi-label">Campaigns</span>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="ti-toolbar">
+            <div class="ti-search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="tiSearch" placeholder="Search IOC values…">
+            </div>
+
+            <select id="tiTypeFilter" class="ti-filter-select">
+                <option value="">All types</option>
+                {% for val, label in IOC_TYPE_CHOICES %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+
+            <select id="tiStatusFilter" class="ti-filter-select">
+                <option value="">All statuses</option>
+                {% for val, label in IOC_STATUS_CHOICES %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+
+            <select id="tiVerdictFilter" class="ti-filter-select">
+                <option value="">All verdicts</option>
+                <option value="malicious">Malicious</option>
+                <option value="suspicious">Suspicious</option>
+                <option value="clean">Clean</option>
+                <option value="unknown">Unknown</option>
+            </select>
+
+            <select id="tiTlpFilter" class="ti-filter-select ti-tlp-filter" title="Filter by TLP — for sharing communities">
+                <option value="">All TLP</option>
+                <option value="CLEAR">🟢 TLP:CLEAR</option>
+                <option value="GREEN">🟡 TLP:GREEN</option>
+                <option value="AMBER">🟠 TLP:AMBER</option>
+                <option value="RED">🔴 TLP:RED</option>
+            </select>
+
+            <select id="tiCampaignFilter" class="ti-filter-select">
+                <option value="">All campaigns</option>
+                {% for c in campaigns %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+
+            <div class="ti-quarter-btns" id="tiQuarterBtns"></div>
+
+            <div class="ti-date-range">
+                <input type="date" id="tiDateFrom" title="From">
+                <span>→</span>
+                <input type="date" id="tiDateTo" title="To">
+            </div>
+        </div>
+
+        <!-- Export Bar -->
+        <div class="ti-export-bar">
+            <span class="ti-export-label">
+                <i class="fa-solid fa-share-nodes"></i>
+                Intelligence export:
+            </span>
+            <a id="exportCsv" href="#" class="ti-export-btn" title="CSV — import into MISP / OpenCTI">
+                <i class="fa-solid fa-file-csv"></i> CSV
+            </a>
+            <a id="exportJson" href="#" class="ti-export-btn" title="JSON — structured IOC bundle">
+                <i class="fa-solid fa-code"></i> JSON
+            </a>
+            <a id="exportPdf" href="#" class="ti-export-btn" title="Technical IOC report PDF">
+                <i class="fa-solid fa-file-pdf"></i> IOC report
+            </a>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="ti-charts-row">
+            <div class="ti-chart-card">
+                <h3 id="heatmapTitle">IOC activity — past 3 months</h3>
+                <div class="ti-heatmap-outer">
+                    <div class="ti-heatmap-inner">
+                        <div id="heatmapMonthLabels" class="ti-hm-month-labels"></div>
+                        <div id="tiHeatmap" class="ti-heatmap"></div>
+                    </div>
+                </div>
+                <div class="ti-heatmap-legend">
+                    <span>Less</span>
+                    <div class="ti-hm-legend-cell" style="background:var(--main-color-1)"></div>
+                    <div class="ti-hm-legend-cell" style="background:#f0dba8"></div>
+                    <div class="ti-hm-legend-cell" style="background:#e8cc8e"></div>
+                    <div class="ti-hm-legend-cell" style="background:#d4a84b"></div>
+                    <div class="ti-hm-legend-cell" style="background:#8b6b00"></div>
+                    <span>More</span>
+                </div>
+            </div>
+
+            <div class="ti-chart-card">
+                <h3>By type</h3>
+                <div class="ti-chart-wrap">
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="ti-chart-card">
+                <h3>Reputation</h3>
+                <div class="ti-chart-wrap">
+                    <canvas id="verdictChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Split: Table + Pivot -->
+        <div class="ti-main">
+            <div class="ti-table-card">
+                <div class="ti-table-header">
+                    <h2>IOC Pivot Table</h2>
+                    <span class="ti-total-badge" id="tableTotal">—</span>
+                </div>
+                <div class="ti-table-wrap">
+                    <table class="ti-table">
+                        <thead>
+                            <tr>
+                                <th>Value</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Verdict</th>
+                                <th>Incident</th>
+                                <th>First seen</th>
+                                <th>Occurrences</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tiTableBody">
+                            <tr><td colspan="7" class="ti-loading"><div class="ti-spinner"></div> Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="ti-pagination" id="tiPagination" style="display:none;">
+                    <button class="ti-page-btn" id="pagePrev" disabled><i class="fa-solid fa-chevron-left"></i></button>
+                    <span id="pageInfo">Page 1 of 1</span>
+                    <button class="ti-page-btn" id="pageNext" disabled><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <div class="ti-pivot-panel" id="pivotPanel">
+                <div class="ti-pivot-empty" id="pivotEmpty">
+                    <i class="fa-solid fa-arrow-pointer"></i>
+                    <p>Click any IOC row to pivot across incidents</p>
+                </div>
+                <div id="pivotContent" style="display:none;">
+                    <div class="ti-pivot-header">
+                        <p class="ti-pivot-value" id="pivotValue"></p>
+                        <div class="ti-pivot-meta">
+                            <span id="pivotTypeBadge" class="ti-type-badge"></span>
+                            <span id="pivotVerdictBadge" class="ti-verdict-badge"></span>
+                            <button class="ti-pivot-copy" id="pivotCopyBtn" onclick="copyPivotValue()">
+                                <i class="fa-regular fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ti-pivot-rep" id="pivotRepSection" style="display:none;">
+                        <h4>VirusTotal</h4>
+                        <div class="ti-pivot-rep-grid" id="pivotRepGrid"></div>
+                    </div>
+                    <div class="ti-pivot-incidents">
+                        <h4 id="pivotIncTitle">Appears in incidents</h4>
+                        <div id="pivotIncList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /tab-ioc -->
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB 2 — Incident Reports (management reporting)                       -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <div class="ti-tab-panel" id="tab-campaigns" style="display:none;">
+
+        <!-- Incident KPI Bar -->
+        <div class="ti-kpi-bar" id="campKpiBar">
+            <div class="ti-kpi">
+                <span class="ti-kpi-value" id="campKpiTotal">—</span>
+                <span class="ti-kpi-label">Incidents</span>
+            </div>
+            <div class="ti-kpi">
+                <span class="ti-kpi-value kpi-bad" id="campKpiOpen">—</span>
+                <span class="ti-kpi-label">Open / In progress</span>
+            </div>
+            <div class="ti-kpi">
+                <span class="ti-kpi-value kpi-warn" id="campKpiCritHigh">—</span>
+                <span class="ti-kpi-label">Critical / High</span>
+            </div>
+            <div class="ti-kpi">
+                <span class="ti-kpi-value kpi-good" id="campKpiResolved">—</span>
+                <span class="ti-kpi-label">Resolved / Closed</span>
+            </div>
+            <div class="ti-kpi">
+                <span class="ti-kpi-value" id="campKpiCampaigns">{{ campaign_count }}</span>
+                <span class="ti-kpi-label">Campaigns tracked</span>
+            </div>
+            <div class="ti-kpi ti-kpi-sla">
+                <span class="ti-kpi-value ti-kpi-mono" id="campKpiTtd">—</span>
+                <span class="ti-kpi-label">Avg time to detect</span>
+            </div>
+            <div class="ti-kpi ti-kpi-sla">
+                <span class="ti-kpi-value ti-kpi-mono" id="campKpiTtr">—</span>
+                <span class="ti-kpi-label">Avg time to respond</span>
+            </div>
+            <div class="ti-kpi ti-kpi-sla">
+                <span class="ti-kpi-value ti-kpi-mono" id="campKpiDur">—</span>
+                <span class="ti-kpi-label">Avg resolution time</span>
+            </div>
+        </div>
+
+        <!-- Period Toolbar -->
+        <div class="ti-toolbar">
+            <span class="ti-toolbar-label"><i class="fa-regular fa-calendar"></i> Period:</span>
+            <div class="ti-quarter-btns" id="campPeriodBtns"></div>
+            <div class="ti-date-range">
+                <input type="date" id="campDateFrom" title="From">
+                <span>→</span>
+                <input type="date" id="campDateTo" title="To">
+            </div>
+        </div>
+
+        <!-- Management Export Bar -->
+        <div class="ti-export-bar">
+            <span class="ti-export-label">
+                <i class="fa-solid fa-chart-line"></i>
+                Management report:
+            </span>
+            <a id="exportCampPdf" href="/api/threat-intel/export/campaign-pdf/" class="ti-export-btn ti-export-btn-primary">
+                <i class="fa-solid fa-file-pdf"></i> PDF report
+            </a>
+        </div>
+
+        <!-- Monthly Activity -->
+        <div class="ti-chart-card ti-monthly-card" id="campMonthlyCard">
+            <h3>Monthly incident activity</h3>
+            <div id="campMonthlyBars" class="ti-monthly-bars">
+                <div class="ti-monthly-empty">Select a period to see the activity breakdown.</div>
+            </div>
+        </div>
+
+        <!-- Campaigns Section -->
+        <div>
+            <div class="ti-section-header">
+                <h2>Threat Campaigns</h2>
+                <button class="ti-new-campaign-btn" onclick="openCampaignModal()">
+                    <i class="fa-solid fa-plus"></i> New Campaign
+                </button>
+            </div>
+            <div class="ti-campaign-grid" id="campaignGrid">
+                <!-- rendered by JS -->
+            </div>
+        </div>
+
+    </div><!-- /tab-campaigns -->
+
+</div>
+</main>
+
+<!-- ── Heatmap Tooltip ───────────────────────────────────────────────────── -->
+<div class="ti-hm-tooltip" id="hmTooltip"></div>
+
+<!-- ── Campaign Modal ────────────────────────────────────────────────────── -->
+<div class="ti-modal-overlay" id="campaignModal">
+    <div class="ti-modal">
+        <div class="ti-modal-header">
+            <h3 id="campaignModalTitle">New Campaign</h3>
+            <button class="ti-modal-close" onclick="closeCampaignModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="ti-modal-body">
+            <input type="hidden" id="campaignId" value="">
+
+            <div class="ti-field">
+                <label>Name *</label>
+                <input type="text" id="campaignName" placeholder="e.g. Q4 2025 Phishing Campaign">
+            </div>
+            <div class="ti-field">
+                <label>Description</label>
+                <textarea id="campaignDesc" placeholder="Brief description of this campaign…"></textarea>
+            </div>
+            <div class="ti-field">
+                <label>Date range</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="date" id="campaignStart">
+                    <span style="color:var(--text-color-2);">→</span>
+                    <input type="date" id="campaignEnd">
+                </div>
+            </div>
+            <div class="ti-field">
+                <label>Color</label>
+                <div class="ti-color-row" id="colorSwatches"></div>
+            </div>
+            <div class="ti-field">
+                <label>Link incidents</label>
+                <div class="ti-incident-checklist" id="incidentChecklist">
+                    {% for inc in incidents %}
+                    <label class="ti-inc-check-row">
+                        <input type="checkbox" class="inc-cb" value="{{ inc.id }}">
+                        <span class="ti-inc-check-name">{{ inc.name }}</span>
+                        <span class="ti-inc-check-sev ti-sev-{{ inc.severity }}">{{ inc.severity }}</span>
+                    </label>
+                    {% empty %}
+                    <div style="padding:12px;color:var(--text-color-2);font-size:.82rem;">No accessible incidents.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="ti-modal-footer">
+            <button class="ti-btn-cancel" onclick="closeCampaignModal()">Cancel</button>
+            <button class="ti-btn-save" onclick="saveCampaign()">Save Campaign</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/threat_intel.js' %}"></script>
+{% endblock %}

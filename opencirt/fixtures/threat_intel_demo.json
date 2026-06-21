@@ -1,0 +1,609 @@
+[
+  {
+    "model": "opencirt.campaign",
+    "pk": 1,
+    "fields": {
+      "name": "Q2 2026 LockBit / Ransomware Wave",
+      "description": "Cluster of ransomware incidents in Q2 2026 linked by shared C2 infrastructure and overlapping TTPs. All incidents show LockBit 3.0 artifacts and the same Cobalt Strike profile.",
+      "color": "#dc2626",
+      "created_by": 1,
+      "created_at": "2026-06-10T09:00:00Z",
+      "updated_at": "2026-06-10T09:00:00Z",
+      "start_date": "2026-04-01",
+      "end_date": "2026-06-30",
+      "incidents": [1]
+    }
+  },
+  {
+    "model": "opencirt.campaign",
+    "pk": 2,
+    "fields": {
+      "name": "APT28 Executive Targeting — 2026",
+      "description": "Sustained spear-phishing campaign attributed to APT28 (Fancy Bear). Targets senior executives with credential-harvesting pages on lookalike domains. Shared IOC infrastructure with SVR-linked tooling.",
+      "color": "#2563eb",
+      "created_by": 1,
+      "created_at": "2026-05-15T10:00:00Z",
+      "updated_at": "2026-05-15T10:00:00Z",
+      "start_date": "2026-03-01",
+      "end_date": "2026-06-30",
+      "incidents": [2]
+    }
+  },
+  {
+    "model": "opencirt.campaign",
+    "pk": 3,
+    "fields": {
+      "name": "Q1 2026 Web Skimming / SQLi",
+      "description": "Web application attacks targeting customer-facing portals. Shared SQLi payload patterns and skimmer C2 domains suggest a single threat actor group.",
+      "color": "#9333ea",
+      "created_by": 1,
+      "created_at": "2026-03-20T11:00:00Z",
+      "updated_at": "2026-03-20T11:00:00Z",
+      "start_date": "2026-01-01",
+      "end_date": "2026-03-31",
+      "incidents": [3]
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 11,
+    "fields": {
+      "created_at": "2026-06-08T15:00:00Z",
+      "updated_at": "2026-06-08T15:00:00Z",
+      "created_by": 1,
+      "tag": "C2 IP",
+      "status": "COMPROMISED",
+      "description": "Primary Cobalt Strike C2 server used across LockBit incident. Seen communicating over port 443 with beacon implants on 6 endpoints.",
+      "incident": 1,
+      "value": "185.220.101.47",
+      "type": "IPADRESS",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-06-09T08:00:00Z",
+        "vt": {
+          "malicious": 47,
+          "suspicious": 5,
+          "harmless": 3,
+          "undetected": 12,
+          "total": 67,
+          "country": "RU",
+          "asn": 204603,
+          "as_owner": "HostRoyale LLC",
+          "link": "https://www.virustotal.com/gui/ip-address/185.220.101.47"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 12,
+    "fields": {
+      "created_at": "2026-06-08T16:30:00Z",
+      "updated_at": "2026-06-08T16:30:00Z",
+      "created_by": 1,
+      "tag": "Ransomware Hash",
+      "status": "COMPROMISED",
+      "description": "LockBit 3.0 ransomware binary. SHA-256 hash identified during forensic analysis of encrypted endpoint.",
+      "incident": 1,
+      "value": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "type": "HASH",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-06-09T08:05:00Z",
+        "vt": {
+          "malicious": 62,
+          "suspicious": 8,
+          "harmless": 0,
+          "undetected": 7,
+          "total": 77,
+          "meaningful_name": "LockBit.3.0.Ransomware",
+          "type_description": "Ransomware",
+          "link": "https://www.virustotal.com/gui/file/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 13,
+    "fields": {
+      "created_at": "2026-06-08T17:00:00Z",
+      "updated_at": "2026-06-08T17:00:00Z",
+      "created_by": 1,
+      "tag": "Exfil Domain",
+      "status": "COMPROMISED",
+      "description": "Domain used for data exfiltration staging. DNS tunnelling observed with high-frequency TXT record queries.",
+      "incident": 1,
+      "value": "exfil-stage.microsoftupdate-cdn.com",
+      "type": "DOMAIN",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-06-09T08:10:00Z",
+        "vt": {
+          "malicious": 35,
+          "suspicious": 12,
+          "harmless": 0,
+          "undetected": 18,
+          "total": 65,
+          "link": "https://www.virustotal.com/gui/domain/exfil-stage.microsoftupdate-cdn.com"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 14,
+    "fields": {
+      "created_at": "2026-06-08T18:00:00Z",
+      "updated_at": "2026-06-08T18:00:00Z",
+      "created_by": 1,
+      "tag": "Loader URL",
+      "status": "COMPROMISED",
+      "description": "URL hosting the initial payload dropper. Served via compromised WordPress site.",
+      "incident": 1,
+      "value": "http://185.220.101.47/stage2/loader.exe",
+      "type": "URL",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-06-09T08:15:00Z",
+        "vt": {
+          "malicious": 41,
+          "suspicious": 7,
+          "harmless": 2,
+          "undetected": 17,
+          "total": 67,
+          "link": "https://www.virustotal.com/gui/url/aHR0cDovLzE4NS4yMjAuMTAxLjQ3L3N0YWdlMi9sb2FkZXIuZXhl"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 15,
+    "fields": {
+      "created_at": "2026-06-09T09:00:00Z",
+      "updated_at": "2026-06-09T09:00:00Z",
+      "created_by": 1,
+      "tag": "Lateral Movement Account",
+      "status": "COMPROMISED",
+      "description": "Domain admin account compromised via Mimikatz credential dump. Used for lateral movement via PSExec across 12 systems.",
+      "incident": 1,
+      "value": "svc_backup@corp.internal",
+      "type": "ACCOUNT",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 16,
+    "fields": {
+      "created_at": "2026-05-14T10:00:00Z",
+      "updated_at": "2026-05-14T10:00:00Z",
+      "created_by": 1,
+      "tag": "Phishing Domain",
+      "status": "COMPROMISED",
+      "description": "APT28 typosquatted domain used for credential harvesting. Hosting fake Microsoft SSO login page.",
+      "incident": 2,
+      "value": "microsoft-secure-signin.com",
+      "type": "DOMAIN",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-05-15T08:00:00Z",
+        "vt": {
+          "malicious": 28,
+          "suspicious": 6,
+          "harmless": 1,
+          "undetected": 22,
+          "total": 57,
+          "link": "https://www.virustotal.com/gui/domain/microsoft-secure-signin.com"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 17,
+    "fields": {
+      "created_at": "2026-05-14T10:30:00Z",
+      "updated_at": "2026-05-14T10:30:00Z",
+      "created_by": 1,
+      "tag": "APT28 C2 IP",
+      "status": "COMPROMISED",
+      "description": "Russian VPS used as C2 for APT28 phishing infrastructure. Seen in previous Fancy Bear campaigns.",
+      "incident": 2,
+      "value": "93.184.216.34",
+      "type": "IPADRESS",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-05-15T08:05:00Z",
+        "vt": {
+          "malicious": 19,
+          "suspicious": 4,
+          "harmless": 12,
+          "undetected": 31,
+          "total": 66,
+          "country": "RU",
+          "asn": 15169,
+          "as_owner": "GOOGLE",
+          "link": "https://www.virustotal.com/gui/ip-address/93.184.216.34"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 18,
+    "fields": {
+      "created_at": "2026-05-14T11:00:00Z",
+      "updated_at": "2026-05-14T11:00:00Z",
+      "created_by": 1,
+      "tag": "Spearphish Email Sender",
+      "status": "COMPROMISED",
+      "description": "Sender address used in APT28 spear phishing emails targeting CFO. Spoofed internal HR domain.",
+      "incident": 2,
+      "value": "hr-payroll@corphr-noreply.com",
+      "type": "EMAIL",
+      "reputation": {
+        "status": "suspicious",
+        "checked_at": "2026-05-15T08:10:00Z",
+        "vt": {
+          "malicious": 4,
+          "suspicious": 11,
+          "harmless": 3,
+          "undetected": 38,
+          "total": 56,
+          "link": "https://www.virustotal.com/gui/domain/corphr-noreply.com"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 19,
+    "fields": {
+      "created_at": "2026-05-15T14:00:00Z",
+      "updated_at": "2026-05-15T14:00:00Z",
+      "created_by": 1,
+      "tag": "Credential Harvesting URL",
+      "status": "COMPROMISED",
+      "description": "Phishing landing page URL mimicking Microsoft login. Captured credentials from 2 executives before takedown.",
+      "incident": 2,
+      "value": "https://microsoft-secure-signin.com/owa/auth/signin",
+      "type": "URL",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-05-15T14:30:00Z",
+        "vt": {
+          "malicious": 33,
+          "suspicious": 9,
+          "harmless": 0,
+          "undetected": 15,
+          "total": 57,
+          "link": "https://www.virustotal.com/gui/url/aHR0cHM6Ly9taWNyb3NvZnQtc2VjdXJlLXNpZ25pbi5jb20vb3dhL2F1dGgvc2lnbmlu"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 20,
+    "fields": {
+      "created_at": "2026-05-16T09:00:00Z",
+      "updated_at": "2026-05-16T09:00:00Z",
+      "created_by": 1,
+      "tag": "Compromised CFO Account",
+      "status": "COMPROMISED",
+      "description": "CFO account credentials stolen via phishing page. Account used to access financial reports and ERP system.",
+      "incident": 2,
+      "value": "cfo@company.com",
+      "type": "ACCOUNT",
+      "reputation": null,
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 21,
+    "fields": {
+      "created_at": "2026-03-10T08:30:00Z",
+      "updated_at": "2026-03-10T08:30:00Z",
+      "created_by": 1,
+      "tag": "SQLi Source IP",
+      "status": "COMPROMISED",
+      "description": "IP address from which SQL injection attacks against the customer portal originated. Associated with Tor exit node.",
+      "incident": 3,
+      "value": "198.54.117.196",
+      "type": "IPADRESS",
+      "reputation": {
+        "status": "suspicious",
+        "checked_at": "2026-03-11T07:00:00Z",
+        "vt": {
+          "malicious": 8,
+          "suspicious": 14,
+          "harmless": 9,
+          "undetected": 41,
+          "total": 72,
+          "country": "US",
+          "asn": 63023,
+          "as_owner": "AS-COLOCROSSING",
+          "link": "https://www.virustotal.com/gui/ip-address/198.54.117.196"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 22,
+    "fields": {
+      "created_at": "2026-03-10T09:00:00Z",
+      "updated_at": "2026-03-10T09:00:00Z",
+      "created_by": 1,
+      "tag": "Skimmer C2",
+      "status": "COMPROMISED",
+      "description": "JavaScript skimmer C2 domain collecting stolen card data. Observed in HTTP POST requests from payment page.",
+      "incident": 3,
+      "value": "cdn-stats-api.io",
+      "type": "DOMAIN",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-03-11T07:05:00Z",
+        "vt": {
+          "malicious": 22,
+          "suspicious": 5,
+          "harmless": 0,
+          "undetected": 28,
+          "total": 55,
+          "link": "https://www.virustotal.com/gui/domain/cdn-stats-api.io"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 23,
+    "fields": {
+      "created_at": "2026-03-10T10:00:00Z",
+      "updated_at": "2026-03-10T10:00:00Z",
+      "created_by": 1,
+      "tag": "Web Shell Hash",
+      "status": "COMPROMISED",
+      "description": "PHP web shell uploaded via file upload vulnerability. Used for persistent access and skimmer injection.",
+      "incident": 3,
+      "value": "a87ff679a2f3e71d9181a67b7542122c",
+      "type": "HASH",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-03-11T07:10:00Z",
+        "vt": {
+          "malicious": 39,
+          "suspicious": 3,
+          "harmless": 1,
+          "undetected": 14,
+          "total": 57,
+          "meaningful_name": "PHP.WebShell.Generic",
+          "type_description": "PHP script",
+          "link": "https://www.virustotal.com/gui/file/a87ff679a2f3e71d9181a67b7542122c"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 24,
+    "fields": {
+      "created_at": "2026-03-11T11:00:00Z",
+      "updated_at": "2026-03-11T11:00:00Z",
+      "created_by": 1,
+      "tag": "Skimmer Script URL",
+      "status": "COMPROMISED",
+      "description": "URL serving the malicious JavaScript skimmer injected into the checkout page.",
+      "incident": 3,
+      "value": "https://cdn-stats-api.io/v2/collect.js",
+      "type": "URL",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-03-11T11:30:00Z",
+        "vt": {
+          "malicious": 26,
+          "suspicious": 4,
+          "harmless": 0,
+          "undetected": 22,
+          "total": 52,
+          "link": "https://www.virustotal.com/gui/url/aHR0cHM6Ly9jZG4tc3RhdHMtYXBpLmlvL3YyL2NvbGxlY3QuanM="
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 25,
+    "fields": {
+      "created_at": "2026-04-03T13:00:00Z",
+      "updated_at": "2026-04-03T13:00:00Z",
+      "created_by": 1,
+      "tag": "Shared C2 — Cross-incident",
+      "status": "COMPROMISED",
+      "description": "This IP appears in both the LockBit incident and is flagged in threat feeds as part of the same RaaS (Ransomware-as-a-Service) infrastructure. High-confidence shared IOC linking the two campaigns.",
+      "incident": 2,
+      "value": "185.220.101.47",
+      "type": "IPADRESS",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-04-03T14:00:00Z",
+        "vt": {
+          "malicious": 47,
+          "suspicious": 5,
+          "harmless": 3,
+          "undetected": 12,
+          "total": 67,
+          "country": "RU",
+          "asn": 204603,
+          "as_owner": "HostRoyale LLC",
+          "link": "https://www.virustotal.com/gui/ip-address/185.220.101.47"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 26,
+    "fields": {
+      "created_at": "2026-05-20T10:00:00Z",
+      "updated_at": "2026-05-20T10:00:00Z",
+      "created_by": 1,
+      "tag": "Reconnaissance IP",
+      "status": "POTENTIALLY_COMPROMISED",
+      "description": "IP seen performing port scanning and banner grabbing against DMZ hosts. No confirmed exploitation yet.",
+      "incident": 2,
+      "value": "45.142.212.100",
+      "type": "IPADRESS",
+      "reputation": {
+        "status": "suspicious",
+        "checked_at": "2026-05-20T11:00:00Z",
+        "vt": {
+          "malicious": 6,
+          "suspicious": 18,
+          "harmless": 5,
+          "undetected": 38,
+          "total": 67,
+          "country": "NL",
+          "asn": 202425,
+          "as_owner": "IP Volume inc",
+          "link": "https://www.virustotal.com/gui/ip-address/45.142.212.100"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 27,
+    "fields": {
+      "created_at": "2026-06-01T08:00:00Z",
+      "updated_at": "2026-06-01T08:00:00Z",
+      "created_by": 1,
+      "tag": "Legitimate Tool (False Positive)",
+      "status": "SAFE",
+      "description": "RDP connection from IT admin workstation. Initially flagged but confirmed as authorised remote administration.",
+      "incident": 1,
+      "value": "10.0.0.50",
+      "type": "IPADRESS",
+      "reputation": {
+        "status": "clean",
+        "checked_at": "2026-06-01T09:00:00Z",
+        "vt": {
+          "malicious": 0,
+          "suspicious": 0,
+          "harmless": 62,
+          "undetected": 5,
+          "total": 67,
+          "link": "https://www.virustotal.com/gui/ip-address/10.0.0.50"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 28,
+    "fields": {
+      "created_at": "2026-06-05T14:00:00Z",
+      "updated_at": "2026-06-05T14:00:00Z",
+      "created_by": 1,
+      "tag": "Suspicious Email Domain",
+      "status": "POTENTIALLY_COMPROMISED",
+      "description": "Lookalike domain registered 3 days before the phishing campaign. Passive DNS shows it resolved to the same C2 IP.",
+      "incident": 2,
+      "value": "corphr-noreply.com",
+      "type": "DOMAIN",
+      "reputation": {
+        "status": "suspicious",
+        "checked_at": "2026-06-05T15:00:00Z",
+        "vt": {
+          "malicious": 3,
+          "suspicious": 14,
+          "harmless": 2,
+          "undetected": 38,
+          "total": 57,
+          "link": "https://www.virustotal.com/gui/domain/corphr-noreply.com"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 29,
+    "fields": {
+      "created_at": "2026-06-12T10:00:00Z",
+      "updated_at": "2026-06-12T10:00:00Z",
+      "created_by": 1,
+      "tag": "Post-incident monitoring IP",
+      "status": "POTENTIALLY_COMPROMISED",
+      "description": "IP seen probing the perimeter after the LockBit incident was contained. Possibly checking if access was fully removed.",
+      "incident": 1,
+      "value": "91.193.18.10",
+      "type": "IPADRESS",
+      "reputation": {
+        "status": "suspicious",
+        "checked_at": "2026-06-12T11:00:00Z",
+        "vt": {
+          "malicious": 9,
+          "suspicious": 21,
+          "harmless": 4,
+          "undetected": 33,
+          "total": 67,
+          "country": "UA",
+          "asn": 49453,
+          "as_owner": "Global Layer B.V.",
+          "link": "https://www.virustotal.com/gui/ip-address/91.193.18.10"
+        }
+      },
+      "tags": []
+    }
+  },
+  {
+    "model": "opencirt.genericioc",
+    "pk": 30,
+    "fields": {
+      "created_at": "2026-06-15T09:00:00Z",
+      "updated_at": "2026-06-15T09:00:00Z",
+      "created_by": 1,
+      "tag": "Dropper Hash",
+      "status": "COMPROMISED",
+      "description": "Second-stage dropper SHA-256. Dropped by the malicious Word document macro. Installs Cobalt Strike loader.",
+      "incident": 1,
+      "value": "5f4dcc3b5aa765d61d8327deb882cf99abcde12345f4dcc3b5aa765d61d83271",
+      "type": "HASH",
+      "reputation": {
+        "status": "malicious",
+        "checked_at": "2026-06-15T10:00:00Z",
+        "vt": {
+          "malicious": 55,
+          "suspicious": 4,
+          "harmless": 0,
+          "undetected": 8,
+          "total": 67,
+          "meaningful_name": "CobaltStrike.Loader.B",
+          "type_description": "Win32 EXE",
+          "link": "https://www.virustotal.com/gui/file/5f4dcc3b5aa765d61d8327deb882cf99abcde12345f4dcc3b5aa765d61d83271"
+        }
+      },
+      "tags": []
+    }
+  }
+]
