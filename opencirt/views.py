@@ -79,21 +79,11 @@ TLP_COLORS = {
 
 @login_required(login_url='login')
 def home(request):
-    # Get incidents where the user has a role OR the incident is public
-    user_roles = UserRole.objects.filter(user=request.user).select_related('incident')
-    
-    user_incidents = Incident.objects.filter(
-        id__in=[user_role.incident.id for user_role in user_roles]
-    )
-    public_incidents = Incident.objects.filter(is_public=True)
-    # Combine both sets of incidents
-
-    # Average KPI don't take into account the public incidents
+    incidents_list = list(_accessible_incidents(request.user).order_by('-created_at'))
 
     total_time_to_detect, total_time_to_respond, total_duration, total_genericiocs, incident_count = 0, 0, 0, 0, 0
 
-    # Accumulate values for each incident, converting timedelta to seconds for simplicity
-    for incident in user_incidents:
+    for incident in incidents_list:
         if incident.time_to_detect:
             total_time_to_detect += incident.time_to_detect.total_seconds()
         if incident.time_to_respond:
@@ -103,25 +93,21 @@ def home(request):
         total_genericiocs += incident.genericiocs.count()
         incident_count += 1
 
-    # Calculate averages (avoid division by zero)
     kpis = [
-        {'label': "Time to detect (TTD)",'value': timedelta(seconds=total_time_to_detect / incident_count) if incident_count else timedelta()},
-        {'label': "Time to respond (TTR)",'value': timedelta(seconds=total_time_to_respond / incident_count) if incident_count else timedelta()},
-        {'label': "Duration",'value': timedelta(seconds=total_duration / incident_count) if incident_count else timedelta()},
-        {'label': 'Iocs found', 'value': total_genericiocs},
+        {'label': "Time to detect (TTD)",  'value': timedelta(seconds=total_time_to_detect / incident_count) if incident_count else timedelta()},
+        {'label': "Time to respond (TTR)",  'value': timedelta(seconds=total_time_to_respond / incident_count) if incident_count else timedelta()},
+        {'label': "Duration",               'value': timedelta(seconds=total_duration / incident_count) if incident_count else timedelta()},
+        {'label': 'Iocs found',             'value': total_genericiocs},
     ]
-
-
-    incidents = (user_incidents | public_incidents).order_by('-created_at')
 
 
     
     # Prepare graphs data
     # Pie chart
     piechart_data = {
-        'labels': list(Counter(incident.status for incident in incidents).keys()),
-        'values': list(Counter(incident.status for incident in incidents).values()),
-    }   
+        'labels': list(Counter(inc.status for inc in incidents_list).keys()),
+        'values': list(Counter(inc.status for inc in incidents_list).values()),
+    }
     # Get sorted unique dates
     timechart_data = get_incidents_by_day_and_severity()
 
@@ -152,7 +138,6 @@ def home(request):
     }
 
     # Stats bar
-    incidents_list = list(incidents)
     total_count = len(incidents_list)
     active_count = sum(1 for inc in incidents_list if inc.status in ('OPEN', 'IN_PROGRESS'))
     critical_count = sum(1 for inc in incidents_list if inc.severity == 'CRITICAL')
@@ -260,13 +245,9 @@ def profile(request):
 @user_is_incident_responder_orpublic
 def overview(request, id):
     incident = get_object_or_404(Incident, id=id)
-    try:
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
 
     platform = PlatformSettings.get()
     return render(request, 'incidents/overview.html', {
@@ -280,53 +261,30 @@ def overview(request, id):
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def activity(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-        incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
-        
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-            incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
+    incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
     return render(request,'incidents/activity.html', {'incident': incident, 'user': request.user,'current_user_role': user_role, 'incident_leads': incident_leads})
 
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def impacts(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-        incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
-        
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-            incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
+    incident_leads = User.objects.filter(id__in=UserRole.objects.filter(incident=incident, role="INCIDENT_LEAD").values_list('user_id', flat=True))
     return render(request,'incidents/impacts.html', {'incident': incident, 'user': request.user,'current_user_role': user_role, 'incident_leads': incident_leads})
 
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def notes(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     shared_files = list(incident.shared_files.all().order_by('-created_at'))
     for sf in shared_files:
         sf.is_executable = _get_extension(sf.original_name) in _EXECUTABLE_EXTENSIONS
@@ -340,16 +298,10 @@ def notes(request, id):
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def tasks(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     return render(request,'incidents/tasks.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
 
 @login_required(login_url='login')
@@ -547,17 +499,12 @@ def delete_file(request, id):
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def incident_settings(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        return _not_found(request, 'This incident does not exist.')
-    if user_role.role not in ('INCIDENT_LEAD',) and not request.user.is_admin:
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
+    pr = getattr(request.user, 'platform_role', '') or ''
+    if user_role.role not in ('INCIDENT_LEAD',) and not request.user.is_admin and pr != 'SOC_LEAD':
         return _forbidden(request, 'Only Incident Leads and platform admins can access incident settings.', incident=incident)
 
     platform = PlatformSettings.get()
@@ -604,16 +551,10 @@ def report_preview(request, id):
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def report(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        return _not_found(request, 'This incident does not exist.')
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
 
     return render(request, 'incidents/report.html', {
         'incident': incident,
@@ -626,18 +567,10 @@ def report(request, id):
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def iocs(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if request.user.is_superuser:
-            user_role = UserRole(user=request.user, incident=incident, role="INCIDENT_LEAD")
-        elif incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     cti_configured      = CtiProvider.objects.filter(enabled=True).exclude(api_key='').exists()
     supported_ioc_types = _cti_supported_types()
     return render(request, 'incidents/evidence.html', {
@@ -651,18 +584,10 @@ def iocs(request, id):
 @login_required(login_url='login')
 @user_is_incident_responder_orpublic
 def timeline(request, id):
-    try:
-        incident = Incident.objects.get(pk=id)
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if request.user.is_superuser:
-            user_role = UserRole(user=request.user, incident=incident, role="INCIDENT_LEAD")
-        elif incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role="PUBLIC_VIEWER")
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
-    except Incident.DoesNotExist:
-        pass
+    incident = get_object_or_404(Incident, pk=id)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     return render(request,'incidents/timeline.html', {'incident': incident, 'user': request.user, 'current_user_role': user_role})
 
 def join(request, id):
@@ -828,11 +753,8 @@ def regenerate_invite(request, id):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     try:
         incident = Incident.objects.get(pk=id)
-        try:
-            user_role = UserRole.objects.get(user=request.user, incident=incident)
-            if user_role.role not in ('INCIDENT_LEAD', 'RESPONDER'):
-                return JsonResponse({'error': 'Permission denied'}, status=403)
-        except UserRole.DoesNotExist:
+        user_role = _get_user_role(request.user, incident)
+        if user_role is None or user_role.role not in ('INCIDENT_LEAD', 'RESPONDER'):
             return JsonResponse({'error': 'Permission denied'}, status=403)
         incident.invite_code = generate_invite_code()
         incident.save()
@@ -862,12 +784,41 @@ def settings_view(request):
 
     platform      = PlatformSettings.get()
     cti_providers = CtiProvider.objects.all().order_by('name')
+    all_users     = User.objects.order_by('username')
     return render(request, 'settings.html', {
         'user':          user,
         'prefs':         prefs,
         'platform':      platform,
         'cti_providers': cti_providers,
+        'all_users':     all_users,
     })
+
+
+@login_required(login_url='login')
+def api_admin_set_platform_role(request, user_id):
+    """POST /api/admin/users/<user_id>/set-platform-role/ — admin only."""
+    if not request.user.is_admin:
+        return JsonResponse({'error': 'Admin only.'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+    try:
+        target = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found.'}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except (ValueError, KeyError):
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+
+    new_role = data.get('platform_role', '')
+    valid = {'', 'SOC_ANALYST', 'SOC_LEAD'}
+    if new_role not in valid:
+        return JsonResponse({'error': 'Invalid platform_role.'}, status=400)
+
+    target.platform_role = new_role
+    target.save(update_fields=['platform_role'])
+    return JsonResponse({'status': 'ok', 'platform_role': new_role})
 
 
 @login_required(login_url='login')
@@ -2092,7 +2043,8 @@ def update_incident(request, id):
             data = json.loads(request.body)
 
             # Verify the user role inside the update_incident function
-            user_role = UserRole.objects.get(user=request.user, incident_id=id).role
+            _ur = _get_user_role(request.user, incident)
+            user_role = _ur.role if _ur else 'RESPONDER'
 
             if user_role == 'INCIDENT_LEAD':
                 # If user is INCIDENT_LEAD, they can modify the title as well
@@ -2337,12 +2289,9 @@ def ai_rephrase(request, id):
         return JsonResponse({'error': 'AI rephrase is not enabled for this incident.'}, status=403)
 
     # Restrict to write-capable roles
-    try:
-        user_role = UserRole.objects.get(user=request.user, incident_id=id).role
-        if user_role in ('READER', 'PUBLIC_VIEWER'):
-            return JsonResponse({'error': 'Permission denied: read-only role.'}, status=403)
-    except UserRole.DoesNotExist:
-        pass  # Public incident — logged-in non-responder; allow (already passed decorator)
+    _ur = _get_user_role(request.user, incident)
+    if _ur and _ur.role in ('READER', 'PUBLIC_VIEWER'):
+        return JsonResponse({'error': 'Permission denied: read-only role.'}, status=403)
 
     if _ai_rephrase_rate_limit_exceeded(request.user.pk):
         return JsonResponse(
@@ -2509,13 +2458,9 @@ def refresh_ioc_reputation(request, id, ioc_id):
 @user_is_incident_responder_orpublic
 def warroom(request, id):
     incident = get_object_or_404(Incident, pk=id)
-    try:
-        user_role = UserRole.objects.get(user=request.user, incident=incident)
-    except UserRole.DoesNotExist:
-        if incident.is_public:
-            user_role = UserRole(user=request.user, incident=incident, role='PUBLIC_VIEWER')
-        else:
-            return _forbidden(request, 'You are not a member of this incident.', incident=incident)
+    user_role = _get_user_role(request.user, incident)
+    if user_role is None:
+        return _forbidden(request, 'You are not a member of this incident.', incident=incident)
     return render(request, 'incidents/warroom.html', {
         'incident': incident,
         'user': request.user,
@@ -2963,14 +2908,35 @@ def ioc_reputation(request, id, ioc_id):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _accessible_incidents(user):
-    """Return QS of incidents the user can read (any role, or public, or superuser)."""
+    """Return QS of incidents the user can read (any role, or public, or platform role)."""
     from django.db.models import Q
-    if user.is_superuser:
+    pr = getattr(user, 'platform_role', '') or ''
+    if user.is_superuser or pr in ('SOC_ANALYST', 'SOC_LEAD'):
         return Incident.objects.all()
     role_incident_ids = UserRole.objects.filter(user=user).values_list('incident_id', flat=True)
     return Incident.objects.filter(
         Q(id__in=role_incident_ids) | Q(is_public=True)
     )
+
+
+def _get_user_role(user, incident):
+    """
+    Return the effective UserRole for a user on an incident.
+    For platform-role users with no explicit incident role, returns a synthetic
+    (unsaved) UserRole so callers can check .role uniformly.
+    Returns None if the user has no access at all.
+    """
+    try:
+        return UserRole.objects.get(user=user, incident=incident)
+    except UserRole.DoesNotExist:
+        pr = getattr(user, 'platform_role', '') or ''
+        if user.is_superuser or pr == 'SOC_LEAD':
+            return UserRole(user=user, incident=incident, role='INCIDENT_LEAD')
+        if pr == 'SOC_ANALYST':
+            return UserRole(user=user, incident=incident, role='RESPONDER')
+        if incident.is_public:
+            return UserRole(user=user, incident=incident, role='PUBLIC_VIEWER')
+        return None
 
 
 def _ti_ioc_queryset(user, params):

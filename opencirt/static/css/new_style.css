@@ -119,6 +119,19 @@ body {
     cursor: pointer;
 }
 .topbar-avatar:hover { border-color: var(--accent-color); opacity: 0.9; }
+
+.topbar-platform-role {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.topbar-pr-soc_analyst { background: #dbeafe; color: #1e40af; }
+.topbar-pr-soc_lead    { background: #fef3c7; color: #92400e; }
 .topbar-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .topbar-avatar-initial {
     font-size: 0.88rem;

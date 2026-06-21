@@ -7,6 +7,11 @@ from .choices_processor import choices_context
 choices = choices_context(HttpRequest())
     
 class User(AbstractUser):
+    PLATFORM_ROLE_CHOICES = [
+        ('',            'None'),
+        ('SOC_ANALYST', 'SOC Analyst'),
+        ('SOC_LEAD',    'SOC Lead'),
+    ]
     is_admin = models.BooleanField(default=False)
     first_connection_time = models.DateTimeField(auto_now_add=True)
     last_connection_time = models.DateTimeField(null=True, blank=True)
@@ -14,6 +19,7 @@ class User(AbstractUser):
     profile_picture = models.ImageField(upload_to='profile_pics/', default='profile_pics/default.jpg')
     light_mode = models.CharField(max_length=15, default='light_mode')
     preferences = models.JSONField(default=dict, blank=True)
+    platform_role = models.CharField(max_length=15, choices=PLATFORM_ROLE_CHOICES, blank=True, default='')
     groups = models.ManyToManyField(
         Group,
         related_name='custom_user_groups',

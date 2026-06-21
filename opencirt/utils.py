@@ -9,6 +9,11 @@ from .choices_processor import choices_context
 
 choices = choices_context(HttpRequest()) # Dummy request to initialize  choices
 
+def _platform_role(user):
+    """Return the user's platform_role string, or '' if the field doesn't exist yet."""
+    return getattr(user, 'platform_role', '') or ''
+
+
 def verify_permissions(required_role: list):
     """
     Decorator to verify if the logged-in user has the required role for a specific incident.
@@ -20,14 +25,19 @@ def verify_permissions(required_role: list):
             if not request.user.is_authenticated:
                 return JsonResponse({'error': 'User is not authenticated'}, status=401)
 
-            # Superusers (platform admins) bypass per-incident role checks.
-            if request.user.is_superuser:
+            # Superusers and SOC Leads have INCIDENT_LEAD-equivalent access everywhere.
+            pr = _platform_role(request.user)
+            if request.user.is_superuser or pr == 'SOC_LEAD':
                 return view_func(request, *args, **kwargs)
 
-            # Check if 'id' is passed in kwargs, if not, try getting it from args
-            incident_id = kwargs.get('id')  # Try kwargs first
+            # SOC Analysts have RESPONDER-equivalent access.
+            if pr == 'SOC_ANALYST':
+                if 'RESPONDER' in required_role or 'INCIDENT_LEAD' not in required_role:
+                    return view_func(request, *args, **kwargs)
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+
+            incident_id = kwargs.get('id')
             if not incident_id and args:
-                # If not in kwargs, try getting it from the first positional argument (args[0])
                 incident_id = args[0]
 
             if not incident_id:
@@ -50,35 +60,31 @@ def user_is_incident_responder_orpublic(view_func):
     @wraps(view_func)
     def wrapper(request, id, *args, **kwargs):
         incident = get_object_or_404(Incident, id=id)
-        # Superusers (platform admins) bypass per-incident role checks.
-        if request.user.is_authenticated and request.user.is_superuser:
-            return view_func(request, id, *args, **kwargs)
-        # If the incident is public, allow access
-
+        if request.user.is_authenticated:
+            pr = _platform_role(request.user)
+            if request.user.is_superuser or pr in ('SOC_ANALYST', 'SOC_LEAD'):
+                return view_func(request, id, *args, **kwargs)
         if incident.is_public:
             return view_func(request, id, *args, **kwargs)
-        else:
-            # If the user is not a responder for this incident, deny access
-            is_responder = UserRole.objects.filter(incident_id=incident.id, user=request.user).exists()
-            if not is_responder:
-                # Check if this is an API request
-                if request.path.startswith('/api/'):
-                    return JsonResponse({'error': 'You do not have permission to access this incident.'}, status=403)
-                return render(request, '403.html', {
-                    'reason': 'You are not a member of this incident.',
-                    'incident': incident,
-                }, status=403)
-            
-            return view_func(request, id, *args, **kwargs)
+        is_responder = UserRole.objects.filter(incident_id=incident.id, user=request.user).exists()
+        if not is_responder:
+            if request.path.startswith('/api/'):
+                return JsonResponse({'error': 'You do not have permission to access this incident.'}, status=403)
+            return render(request, '403.html', {
+                'reason': 'You are not a member of this incident.',
+                'incident': incident,
+            }, status=403)
+        return view_func(request, id, *args, **kwargs)
     return wrapper
+
 
 def user_is_incident_responder(view_func):
     @wraps(view_func)
     def wrapper(request, id, *args, **kwargs):
-        # Superusers (platform admins) bypass per-incident role checks.
-        if request.user.is_authenticated and request.user.is_superuser:
-            return view_func(request, id, *args, **kwargs)
-        # If the user is not a responder for this incident, deny access
+        if request.user.is_authenticated:
+            pr = _platform_role(request.user)
+            if request.user.is_superuser or pr in ('SOC_ANALYST', 'SOC_LEAD'):
+                return view_func(request, id, *args, **kwargs)
         is_responder = UserRole.objects.filter(incident_id=id, user=request.user).exists()
         if not is_responder:
             incident = get_object_or_404(Incident, id=id)
@@ -86,7 +92,6 @@ def user_is_incident_responder(view_func):
                 'reason': 'You are not a member of this incident.',
                 'incident': incident,
             }, status=403)
-        
         return view_func(request, id, *args, **kwargs)
     return wrapper
 

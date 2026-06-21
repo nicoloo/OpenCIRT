@@ -476,6 +476,95 @@
 </script>
 {% endif %}
 
+{% if user.is_admin %}
+<!-- ── Platform Users ──────────────────────────────────────────── -->
+<div class="settings-section" id="users-section">
+    <div class="settings-section-header" style="display:flex;align-items:center;gap:8px;">
+        <i class="fa-solid fa-users"></i>
+        <h2>Platform Users</h2>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-color-2);margin:0 0 16px 0;">
+        Assign platform-wide roles so analysts can see all incidents without being invited to each one.<br>
+        <strong>SOC Analyst</strong> — RESPONDER access to every incident. &nbsp;
+        <strong>SOC Lead</strong> — INCIDENT_LEAD access to every incident (same as admin for incident data).
+    </p>
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+        <thead>
+            <tr style="border-bottom:1px solid var(--border-color);">
+                <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">User</th>
+                <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Email</th>
+                <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Platform role</th>
+                <th style="padding:8px 10px;width:80px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for u in all_users %}
+        <tr style="border-bottom:1px solid var(--border-color);" id="user-row-{{ u.id }}">
+            <td style="padding:9px 10px;font-weight:600;">
+                {{ u.displayname|default:u.username }}
+                {% if u.is_admin %}<span style="font-size:0.65rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;margin-left:6px;font-weight:700;">ADMIN</span>{% endif %}
+            </td>
+            <td style="padding:9px 10px;color:var(--text-color-2);">{{ u.email }}</td>
+            <td style="padding:9px 10px;">
+                <select class="home-filter-select user-role-select" data-uid="{{ u.id }}"
+                        style="font-size:0.82rem;padding:5px 10px;"
+                        {% if u == user %}disabled title="Cannot change your own role"{% endif %}>
+                    <option value=""           {% if u.platform_role == '' %}selected{% endif %}>No platform role</option>
+                    <option value="SOC_ANALYST"{% if u.platform_role == 'SOC_ANALYST' %}selected{% endif %}>SOC Analyst</option>
+                    <option value="SOC_LEAD"   {% if u.platform_role == 'SOC_LEAD' %}selected{% endif %}>SOC Lead</option>
+                </select>
+            </td>
+            <td style="padding:9px 10px;">
+                <span class="user-role-saved" id="saved-{{ u.id }}"
+                      style="font-size:0.75rem;color:#16a34a;display:none;">
+                    <i class="fa-solid fa-check"></i> Saved
+                </span>
+                <span class="user-role-err" id="err-{{ u.id }}"
+                      style="font-size:0.75rem;color:#dc2626;display:none;"></span>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+(function() {
+    const csrf = document.getElementById('csrf-token')?.value
+        ?? document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] ?? '';
+
+    document.querySelectorAll('.user-role-select').forEach(sel => {
+        sel.addEventListener('change', async () => {
+            const uid     = sel.dataset.uid;
+            const role    = sel.value;
+            const savedEl = document.getElementById('saved-' + uid);
+            const errEl   = document.getElementById('err-' + uid);
+            savedEl.style.display = 'none';
+            errEl.style.display   = 'none';
+            try {
+                const resp = await fetch(`/api/admin/users/${uid}/set-platform-role/`, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body:    JSON.stringify({ platform_role: role }),
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    savedEl.style.display = 'inline';
+                    setTimeout(() => savedEl.style.display = 'none', 2500);
+                } else {
+                    errEl.textContent   = data.error || 'Error';
+                    errEl.style.display = 'inline';
+                }
+            } catch(e) {
+                errEl.textContent   = 'Network error';
+                errEl.style.display = 'inline';
+            }
+        });
+    });
+})();
+</script>
+{% endif %}
+
     <!-- ── Save ── -->
     <div class="settings-save-row">
         <button type="submit" class="btn-settings-save">
