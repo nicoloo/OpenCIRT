@@ -270,12 +270,14 @@ def overview(request, id):
         return _forbidden(request, 'You are not a member of this incident.', incident=incident)
 
     platform = PlatformSettings.get()
+    from .choices_processor import INCIDENT_RESOLUTION_CHOICES
     return render(request, 'incidents/overview.html', {
         'incident':           incident,
         'user':               request.user,
         'current_user_role':  user_role,
         'ai_configured':      platform.ai_provider != 'NONE' and bool(platform.ai_api_key),
         'all_categories':     list(IncidentCategory.objects.order_by('name').values('id', 'name', 'color')),
+        'INCIDENT_RESOLUTION_CHOICES': INCIDENT_RESOLUTION_CHOICES,
     })
 
 @login_required(login_url='login')
@@ -2100,12 +2102,8 @@ def update_incident(request, id):
                 new_status = data['status']
                 valid_res = {r[0] for r in Incident.RESOLUTION_CHOICES}
                 if new_status == 'CLOSED':
-                    resolution = data.get('resolution', '').strip()
-                    if not resolution:
-                        resolution = incident.resolution  # keep existing if already set
-                    if not resolution:
-                        return JsonResponse({'error': 'resolution_required', 'message': 'A resolution is required to close an incident.'}, status=400)
-                    if resolution not in valid_res:
+                    resolution = data.get('resolution', '').strip() or incident.resolution or ''
+                    if resolution and resolution not in valid_res:
                         return JsonResponse({'error': 'Invalid resolution.'}, status=400)
                     incident.resolution = resolution
                     incident.resolution_note = data.get('resolution_note', incident.resolution_note)[:2000]
@@ -3812,9 +3810,7 @@ def api_incidents_batch(request):
 
         if new_status == 'CLOSED':
             resolution = body.get('resolution', '').strip()
-            if not resolution:
-                return JsonResponse({'error': 'resolution_required', 'message': 'Resolution required to close.'}, status=400)
-            if resolution not in _VALID_RESOLUTIONS:
+            if resolution and resolution not in _VALID_RESOLUTIONS:
                 return JsonResponse({'error': 'Invalid resolution.'}, status=400)
             resolution_note = body.get('resolution_note', '')[:2000]
             incidents.update(status=new_status, resolution=resolution, resolution_note=resolution_note)

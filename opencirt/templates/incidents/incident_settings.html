@@ -846,10 +846,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 resolution:      document.getElementById('field-resolution')?.value ?? '',
                 resolution_note: document.getElementById('field-resolution-note')?.value ?? '',
             };
-            if (status === 'CLOSED' && !payload.resolution) {
-                alert('A resolution is required when closing an incident.');
-                return;
-            }
             try {
                 const r = await fetch(`/api/incident/${incidentId}/update/`, {
                     method: 'POST',

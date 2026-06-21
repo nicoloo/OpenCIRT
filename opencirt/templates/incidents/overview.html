@@ -121,6 +121,34 @@
 
 {% block content %}
 {{ all_categories|json_script:"all-cats-data" }}
+
+{# Resolution modal — shown when user sets status to CLOSED #}
+<div id="closeResolutionModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--widget-background-color);border-radius:10px;padding:28px 32px;max-width:440px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+        <h3 style="margin:0 0 6px;font-size:1.05rem;"><i class="fa-solid fa-circle-check"></i> Close Incident</h3>
+        <p style="margin:0 0 18px;font-size:0.88rem;color:var(--text-color-2);">Select how this incident was resolved.</p>
+        <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:8px;">Resolution</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;" id="ovResolutionGrid">
+                {% for val, label in INCIDENT_RESOLUTION_CHOICES %}
+                <label style="cursor:pointer;">
+                    <input type="radio" name="ovResolution" value="{{ val }}" style="display:none;">
+                    <span class="res-label res-{{ val|lower }}" style="padding:5px 12px;border-radius:20px;font-size:0.78rem;font-weight:600;border:2px solid transparent;cursor:pointer;">{{ label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        <div style="margin-bottom:20px;">
+            <label style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:6px;">Note <span style="font-weight:400;color:var(--text-color-2);">(optional)</span></label>
+            <textarea id="ovResolutionNote" rows="2" placeholder="Additional context…" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-color);border-radius:6px;background:var(--input-bg,var(--widget-background-color));color:var(--text-color-1);font-size:0.88rem;resize:vertical;"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button id="ovCancelClose" style="padding:8px 18px;border-radius:6px;border:1px solid var(--border-color);background:transparent;color:var(--text-color-1);cursor:pointer;font-size:0.88rem;">Cancel</button>
+            <button id="ovConfirmClose" style="padding:8px 18px;border-radius:6px;border:none;background:var(--main-color-3);color:#fff;cursor:pointer;font-size:0.88rem;font-weight:600;"><i class="fa-solid fa-circle-check"></i> Close Incident</button>
+        </div>
+    </div>
+</div>
+
 <div class="overview-page">
     <form id="incident-form">
 
@@ -365,6 +393,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    async function patchIncident(data) {
+        try {
+            const response = await fetch(`/api/incident/${incidentId}/update/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify(data),
+            });
+            if (response.ok) showSaved();
+        } catch (err) {
+            console.error('Save failed:', err);
+        }
+    }
+
+    // Resolution modal wiring
+    const closeResModal = document.getElementById('closeResolutionModal');
+    document.getElementById('ovCancelClose').addEventListener('click', () => {
+        closeResModal.style.display = 'none';
+        document.getElementById('status').value = '{{ incident.status }}';
+    });
+    document.getElementById('ovConfirmClose').addEventListener('click', async () => {
+        const resolution = document.querySelector('input[name="ovResolution"]:checked')?.value || '';
+        const note = document.getElementById('ovResolutionNote').value;
+        closeResModal.style.display = 'none';
+        await patchIncident({ status: 'CLOSED', resolution, resolution_note: note });
+    });
+    // Highlight selected resolution radio visually
+    document.getElementById('ovResolutionGrid').addEventListener('change', e => {
+        document.querySelectorAll('#ovResolutionGrid .res-label').forEach(el => el.style.outline = '');
+        if (e.target.checked) e.target.nextElementSibling.style.outline = '2px solid var(--main-color-3)';
+    });
+
     form.querySelectorAll('input, textarea, select').forEach(field => {
         field.addEventListener('blur', async (event) => {
             const f = event.target;
@@ -382,26 +441,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (f.name === 'technical-details' && formData.get('technical-details') !== '{{ incident.technical_details|escapejs }}') {
                 data.technical_details = formData.get('technical-details');
             } else if (f.name === 'status' && formData.get('status') !== '{{ incident.status|escapejs }}') {
+                if (formData.get('status') === 'CLOSED') {
+                    closeResModal.style.display = 'flex';
+                    return;
+                }
                 data.status = formData.get('status');
             } else if (f.name === 'severity' && formData.get('severity') !== '{{ incident.severity|escapejs }}') {
                 data.severity = formData.get('severity');
             }
 
-            if (Object.keys(data).length > 0) {
-                try {
-                    const response = await fetch(`/api/incident/${incidentId}/update/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrfToken
-                        },
-                        body: JSON.stringify(data)
-                    });
-                    if (response.ok) showSaved();
-                } catch (err) {
-                    console.error('Save failed:', err);
-                }
-            }
+            if (Object.keys(data).length > 0) await patchIncident(data);
         });
     });
 

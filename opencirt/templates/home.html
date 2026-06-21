@@ -336,6 +336,24 @@
 </div>
 
 <!-- Merge modal -->
+<div class="home-modal-overlay" id="deleteModal">
+    <div class="home-modal">
+        <div class="home-modal-header">
+            <h3><i class="fa-solid fa-trash"></i> Delete Incidents</h3>
+            <button class="home-modal-close" onclick="closeModal('deleteModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="home-modal-body">
+            <p class="home-modal-hint" id="deleteModalHint"></p>
+        </div>
+        <div class="home-modal-footer">
+            <button class="home-btn-cancel" onclick="closeModal('deleteModal')">Cancel</button>
+            <button class="home-btn-danger" onclick="closeModal('deleteModal'); submitBatch({ action: 'delete' });">
+                <i class="fa-solid fa-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="home-modal-overlay" id="mergeModal">
     <div class="home-modal">
         <div class="home-modal-header">
@@ -469,8 +487,9 @@ function batchAction(type) {
         showModal('mergeModal');
 
     } else if (type === 'delete') {
-        if (!confirm(`Delete ${_selectedIds.size} incident${_selectedIds.size !== 1 ? 's' : ''}? This cannot be undone. You need INCIDENT_LEAD role on each.`)) return;
-        submitBatch({ action: 'delete' });
+        document.getElementById('deleteModalHint').textContent =
+            `Delete ${_selectedIds.size} incident${_selectedIds.size !== 1 ? 's' : ''}? This cannot be undone. You need Incident Lead role on each.`;
+        showModal('deleteModal');
     }
 }
 
