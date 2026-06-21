@@ -8,6 +8,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('', RedirectView.as_view(url='/home', permanent=False)),
     path('home', views.home, name='home'),
+    path('register/', views.register, name='register'),
     path('login/', views.custom_login, name='login'),
     path('logout/', views.custom_logout, name='logout'),
     path('incident/<int:id>/overview', views.overview, name='overview'),

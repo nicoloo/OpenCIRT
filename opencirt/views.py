@@ -193,6 +193,26 @@ def _login_rate_limit_reset(ip: str) -> None:
     cache.delete(f'login_fail_{ip}')
 
 
+def register(request):
+    if request.user.is_authenticated:
+        return redirect('/home')
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        password2 = request.POST.get('password2', '')
+        if not username or not password:
+            return render(request, 'register.html', {'error': 'Username and password are required.'})
+        if password != password2:
+            return render(request, 'register.html', {'error': 'Passwords do not match.', 'username': username})
+        if User.objects.filter(username=username).exists():
+            return render(request, 'register.html', {'error': 'Username already taken.', 'username': username})
+        if len(password) < 8:
+            return render(request, 'register.html', {'error': 'Password must be at least 8 characters.', 'username': username})
+        user = User.objects.create_user(username=username, password=password)
+        login(request, user)
+        return redirect('/home')
+    return render(request, 'register.html')
+
 def custom_login(request):
     if request.method == 'POST':
         ip = _get_client_ip(request)
