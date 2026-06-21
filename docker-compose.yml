@@ -19,7 +19,7 @@ services:
     build:
       context: .
     environment:
-      DEBUG: ${DEBUG:-False}
+      DEBUG: "True"
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
       DATABASE_ENGINE: django.db.backends.postgresql
@@ -54,10 +54,8 @@ services:
     image: nginx:1.27-alpine
     ports:
       - "80:80"
-      - "443:443"
     volumes:
-      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./docker/certs:/etc/nginx/certs:ro
+      - ./docker/nginx-http.conf:/etc/nginx/conf.d/default.conf:ro
       - static_volume:/vol/web/static:ro
       - media_volume:/vol/web/media:ro
     depends_on:

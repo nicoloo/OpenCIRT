@@ -84,6 +84,13 @@ Available tags: `latest`, `sha-<commit>`, and semver tags (`1.2.3`, `1.2`, `1`) 
 
 ## Development / build from source
 
+**Prerequisites:** your user must be in the `docker` group (or prefix every `docker` command with `sudo`):
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker   # or log out and back in
+```
+
 ```bash
 git clone https://github.com/nicoloo/OpenCIRT.git
 cd OpenCIRT
@@ -91,6 +98,10 @@ cp .env.example .env
 # Edit .env: set SECRET_KEY and POSTGRES_PASSWORD
 docker compose up --build
 ```
+
+Open [http://localhost](http://localhost) — username `admin`, password printed in the container logs on first start.
+
+> The dev compose file (`docker-compose.yml`) uses `nginx-http.conf` (HTTP, port 80). For HTTPS, see the [HTTPS / production (TLS)](#https--production-tls) section and switch to `docker-compose.prod.yml`.
 
 ## Contributing
 
