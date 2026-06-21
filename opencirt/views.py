@@ -172,7 +172,7 @@ def home(request):
             ('LOW', 'Low'), ('MEDIUM', 'Medium'),
             ('HIGH', 'High'), ('CRITICAL', 'Critical'),
         ],
-        'campaigns': Campaign.objects.all().order_by('name'),
+        'campaigns': Campaign.objects.all().order_by('name') if _has_platform_access(request.user) else Campaign.objects.none(),
         'categories': IncidentCategory.objects.all().order_by('name'),
     })
 
@@ -687,6 +687,12 @@ def generate_invite_code():
 
 @login_required(login_url='login')
 def create_incident(request):
+    if not _has_platform_access(request.user):
+        return render(request, 'incidents/create_incident.html', {
+            'user': request.user,
+            'error': 'You need a platform role (SOC Analyst or SOC Lead) to create incidents.',
+            'no_access': True,
+        })
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
@@ -2927,6 +2933,13 @@ def ioc_reputation(request, id, ioc_id):
 # THREAT INTELLIGENCE HUB
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _has_platform_access(user):
+    """True if user has any platform-level role (not a bare new account)."""
+    if user.is_superuser:
+        return True
+    pr = getattr(user, 'platform_role', '') or ''
+    return pr in ('SOC_ANALYST', 'SOC_LEAD')
+
 def _accessible_incidents(user):
     """Return QS of incidents the user can read (any role, or public, or platform role)."""
     from django.db.models import Q
@@ -3027,7 +3040,7 @@ def threat_intel(request):
     from django.db.models import Count
 
     incidents   = _accessible_incidents(request.user)
-    campaigns   = Campaign.objects.all().prefetch_related('incidents')
+    campaigns   = Campaign.objects.all().prefetch_related('incidents') if _has_platform_access(request.user) else Campaign.objects.none()
     all_iocs    = GenericIoc.objects.filter(incident__in=incidents)
     total_iocs  = all_iocs.count()
     unique_iocs = all_iocs.values('value').distinct().count()
@@ -3240,6 +3253,9 @@ def api_campaigns_list(request):
     """GET /api/campaigns/ — list campaigns with summary stats."""
     from django.db.models import Count
 
+    if not _has_platform_access(request.user):
+        return JsonResponse({'campaigns': []})
+
     accessible_ids = list(_accessible_incidents(request.user).values_list('id', flat=True))
     campaigns = Campaign.objects.prefetch_related('incidents').order_by('-created_at')
 
@@ -3291,6 +3307,8 @@ def _can_mutate_campaign(user, campaign):
 @login_required(login_url='login')
 def api_campaign_create(request):
     """POST /api/campaigns/create/"""
+    if not _has_platform_access(request.user):
+        return JsonResponse({'error': 'Platform role required.'}, status=403)
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed.'}, status=405)
     try:
