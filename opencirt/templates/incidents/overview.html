@@ -123,28 +123,34 @@
 {{ all_categories|json_script:"all-cats-data" }}
 
 {# Resolution modal — shown when user sets status to CLOSED #}
-<div id="closeResolutionModal" class="ov-modal-overlay">
-    <div class="ov-modal">
-        <h3><i class="fa-solid fa-circle-check"></i> Close Incident</h3>
-        <p class="ov-modal-sub">Select how this incident was resolved.</p>
-        <div style="margin-bottom:14px;">
-            <label class="ov-field-label">Resolution <span style="font-weight:400;color:var(--text-color-2);">(optional)</span></label>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;" id="ovResolutionGrid">
-                {% for val, label in INCIDENT_RESOLUTION_CHOICES %}
-                <label class="res-option">
-                    <input type="radio" name="ovResolution" value="{{ val }}">
-                    <span class="res-label res-{{ val|lower }}">{{ label }}</span>
-                </label>
-                {% endfor %}
+<div id="closeResolutionModal" class="home-modal-overlay">
+    <div class="home-modal">
+        <div class="home-modal-header">
+            <h3><i class="fa-solid fa-circle-check"></i> Close Incident</h3>
+            <button class="home-modal-close" id="ovCancelClose"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="home-modal-body">
+            <div class="home-field">
+                <label>Resolution <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-color-2);">(optional)</span></label>
+                <div class="home-resolution-grid">
+                    {% for val, label in INCIDENT_RESOLUTION_CHOICES %}
+                    <label class="res-option">
+                        <input type="radio" name="ovResolution" value="{{ val }}">
+                        <span class="res-label res-{{ val|lower }}">{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="home-field">
+                <label>Note <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-color-2);">(optional)</span></label>
+                <textarea id="ovResolutionNote" placeholder="Additional context…" rows="3"></textarea>
             </div>
         </div>
-        <div>
-            <label class="ov-field-label">Note <span style="font-weight:400;color:var(--text-color-2);">(optional)</span></label>
-            <textarea id="ovResolutionNote" rows="2" placeholder="Additional context…"></textarea>
-        </div>
-        <div class="ov-modal-footer">
-            <button id="ovCancelClose" class="ov-btn-cancel">Cancel</button>
-            <button id="ovConfirmClose" class="ov-btn-confirm"><i class="fa-solid fa-circle-check"></i> Close Incident</button>
+        <div class="home-modal-footer">
+            <button class="home-btn-cancel" id="ovCancelCloseBtn">Cancel</button>
+            <button class="home-btn-primary" id="ovConfirmClose">
+                <i class="fa-solid fa-circle-check"></i> Close Incident
+            </button>
         </div>
     </div>
 </div>
@@ -408,14 +414,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Resolution modal wiring
     const closeResModal = document.getElementById('closeResolutionModal');
-    document.getElementById('ovCancelClose').addEventListener('click', () => {
-        closeResModal.classList.remove('open');
+    function openResModal()  { closeResModal.style.display = 'flex'; }
+    function closeResModalFn() {
+        closeResModal.style.display = 'none';
         document.getElementById('status').value = '{{ incident.status }}';
-    });
+    }
+    document.getElementById('ovCancelClose').addEventListener('click', closeResModalFn);
+    document.getElementById('ovCancelCloseBtn').addEventListener('click', closeResModalFn);
     document.getElementById('ovConfirmClose').addEventListener('click', async () => {
         const resolution = document.querySelector('input[name="ovResolution"]:checked')?.value || '';
         const note = document.getElementById('ovResolutionNote').value;
-        closeResModal.classList.remove('open');
+        closeResModal.style.display = 'none';
         await patchIncident({ status: 'CLOSED', resolution, resolution_note: note });
     });
 
@@ -437,7 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 data.technical_details = formData.get('technical-details');
             } else if (f.name === 'status' && formData.get('status') !== '{{ incident.status|escapejs }}') {
                 if (formData.get('status') === 'CLOSED') {
-                    closeResModal.classList.add('open');
+                    openResModal();
                     return;
                 }
                 data.status = formData.get('status');
