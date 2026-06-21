@@ -3,12 +3,40 @@
 {% load custom_filters %}
 
 {% block styles %}
-    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <link rel="stylesheet" href="{% static 'css/home.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'css/threat_intel.css' %}">
 {% endblock %}
 
 {% block content %}
 <main>
 <div class="home-page">
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TOP-LEVEL TAB BAR                                                         -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div class="ti-tabs-bar" style="margin-bottom:20px;">
+    <button class="ti-tab-btn" id="topTabIncidents" onclick="switchTopTab('incidents',this)">
+        <i class="fa-solid fa-house"></i>
+        <span>Incidents</span>
+    </button>
+    <button class="ti-tab-btn" id="topTabIoc" onclick="switchTopTab('ioc',this)">
+        <i class="fa-solid fa-virus"></i>
+        <span>IOC Intelligence</span>
+    </button>
+    <button class="ti-tab-btn" id="topTabReports" onclick="switchTopTab('reports',this)">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Incident Reports</span>
+    </button>
+    <button class="ti-tab-btn" id="topTabCampaigns" onclick="switchTopTab('campaigns',this)">
+        <i class="fa-solid fa-crosshairs"></i>
+        <span>Threat Campaigns</span>
+    </button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- PANEL 1 — INCIDENTS (home page)                                           -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="panel-incidents">
 
     <!-- ── Stats Bar ──────────────────────────────── -->
     <div class="home-stats-bar">
@@ -66,15 +94,12 @@
              data-name="{{ inc.name|lower }}"
              data-severity="{{ inc.severity }}"
              data-status="{{ inc.status }}">
-            <!-- Checkbox for batch selection -->
             <label class="ic-checkbox-wrap" onclick="event.stopPropagation()">
                 <input type="checkbox" class="ic-checkbox" value="{{ inc.id }}"
                        onchange="onCardCheck(this)">
             </label>
-            <!-- Severity bar -->
             <div class="ic-sev-bar ic-sev-{{ inc.severity|lower }}"
                  onclick="window.location.href='/incident/{{ inc.id }}/overview'"></div>
-            <!-- Body -->
             <div class="ic-body" onclick="window.location.href='/incident/{{ inc.id }}/overview'">
                 <div class="ic-top">
                     <span class="ic-name">{{ inc.name }}</span>
@@ -121,69 +146,282 @@
         {% endfor %}
     </div>
 
-    <!-- ── Charts Row ─────────────────────────────── -->
-    <div class="home-charts-row">
-        <div class="home-chart-card">
-            <h3>Incidents over time</h3>
-            <div class="hcc-canvas-wrap">
-                <canvas id="incidentsChart"></canvas>
-            </div>
-        </div>
-        <div class="home-chart-card">
-            <h3>Status distribution <small class="chart-filter-hint">· click to filter</small></h3>
-            <div class="hcc-canvas-wrap">
-                <canvas id="statusChart" style="cursor:pointer;"></canvas>
-            </div>
-        </div>
-        <div class="home-chart-card">
-            <h3>Severity distribution <small class="chart-filter-hint">· click to filter</small></h3>
-            <div class="hcc-canvas-wrap">
-                <canvas id="severityChart" style="cursor:pointer;"></canvas>
-            </div>
-        </div>
-    </div>
-
-</div>
-</main>
+</div>{# /panel-incidents #}
 
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
-<!-- BATCH ACTION BAR (appears at bottom when incidents are selected)          -->
+<!-- PANEL 2 — IOC INTELLIGENCE                                                -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+    <div class="ti-tab-panel" id="tab-ioc" style="display:none;">
+
+        <div class="ti-kpi-bar">
+            <div class="ti-kpi"><span class="ti-kpi-value" id="kpiTotal">{{ ti_total_iocs }}</span><span class="ti-kpi-label">Total IOCs</span></div>
+            <div class="ti-kpi"><span class="ti-kpi-value" id="kpiUnique">{{ ti_unique_iocs }}</span><span class="ti-kpi-label">Unique values</span></div>
+            <div class="ti-kpi"><span class="ti-kpi-value kpi-bad" id="kpiMalicious">—</span><span class="ti-kpi-label">Malicious</span></div>
+            <div class="ti-kpi"><span class="ti-kpi-value kpi-warn" id="kpiSuspicious">—</span><span class="ti-kpi-label">Suspicious</span></div>
+            <div class="ti-kpi"><span class="ti-kpi-value" id="kpiIncidents">{{ ti_incident_count }}</span><span class="ti-kpi-label">Incidents</span></div>
+            <div class="ti-kpi"><span class="ti-kpi-value" id="kpiCampaigns">{{ ti_campaign_count }}</span><span class="ti-kpi-label">Campaigns</span></div>
+        </div>
+
+        <div class="ti-toolbar">
+            <div class="ti-search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="tiSearch" placeholder="Search IOC values…">
+            </div>
+            <select id="tiTypeFilter" class="ti-filter-select">
+                <option value="">All types</option>
+                {% for val, label in IOC_TYPE_CHOICES %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+            <select id="tiStatusFilter" class="ti-filter-select">
+                <option value="">All statuses</option>
+                {% for val, label in IOC_STATUS_CHOICES %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+            <select id="tiVerdictFilter" class="ti-filter-select">
+                <option value="">All verdicts</option>
+                <option value="malicious">Malicious</option>
+                <option value="suspicious">Suspicious</option>
+                <option value="clean">Clean</option>
+                <option value="unknown">Unknown</option>
+            </select>
+            <select id="tiTlpFilter" class="ti-filter-select ti-tlp-filter" title="Filter by TLP">
+                <option value="">All TLP</option>
+                <option value="CLEAR">🟢 TLP:CLEAR</option>
+                <option value="GREEN">🟡 TLP:GREEN</option>
+                <option value="AMBER">🟠 TLP:AMBER</option>
+                <option value="RED">🔴 TLP:RED</option>
+            </select>
+            <select id="tiCampaignFilter" class="ti-filter-select">
+                <option value="">All campaigns</option>
+                {% for c in campaigns %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+            <div class="ti-quarter-btns" id="tiQuarterBtns"></div>
+            <div class="ti-date-range">
+                <input type="date" id="tiDateFrom" title="From">
+                <span>→</span>
+                <input type="date" id="tiDateTo" title="To">
+            </div>
+        </div>
+
+        <div class="ti-export-bar">
+            <span class="ti-export-label"><i class="fa-solid fa-share-nodes"></i> Intelligence export:</span>
+            <a id="exportCsv" href="#" class="ti-export-btn" title="CSV — import into MISP / OpenCTI"><i class="fa-solid fa-file-csv"></i> CSV</a>
+            <a id="exportJson" href="#" class="ti-export-btn" title="JSON — structured IOC bundle"><i class="fa-solid fa-code"></i> JSON</a>
+            <a id="exportPdf" href="#" class="ti-export-btn" title="Technical IOC report PDF"><i class="fa-solid fa-file-pdf"></i> IOC report</a>
+        </div>
+
+        <div class="ti-charts-row">
+            <div class="ti-chart-card">
+                <h3 id="heatmapTitle">IOC activity — past 3 months</h3>
+                <div class="ti-heatmap-outer">
+                    <div class="ti-heatmap-inner">
+                        <div id="heatmapMonthLabels" class="ti-hm-month-labels"></div>
+                        <div id="tiHeatmap" class="ti-heatmap"></div>
+                    </div>
+                </div>
+                <div class="ti-heatmap-legend">
+                    <span>Less</span>
+                    <div class="ti-hm-legend-cell" style="background:var(--main-color-1)"></div>
+                    <div class="ti-hm-legend-cell" style="background:#f0dba8"></div>
+                    <div class="ti-hm-legend-cell" style="background:#e8cc8e"></div>
+                    <div class="ti-hm-legend-cell" style="background:#d4a84b"></div>
+                    <div class="ti-hm-legend-cell" style="background:#8b6b00"></div>
+                    <span>More</span>
+                </div>
+            </div>
+            <div class="ti-chart-card">
+                <h3>By type</h3>
+                <div class="ti-chart-wrap"><canvas id="typeChart"></canvas></div>
+            </div>
+            <div class="ti-chart-card">
+                <h3>Reputation</h3>
+                <div class="ti-chart-wrap"><canvas id="verdictChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="ti-main">
+            <div class="ti-table-card">
+                <div class="ti-table-header">
+                    <h2>IOC Pivot Table</h2>
+                    <span class="ti-total-badge" id="tableTotal">—</span>
+                </div>
+                <div class="ti-table-wrap">
+                    <table class="ti-table">
+                        <thead>
+                            <tr>
+                                <th>Value</th><th>Type</th><th>Status</th><th>Verdict</th>
+                                <th>Incident</th><th>First seen</th><th>Occurrences</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tiTableBody">
+                            <tr><td colspan="7" class="ti-loading"><div class="ti-spinner"></div> Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="ti-pagination" id="tiPagination" style="display:none;">
+                    <button class="ti-page-btn" id="pagePrev" disabled><i class="fa-solid fa-chevron-left"></i></button>
+                    <span id="pageInfo">Page 1 of 1</span>
+                    <button class="ti-page-btn" id="pageNext" disabled><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="ti-pivot-panel" id="pivotPanel">
+                <div class="ti-pivot-empty" id="pivotEmpty">
+                    <i class="fa-solid fa-arrow-pointer"></i>
+                    <p>Click any IOC row to pivot across incidents</p>
+                </div>
+                <div id="pivotContent" style="display:none;">
+                    <div class="ti-pivot-header">
+                        <p class="ti-pivot-value" id="pivotValue"></p>
+                        <div class="ti-pivot-meta">
+                            <span id="pivotTypeBadge" class="ti-type-badge"></span>
+                            <span id="pivotVerdictBadge" class="ti-verdict-badge"></span>
+                            <button class="ti-pivot-copy" id="pivotCopyBtn" onclick="copyPivotValue()">
+                                <i class="fa-regular fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ti-pivot-rep" id="pivotRepSection" style="display:none;">
+                        <h4>VirusTotal</h4>
+                        <div class="ti-pivot-rep-grid" id="pivotRepGrid"></div>
+                    </div>
+                    <div class="ti-pivot-incidents">
+                        <h4 id="pivotIncTitle">Appears in incidents</h4>
+                        <div id="pivotIncList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>{# /tab-ioc #}
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- PANEL 3 — INCIDENT REPORTS                                                -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+    <div class="ti-tab-panel" id="tab-campaigns" style="display:none;">
+
+        <div class="ti-toolbar">
+            <span class="ti-toolbar-label"><i class="fa-regular fa-calendar"></i> Period:</span>
+            <div class="ti-quarter-btns" id="campPeriodBtns"></div>
+            <div class="ti-date-range">
+                <input type="date" id="campDateFrom" title="From">
+                <span>→</span>
+                <input type="date" id="campDateTo" title="To">
+            </div>
+            <a id="exportCampPdf" href="/api/threat-intel/export/campaign-pdf/" class="ti-export-btn ti-export-btn-primary" style="margin-left:auto;">
+                <i class="fa-solid fa-file-pdf"></i> PDF report
+            </a>
+        </div>
+
+        <div class="ti-kpi-bar" id="campKpiBar">
+            <div class="ti-kpi"><span class="ti-kpi-value" id="campKpiTotal">—</span><span class="ti-kpi-label">Incidents</span></div>
+            <div class="ti-kpi"><span class="ti-kpi-value kpi-bad" id="campKpiOpen">—</span><span class="ti-kpi-label">Open / In progress</span></div>
+            <div class="ti-kpi"><span class="ti-kpi-value kpi-warn" id="campKpiCritHigh">—</span><span class="ti-kpi-label">Critical / High</span></div>
+            <div class="ti-kpi"><span class="ti-kpi-value kpi-good" id="campKpiResolved">—</span><span class="ti-kpi-label">Resolved / Closed</span></div>
+            <div class="ti-kpi"><span class="ti-kpi-value" id="campKpiCampaigns">{{ ti_campaign_count }}</span><span class="ti-kpi-label">Campaigns tracked</span></div>
+            <div class="ti-kpi ti-kpi-sla"><span class="ti-kpi-value ti-kpi-mono" id="campKpiTtd">—</span><span class="ti-kpi-label">Avg time to detect</span></div>
+            <div class="ti-kpi ti-kpi-sla"><span class="ti-kpi-value ti-kpi-mono" id="campKpiTtr">—</span><span class="ti-kpi-label">Avg time to respond</span></div>
+            <div class="ti-kpi ti-kpi-sla"><span class="ti-kpi-value ti-kpi-mono" id="campKpiDur">—</span><span class="ti-kpi-label">Avg resolution time</span></div>
+        </div>
+
+        <!-- ── Overview Charts ──────────────────────── -->
+        <div class="home-charts-row" style="margin-bottom:20px;">
+            <div class="home-chart-card">
+                <h3>Incidents over time</h3>
+                <div class="hcc-canvas-wrap"><canvas id="incidentsChart"></canvas></div>
+            </div>
+            <div class="home-chart-card">
+                <h3>Status distribution</h3>
+                <div class="hcc-canvas-wrap"><canvas id="statusChart"></canvas></div>
+            </div>
+            <div class="home-chart-card">
+                <h3>Severity distribution</h3>
+                <div class="hcc-canvas-wrap"><canvas id="severityChart"></canvas></div>
+            </div>
+            <div class="home-chart-card">
+                <h3>Resolutions over time</h3>
+                <div class="hcc-canvas-wrap"><canvas id="resolutionChart"></canvas></div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+            <div class="ti-chart-card ti-monthly-card" id="campMonthlyCard">
+                <h3>Monthly incident activity</h3>
+                <div id="campMonthlyBars" class="ti-monthly-bars">
+                    <div class="ti-monthly-empty">Select a period to see the activity breakdown.</div>
+                </div>
+            </div>
+            <div class="ti-chart-card">
+                <h3>Resolution breakdown <span id="campTpRateChip" style="display:none;font-size:0.72rem;font-weight:600;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;margin-left:8px;"></span></h3>
+                <div id="campResolutionBars" style="padding-top:4px;">
+                    <div class="ti-monthly-empty">No resolution data for this period.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>{# /tab-campaigns #}
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- PANEL 4 — THREAT CAMPAIGNS                                             -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <div class="ti-tab-panel" id="tab-threatcampaigns" style="display:none;">
+
+        <!-- Unattributed incidents banner -->
+        <div class="camp-unattributed-bar" id="campUnattributedBar" style="display:none;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span id="campUnattributedMsg"></span>
+            <a href="?tab=incidents" onclick="switchTopTab('incidents',document.getElementById('topTabIncidents'));return false;" class="camp-unattr-link">Review incidents →</a>
+        </div>
+
+        <!-- Timeline -->
+        <div class="camp-section-header">
+            <h2><i class="fa-solid fa-timeline"></i> Campaign Timeline</h2>
+            <button class="ti-new-campaign-btn" onclick="openCampaignModal()">
+                <i class="fa-solid fa-plus"></i> New Campaign
+            </button>
+        </div>
+        <div class="camp-timeline-wrap" id="campTimeline">
+            <div class="camp-tl-empty">Loading campaigns…</div>
+        </div>
+
+        <!-- Campaign cards -->
+        <div class="camp-section-header" style="margin-top:28px;">
+            <h2><i class="fa-solid fa-layer-group"></i> All Campaigns</h2>
+        </div>
+        <div class="ti-campaign-grid" id="campaignGrid"></div>
+
+    </div>{# /tab-threatcampaigns #}
+
+</div>{# /home-page #}
+</main>
+
+<!-- ── Heatmap Tooltip ───────────────────────────────────────────────────── -->
+<div class="ti-hm-tooltip" id="hmTooltip"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- BATCH ACTION BAR                                                          -->
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <div class="batch-bar" id="batchBar" style="display:none;">
     <span class="batch-count" id="batchCount">0 selected</span>
     <div class="batch-actions">
-        <button class="batch-btn" onclick="batchAction('status')">
-            <i class="fa-solid fa-arrow-right-arrow-left"></i> Status
-        </button>
-        <button class="batch-btn batch-btn-close" onclick="batchAction('close')">
-            <i class="fa-solid fa-circle-check"></i> Close
-        </button>
-        <button class="batch-btn" onclick="batchAction('severity')">
-            <i class="fa-solid fa-triangle-exclamation"></i> Severity
-        </button>
-        <button class="batch-btn" onclick="batchAction('campaign')">
-            <i class="fa-solid fa-folder-tree"></i> Campaign
-        </button>
-        <button class="batch-btn" onclick="batchAction('categories')">
-            <i class="fa-solid fa-tags"></i> Categories
-        </button>
-        <button class="batch-btn" id="batchMergeBtn" onclick="batchAction('merge')" style="display:none;">
-            <i class="fa-solid fa-code-merge"></i> Merge
-        </button>
-        <button class="batch-btn batch-btn-danger" onclick="batchAction('delete')">
-            <i class="fa-solid fa-trash"></i>
-        </button>
+        <button class="batch-btn" onclick="batchAction('status')"><i class="fa-solid fa-arrow-right-arrow-left"></i> Status</button>
+        <button class="batch-btn batch-btn-close" onclick="batchAction('close')"><i class="fa-solid fa-circle-check"></i> Close</button>
+        <button class="batch-btn" onclick="batchAction('severity')"><i class="fa-solid fa-triangle-exclamation"></i> Severity</button>
+        <button class="batch-btn" onclick="batchAction('campaign')"><i class="fa-solid fa-folder-tree"></i> Campaign</button>
+        <button class="batch-btn" onclick="batchAction('categories')"><i class="fa-solid fa-tags"></i> Categories</button>
+        <button class="batch-btn" id="batchMergeBtn" onclick="batchAction('merge')" style="display:none;"><i class="fa-solid fa-code-merge"></i> Merge</button>
+        <button class="batch-btn batch-btn-danger" onclick="batchAction('delete')"><i class="fa-solid fa-trash"></i></button>
     </div>
-    <button class="batch-clear" onclick="clearSelection()" title="Clear selection">
-        <i class="fa-solid fa-xmark"></i>
-    </button>
+    <button class="batch-clear" onclick="clearSelection()" title="Clear selection"><i class="fa-solid fa-xmark"></i></button>
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
-<!-- BATCH MODALS                                                              -->
+<!-- MODALS — HOME (batch operations)                                          -->
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 
-<!-- Resolution + close modal -->
 <div class="home-modal-overlay" id="closeModal">
     <div class="home-modal">
         <div class="home-modal-header">
@@ -210,14 +448,11 @@
         </div>
         <div class="home-modal-footer">
             <button class="home-btn-cancel" onclick="closeModal('closeModal')">Cancel</button>
-            <button class="home-btn-primary" onclick="submitClose()">
-                <i class="fa-solid fa-circle-check"></i> Close Incidents
-            </button>
+            <button class="home-btn-primary" onclick="submitClose()"><i class="fa-solid fa-circle-check"></i> Close Incidents</button>
         </div>
     </div>
 </div>
 
-<!-- Status change modal -->
 <div class="home-modal-overlay" id="statusModal">
     <div class="home-modal home-modal-sm">
         <div class="home-modal-header">
@@ -242,7 +477,6 @@
     </div>
 </div>
 
-<!-- Severity change modal -->
 <div class="home-modal-overlay" id="severityModal">
     <div class="home-modal home-modal-sm">
         <div class="home-modal-header">
@@ -267,12 +501,12 @@
     </div>
 </div>
 
-<!-- Campaign assignment modal -->
-<div class="home-modal-overlay" id="campaignModal">
+<!-- Batch campaign assign (renamed to avoid conflict with TI campaign CRUD modal) -->
+<div class="home-modal-overlay" id="homeCampaignModal">
     <div class="home-modal home-modal-sm">
         <div class="home-modal-header">
             <h3><i class="fa-solid fa-folder-tree"></i> Assign Campaign</h3>
-            <button class="home-modal-close" onclick="closeModal('campaignModal')"><i class="fa-solid fa-xmark"></i></button>
+            <button class="home-modal-close" onclick="closeModal('homeCampaignModal')"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="home-modal-body">
             <p class="home-modal-hint" id="campaignModalHint"></p>
@@ -288,23 +522,18 @@
             <div class="home-field">
                 <label>Action</label>
                 <div style="display:flex;gap:10px;">
-                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-                        <input type="radio" name="campAction" value="assign" checked> Add to campaign
-                    </label>
-                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-                        <input type="radio" name="campAction" value="remove"> Remove from campaign
-                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="campAction" value="assign" checked> Add to campaign</label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="campAction" value="remove"> Remove from campaign</label>
                 </div>
             </div>
         </div>
         <div class="home-modal-footer">
-            <button class="home-btn-cancel" onclick="closeModal('campaignModal')">Cancel</button>
+            <button class="home-btn-cancel" onclick="closeModal('homeCampaignModal')">Cancel</button>
             <button class="home-btn-primary" onclick="submitCampaign()">Apply</button>
         </div>
     </div>
 </div>
 
-<!-- Categories modal -->
 <div class="home-modal-overlay" id="categoriesModal">
     <div class="home-modal home-modal-sm">
         <div class="home-modal-header">
@@ -335,7 +564,6 @@
     </div>
 </div>
 
-<!-- Merge modal -->
 <div class="home-modal-overlay" id="deleteModal">
     <div class="home-modal">
         <div class="home-modal-header">
@@ -347,9 +575,7 @@
         </div>
         <div class="home-modal-footer">
             <button class="home-btn-cancel" onclick="closeModal('deleteModal')">Cancel</button>
-            <button class="home-btn-danger" onclick="closeModal('deleteModal'); submitBatch({ action: 'delete' });">
-                <i class="fa-solid fa-trash"></i> Delete
-            </button>
+            <button class="home-btn-danger" onclick="closeModal('deleteModal'); submitBatch({ action: 'delete' });"><i class="fa-solid fa-trash"></i> Delete</button>
         </div>
     </div>
 </div>
@@ -371,27 +597,107 @@
         </div>
         <div class="home-modal-footer">
             <button class="home-btn-cancel" onclick="closeModal('mergeModal')">Cancel</button>
-            <button class="home-btn-danger" onclick="submitMerge()">
-                <i class="fa-solid fa-code-merge"></i> Merge &amp; delete others
-            </button>
+            <button class="home-btn-danger" onclick="submitMerge()"><i class="fa-solid fa-code-merge"></i> Merge &amp; delete others</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL — TI Campaign CRUD                                                  -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div class="ti-modal-overlay" id="campaignModal">
+    <div class="ti-modal">
+        <div class="ti-modal-header">
+            <h3 id="campaignModalTitle">New Campaign</h3>
+            <button class="ti-modal-close" onclick="closeCampaignModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="ti-modal-body">
+            <input type="hidden" id="campaignId" value="">
+            <div class="ti-field"><label>Name *</label><input type="text" id="campaignName" placeholder="e.g. Q4 2025 Phishing Campaign"></div>
+            <div class="ti-field"><label>Description</label><textarea id="campaignDesc" placeholder="Brief description of this campaign…"></textarea></div>
+            <div class="ti-field">
+                <label>Date range</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="date" id="campaignStart">
+                    <span style="color:var(--text-color-2);">→</span>
+                    <input type="date" id="campaignEnd">
+                </div>
+            </div>
+            <div class="ti-field"><label>Color</label><div class="ti-color-row" id="colorSwatches"></div></div>
+            <div class="ti-field">
+                <label>Link incidents</label>
+                <div class="ti-incident-checklist" id="incidentChecklist">
+                    {% for inc in incidents %}
+                    <label class="ti-inc-check-row">
+                        <input type="checkbox" class="inc-cb" value="{{ inc.id }}">
+                        <span class="ti-inc-check-name">{{ inc.name }}</span>
+                        <span class="ti-inc-check-sev ti-sev-{{ inc.severity }}">{{ inc.severity }}</span>
+                    </label>
+                    {% empty %}
+                    <div style="padding:12px;color:var(--text-color-2);font-size:.82rem;">No accessible incidents.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="ti-modal-footer">
+            <button class="ti-btn-cancel" onclick="closeCampaignModal()">Cancel</button>
+            <button class="ti-btn-save" onclick="saveCampaign()">Save Campaign</button>
         </div>
     </div>
 </div>
 
 <script>
+// ── Top-level tab switching ───────────────────────────────────────────────────
+const _topTabBtns = {
+    incidents: document.getElementById('topTabIncidents'),
+    ioc:       document.getElementById('topTabIoc'),
+    reports:   document.getElementById('topTabReports'),
+    campaigns: document.getElementById('topTabCampaigns'),
+};
+
+let _campaignsTabLoaded = false;
+
+function switchTopTab(tab, btn) {
+    document.getElementById('panel-incidents').style.display        = tab === 'incidents'  ? '' : 'none';
+    document.getElementById('tab-ioc').style.display                = tab === 'ioc'        ? 'flex' : 'none';
+    document.getElementById('tab-campaigns').style.display          = tab === 'reports'    ? 'flex' : 'none';
+    document.getElementById('tab-threatcampaigns').style.display    = tab === 'campaigns'  ? 'flex' : 'none';
+    Object.values(_topTabBtns).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const url = new URL(window.location);
+    if (tab === 'incidents') url.searchParams.delete('tab');
+    else url.searchParams.set('tab', tab);
+    history.replaceState(null, '', url);
+    if (tab === 'reports') {
+        initOverviewCharts();
+        if (typeof loadCampaignStats === 'function') {
+            loadCampaignStats();
+        }
+    }
+    if (tab === 'campaigns' && !_campaignsTabLoaded) {
+        _campaignsTabLoaded = true;
+        loadCampaignTab();
+    }
+}
+
+// Activate correct top tab on load
+(function() {
+    const tab = new URLSearchParams(window.location.search).get('tab') || 'incidents';
+    const btn = _topTabBtns[tab] || _topTabBtns.incidents;
+    switchTopTab(tab in _topTabBtns ? tab : 'incidents', btn);
+})();
+
 // ─── Incident Filtering ───────────────────────────────────────────────────────
 const searchInput = document.getElementById('incidentSearch');
 const sevFilter   = document.getElementById('severityFilter');
 const statFilter  = document.getElementById('statusFilter');
 const cards       = document.querySelectorAll('.incident-card');
-
 const ACTIVE_STATUSES = new Set(['OPEN', 'IN_PROGRESS']);
 
 function applyFilters() {
     const q    = searchInput.value.toLowerCase();
     const sev  = sevFilter.value;
     const stat = statFilter.value;
-
     cards.forEach(card => {
         const matchName   = !q    || card.dataset.name.includes(q);
         const matchSev    = !sev  || card.dataset.severity === sev;
@@ -401,37 +707,25 @@ function applyFilters() {
         card.style.display = (matchName && matchSev && matchStatus) ? '' : 'none';
     });
 }
-
 applyFilters();
-
 searchInput.addEventListener('input', applyFilters);
 sevFilter.addEventListener('change', applyFilters);
 statFilter.addEventListener('change', applyFilters);
 
 // ─── Batch selection ──────────────────────────────────────────────────────────
 let _selectedIds = new Set();
-
 function onCardCheck(cb) {
     const id = parseInt(cb.value);
-    if (cb.checked) {
-        _selectedIds.add(id);
-        cb.closest('.incident-card').classList.add('ic-selected');
-    } else {
-        _selectedIds.delete(id);
-        cb.closest('.incident-card').classList.remove('ic-selected');
-    }
+    if (cb.checked) { _selectedIds.add(id); cb.closest('.incident-card').classList.add('ic-selected'); }
+    else            { _selectedIds.delete(id); cb.closest('.incident-card').classList.remove('ic-selected'); }
     updateBatchBar();
 }
-
 function updateBatchBar() {
-    const n   = _selectedIds.size;
-    const bar = document.getElementById('batchBar');
-    bar.style.display = n > 0 ? 'flex' : 'none';
+    const n = _selectedIds.size;
+    document.getElementById('batchBar').style.display = n > 0 ? 'flex' : 'none';
     document.getElementById('batchCount').textContent = `${n} selected`;
-    // Merge only makes sense with ≥2 incidents
     document.getElementById('batchMergeBtn').style.display = n >= 2 ? '' : 'none';
 }
-
 function clearSelection() {
     _selectedIds.clear();
     document.querySelectorAll('.ic-checkbox').forEach(cb => {
@@ -440,40 +734,30 @@ function clearSelection() {
     });
     updateBatchBar();
 }
-
-function selectedHint() {
-    return `Applying to ${_selectedIds.size} selected incident${_selectedIds.size !== 1 ? 's' : ''}.`;
-}
+function selectedHint() { return `Applying to ${_selectedIds.size} selected incident${_selectedIds.size !== 1 ? 's' : ''}.`; }
 
 // ─── Batch action dispatch ────────────────────────────────────────────────────
 function batchAction(type) {
     if (_selectedIds.size === 0) return;
-
     if (type === 'close') {
         document.getElementById('closeModalHint').textContent = selectedHint();
         document.querySelectorAll('input[name="batchResolution"]').forEach(r => r.checked = false);
         document.getElementById('resolutionNote').value = '';
         showModal('closeModal');
-
     } else if (type === 'status') {
         document.getElementById('statusModalHint').textContent = selectedHint();
         showModal('statusModal');
-
     } else if (type === 'severity') {
         document.getElementById('severityModalHint').textContent = selectedHint();
         showModal('severityModal');
-
     } else if (type === 'campaign') {
         document.getElementById('campaignModalHint').textContent = selectedHint();
-        showModal('campaignModal');
-
+        showModal('homeCampaignModal');
     } else if (type === 'categories') {
         document.getElementById('categoriesModalHint').textContent = selectedHint();
         document.querySelectorAll('.cat-batch-cb').forEach(cb => cb.checked = false);
         showModal('categoriesModal');
-
     } else if (type === 'merge') {
-        // Populate primary selector with currently selected incidents
         const sel = document.getElementById('mergePrimary');
         sel.innerHTML = '<option value="">— select primary —</option>';
         document.querySelectorAll('.incident-card').forEach(card => {
@@ -485,7 +769,6 @@ function batchAction(type) {
             }
         });
         showModal('mergeModal');
-
     } else if (type === 'delete') {
         document.getElementById('deleteModalHint').textContent =
             `Delete ${_selectedIds.size} incident${_selectedIds.size !== 1 ? 's' : ''}? This cannot be undone. You need Incident Lead role on each.`;
@@ -494,44 +777,28 @@ function batchAction(type) {
 }
 
 // ─── Modal helpers ────────────────────────────────────────────────────────────
-function showModal(id) {
-    document.getElementById(id).style.display = 'flex';
-}
-function closeModal(id) {
-    document.getElementById(id).style.display = 'none';
-}
+function showModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 document.querySelectorAll('.home-modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => {
-        if (e.target === overlay) overlay.style.display = 'none';
-    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.style.display = 'none'; });
 });
 
 // ─── Submit helpers ───────────────────────────────────────────────────────────
 function csrfToken() {
-    return document.cookie.split('; ')
-        .find(r => r.startsWith('csrftoken='))?.split('=')[1] ?? '';
+    return document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] ?? '';
 }
-
 async function submitBatch(payload) {
     const body = { ids: [..._selectedIds], ...payload };
     try {
         const resp = await fetch('/api/incidents/batch/', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
-            body:    JSON.stringify(body),
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+            body: JSON.stringify(body),
         });
         const data = await resp.json();
-        if (!resp.ok) {
-            alert(data.message || data.error || 'Error');
-            return;
-        }
-        // Reload to reflect changes
+        if (!resp.ok) { alert(data.message || data.error || 'Error'); return; }
         window.location.reload();
-    } catch (e) {
-        alert('Network error: ' + e.message);
-    }
+    } catch (e) { alert('Network error: ' + e.message); }
 }
-
 function submitClose() {
     const resolution = document.querySelector('input[name="batchResolution"]:checked')?.value;
     if (!resolution) { alert('Please select a resolution.'); return; }
@@ -539,123 +806,278 @@ function submitClose() {
     closeModal('closeModal');
     submitBatch({ action: 'status', status: 'CLOSED', resolution, resolution_note: note });
 }
-
 function submitStatus() {
     const status = document.getElementById('batchStatus').value;
-    if (status === 'CLOSED') {
-        // Redirect to the close modal which requires a resolution
-        closeModal('statusModal');
-        batchAction('close');
-        return;
-    }
-    closeModal('statusModal');
-    submitBatch({ action: 'status', status });
+    if (status === 'CLOSED') { closeModal('statusModal'); batchAction('close'); return; }
+    closeModal('statusModal'); submitBatch({ action: 'status', status });
 }
-
 function submitSeverity() {
     const severity = document.getElementById('batchSeverity').value;
-    closeModal('severityModal');
-    submitBatch({ action: 'severity', severity });
+    closeModal('severityModal'); submitBatch({ action: 'severity', severity });
 }
-
 function submitCampaign() {
     const campaign_id = document.getElementById('batchCampaign').value;
     if (!campaign_id) { alert('Please select a campaign.'); return; }
-    const action = document.querySelector('input[name="campAction"]:checked').value === 'assign'
-        ? 'assign_campaign' : 'remove_campaign';
-    closeModal('campaignModal');
-    submitBatch({ action, campaign_id: parseInt(campaign_id) });
+    const action = document.querySelector('input[name="campAction"]:checked').value === 'assign' ? 'assign_campaign' : 'remove_campaign';
+    closeModal('homeCampaignModal'); submitBatch({ action, campaign_id: parseInt(campaign_id) });
 }
-
 function submitCategories() {
     const category_ids = [...document.querySelectorAll('.cat-batch-cb:checked')].map(cb => parseInt(cb.value));
     if (!category_ids.length) { alert('Select at least one category.'); return; }
-    closeModal('categoriesModal');
-    submitBatch({ action: 'assign_categories', category_ids });
+    closeModal('categoriesModal'); submitBatch({ action: 'assign_categories', category_ids });
 }
-
 function submitMerge() {
     const primary_id = parseInt(document.getElementById('mergePrimary').value);
     if (!primary_id) { alert('Select a primary incident.'); return; }
     if (!confirm('This will permanently delete all non-primary incidents and move their data to the primary. Continue?')) return;
-    closeModal('mergeModal');
-    submitBatch({ action: 'merge', primary_id });
+    closeModal('mergeModal'); submitBatch({ action: 'merge', primary_id });
 }
 
-// ─── Charts ──────────────────────────────────────────────────────────────────
-const severityColors = {
-    CRITICAL: '#dc2626', HIGH: '#ea580c', MEDIUM: '#d97706', LOW: '#16a34a',
+// ─── Overview Charts (lazy — rendered on first visit to Incident Reports tab) ─
+const _SEV_COLORS = { CRITICAL: '#dc2626', HIGH: '#ea580c', MEDIUM: '#d97706', LOW: '#16a34a' };
+const _RES_COLORS = {
+    TRUE_POSITIVE: '#dc2626', FALSE_POSITIVE: '#16a34a', SECURITY_TESTING: '#2563eb',
+    AUTHORIZED_SCAN: '#7c3aed', DUPLICATE: '#d97706', INFORMATIONAL: '#0891b2', UNDETERMINED: '#6b7280',
 };
+const _RES_LABELS = {
+    TRUE_POSITIVE: 'True Positive', FALSE_POSITIVE: 'False Positive', SECURITY_TESTING: 'Security Testing',
+    AUTHORIZED_SCAN: 'Authorized Scan', DUPLICATE: 'Duplicate', INFORMATIONAL: 'Informational', UNDETERMINED: 'Undetermined',
+};
+const _SEVERITIES  = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+const _RESOLUTIONS = ['TRUE_POSITIVE','FALSE_POSITIVE','SECURITY_TESTING','AUTHORIZED_SCAN','DUPLICATE','INFORMATIONAL','UNDETERMINED'];
 const ochreGradient = ['#c49840','#d4b06e','#e8cc8e','#f0dba8','#f5e8cc'];
 
-const lineCtx = document.getElementById('incidentsChart').getContext('2d');
-new Chart(lineCtx, {
-    type: 'bar',
-    data: {
-        labels: {{ timechart_data.labels|safe }},
-        datasets: {{ timechart_data.datasets|safe }}.map(ds => ({
-            ...ds,
-            backgroundColor: severityColors[ds.label] || '#c49840',
-            borderColor:     severityColors[ds.label] || '#c49840',
-            borderWidth: 0,
-        })),
-    },
-    options: {
-        responsive: true, maintainAspectRatio: false,
-        scales: {
-            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
-            y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
-        },
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
-    },
+let _chartsInitialised = false;
+let _incChart, _statusChart, _sevChart, _resChart;
+
+const _chartOpts = (stacked = false, cutout = null) => ({
+    responsive: true, maintainAspectRatio: false,
+    ...(cutout ? { cutout } : {}),
+    scales: stacked ? {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
+    } : undefined,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
 });
 
-function filterByChart(selectEl, label) {
-    if (selectEl.value === label) { selectEl.value = ''; }
-    else { selectEl.value = label; if (selectEl.value !== label) selectEl.value = ''; }
-    applyFilters();
-    document.getElementById('incidentList').scrollIntoView({ behavior: 'smooth', block: 'start' });
+function initOverviewCharts() {
+    if (_chartsInitialised) return;
+    _chartsInitialised = true;
+
+    _incChart = new Chart(document.getElementById('incidentsChart').getContext('2d'), {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: _chartOpts(true),
+    });
+
+    _statusChart = new Chart(document.getElementById('statusChart').getContext('2d'), {
+        type: 'doughnut',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: ochreGradient, borderWidth: 0 }] },
+        options: _chartOpts(false, '60%'),
+    });
+
+    _sevChart = new Chart(document.getElementById('severityChart').getContext('2d'), {
+        type: 'doughnut',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0 }] },
+        options: _chartOpts(false, '60%'),
+    });
+
+    _resChart = new Chart(document.getElementById('resolutionChart').getContext('2d'), {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: { ..._chartOpts(true), plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: { callbacks: { title: ctx => 'Month: ' + ctx[0].label } },
+        }},
+    });
 }
 
-const statusCtx   = document.getElementById('statusChart').getContext('2d');
-const statusChart = new Chart(statusCtx, {
-    type: 'doughnut',
-    data: {
-        labels: {{ status_counts.labels|safe }},
-        datasets: [{ data: {{ status_counts.values|safe }}, backgroundColor: ochreGradient, borderWidth: 0 }],
-    },
-    options: {
-        responsive: true, maintainAspectRatio: false, cutout: '60%',
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
-        onClick(evt, elements) {
-            if (!elements.length) return;
-            filterByChart(statFilter, statusChart.data.labels[elements[0].index]);
-        },
-        onHover(evt, elements) { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
-    },
-});
+function updateOverviewCharts(data) {
+    if (!_chartsInitialised) return;
 
-const sevCtx   = document.getElementById('severityChart').getContext('2d');
-const sevChart = new Chart(sevCtx, {
-    type: 'doughnut',
-    data: {
-        labels: {{ severity_chart_data.labels|safe }},
-        datasets: [{
-            data: {{ severity_chart_data.values|safe }},
-            backgroundColor: {{ severity_chart_data.labels|safe }}.map(l => severityColors[l] || '#c49840'),
-            borderWidth: 0,
-        }],
-    },
-    options: {
-        responsive: true, maintainAspectRatio: false, cutout: '60%',
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
-        onClick(evt, elements) {
-            if (!elements.length) return;
-            filterByChart(sevFilter, sevChart.data.labels[elements[0].index]);
-        },
-        onHover(evt, elements) { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
-    },
-});
+    // Incidents over time (stacked bar by severity per month)
+    const sevRows = data.severity_by_month || [];
+    _incChart.data.labels   = sevRows.map(r => r.month);
+    _incChart.data.datasets = _SEVERITIES
+        .filter(s => sevRows.some(r => (r[s] || 0) > 0))
+        .map(s => ({
+            label: s, borderWidth: 0,
+            backgroundColor: _SEV_COLORS[s],
+            data: sevRows.map(r => r[s] || 0),
+        }));
+    _incChart.update();
+
+    // Status distribution (doughnut)
+    const stMap = data.status_counts || {};
+    const stLabels = Object.keys(stMap);
+    _statusChart.data.labels = stLabels;
+    _statusChart.data.datasets[0].data = stLabels.map(l => stMap[l]);
+    _statusChart.data.datasets[0].backgroundColor = ochreGradient;
+    _statusChart.update();
+
+    // Severity distribution (doughnut)
+    const svMap = data.severity_counts || {};
+    const svLabels = _SEVERITIES.filter(s => svMap[s]);
+    _sevChart.data.labels = svLabels;
+    _sevChart.data.datasets[0].data = svLabels.map(l => svMap[l]);
+    _sevChart.data.datasets[0].backgroundColor = svLabels.map(l => _SEV_COLORS[l]);
+    _sevChart.update();
+
+    // Resolutions over time (stacked bar per month)
+    const resRows = data.resolution_by_month || [];
+    _resChart.data.labels   = resRows.map(r => r.month);
+    _resChart.data.datasets = _RESOLUTIONS
+        .filter(res => resRows.some(r => (r[res] || 0) > 0))
+        .map(res => ({
+            label: _RES_LABELS[res], borderWidth: 0,
+            backgroundColor: _RES_COLORS[res] || '#999',
+            data: resRows.map(r => r[res] || 0),
+        }));
+    _resChart.update();
+}
 </script>
 
+<script src="{% static 'js/threat_intel.js' %}"></script>
+<script>
+// Wrap loadCampaignStats (defined in threat_intel.js) to also refresh the overview charts
+(function () {
+    const _orig = loadCampaignStats;
+    loadCampaignStats = async function () {
+        const p = new URLSearchParams();
+        if (campState.date_from) p.set('date_from', campState.date_from);
+        if (campState.date_to)   p.set('date_to',   campState.date_to);
+        await _orig.apply(this, arguments);
+        try {
+            const resp = await fetch('/api/threat-intel/campaign-stats/?' + p);
+            if (resp.ok) updateOverviewCharts(await resp.json());
+        } catch (e) { console.warn('Chart update error:', e); }
+    };
+})();
+
+// ── Threat Campaigns tab ─────────────────────────────────────────────────────
+
+async function loadCampaignTab() {
+    let data;
+    try {
+        const r = await fetch('/api/campaigns/');
+        data = await r.json();
+    } catch(e) {
+        document.getElementById('campTimeline').innerHTML = '<div class="camp-tl-empty">Failed to load campaigns.</div>';
+        return;
+    }
+
+    const campaigns = data.campaigns || [];
+    const unattributed = data.unattributed_count || 0;
+
+    // Unattributed banner
+    const bar = document.getElementById('campUnattributedBar');
+    if (unattributed > 0) {
+        document.getElementById('campUnattributedMsg').textContent =
+            `${unattributed} incident${unattributed > 1 ? 's have' : ' has'} no campaign assigned.`;
+        bar.style.display = '';
+    } else {
+        bar.style.display = 'none';
+    }
+
+    // Render timeline
+    renderTimeline(campaigns);
+
+    // Render campaign cards via threat_intel.js
+    if (typeof state !== 'undefined' && typeof renderCampaigns === 'function') {
+        state.campaigns = campaigns;
+        renderCampaigns();
+    }
+}
+
+function renderTimeline(campaigns) {
+    const wrap = document.getElementById('campTimeline');
+    if (!campaigns.length) {
+        wrap.innerHTML = '<div class="camp-tl-empty">No campaigns yet. Create one to get started.</div>';
+        return;
+    }
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    // Determine overall date range
+    let minDate = null, maxDate = null;
+    campaigns.forEach(c => {
+        if (c.start_date) {
+            const s = new Date(c.start_date);
+            if (!minDate || s < minDate) minDate = s;
+        }
+        const e = c.end_date ? new Date(c.end_date) : today;
+        if (!maxDate || e > maxDate) maxDate = e;
+    });
+
+    // Snap to month boundaries
+    minDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 1);
+
+    const totalMs = maxDate - minDate;
+
+    // Build month header labels
+    const months = [];
+    let cur = new Date(minDate);
+    while (cur < maxDate) {
+        months.push(new Date(cur));
+        cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+    }
+
+    const fmtMonth = d => d.toLocaleDateString('en-GB', {month:'short', year:'2-digit'});
+    const fmtFull  = d => d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+
+    const pct = d => ((d - minDate) / totalMs * 100).toFixed(3);
+
+    let html = '<div class="camp-tl">';
+
+    // Month headers row
+    html += '<div class="camp-tl-row camp-tl-header-row"><div class="camp-tl-name"></div><div class="camp-tl-track camp-tl-months">';
+    months.forEach(m => {
+        const w = (1 / months.length * 100).toFixed(3);
+        html += `<span class="camp-tl-month" style="width:${w}%">${fmtMonth(m)}</span>`;
+    });
+    html += '</div></div>';
+
+    // Today marker position
+    const todayPct = Math.min(100, Math.max(0, parseFloat(pct(today))));
+
+    // Campaign rows — sorted by start_date
+    const sorted = [...campaigns].sort((a,b) => (a.start_date||'') < (b.start_date||'') ? -1 : 1);
+    sorted.forEach(c => {
+        const start = c.start_date ? new Date(c.start_date) : minDate;
+        const end   = c.end_date   ? new Date(c.end_date)   : today;
+        const ongoing = !c.end_date;
+
+        const left  = Math.max(0, parseFloat(pct(start)));
+        const right = Math.min(100, parseFloat(pct(end)));
+        const width = Math.max(0.5, right - left);
+
+        const startLabel = fmtFull(start);
+        const endLabel   = ongoing ? 'Ongoing' : fmtFull(end);
+        const incTxt     = c.incident_count === 1 ? '1 incident' : `${c.incident_count} incidents`;
+
+        html += `
+        <div class="camp-tl-row" onclick="openCampaignModal(${c.id})" style="cursor:pointer;">
+            <div class="camp-tl-name" title="${c.name}">${c.name}</div>
+            <div class="camp-tl-track">
+                <div class="camp-tl-today" style="left:${todayPct}%"></div>
+                <div class="camp-tl-bar${ongoing ? ' camp-tl-ongoing' : ''}"
+                     style="left:${left}%;width:${width}%;background:${c.color};"
+                     title="${c.name}\n${startLabel} → ${endLabel}\n${incTxt}">
+                    <span class="camp-tl-bar-label">${c.name}</span>
+                </div>
+                <div class="camp-tl-pin camp-tl-pin-start" style="left:${left}%" title="Start: ${startLabel}"></div>
+                <div class="camp-tl-pin camp-tl-pin-end${ongoing ? ' camp-tl-pin-ongoing' : ''}"
+                     style="left:${Math.min(right, 99.8)}%" title="${ongoing ? 'Ongoing' : 'End: '+endLabel}"></div>
+                <div class="camp-tl-date-label camp-tl-date-start" style="left:${left}%">${startLabel}</div>
+                <div class="camp-tl-date-label camp-tl-date-end" style="left:${Math.min(right, 99.5)}%">${endLabel}</div>
+            </div>
+        </div>`;
+    });
+
+    html += '</div>';
+    wrap.innerHTML = html;
+}
+</script>
 {% endblock %}

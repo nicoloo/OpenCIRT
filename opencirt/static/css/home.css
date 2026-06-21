@@ -3,9 +3,11 @@
    ═══════════════════════════════════════ */
 
 .home-page {
-    padding: 28px 32px;
-    max-width: 1400px;
+    padding: 24px 28px;
+    max-width: 1600px;
     margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* ─── Stats Bar ─── */
@@ -298,7 +300,7 @@
 /* ─── Charts Row ─── */
 .home-charts-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
     gap: 18px;
     min-width: 0; /* prevent grid blowout */
 }
@@ -803,3 +805,193 @@
 .home-btn-danger:hover {
     opacity: 0.85;
 }
+
+/* ═══════════════════════════════════════
+   THREAT CAMPAIGNS TAB
+   ═══════════════════════════════════════ */
+
+.camp-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+.camp-section-header h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+/* Unattributed incidents banner */
+.camp-unattributed-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    font-size: 0.86rem;
+    color: #92400e;
+}
+.camp-unattributed-bar i { color: #d97706; }
+.camp-unattr-link {
+    margin-left: auto;
+    color: #b45309;
+    font-weight: 600;
+    text-decoration: none;
+}
+.camp-unattr-link:hover { text-decoration: underline; }
+
+/* Timeline wrapper */
+.camp-timeline-wrap {
+    background: var(--widget-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px 20px 16px;
+    overflow-x: auto;
+}
+
+.camp-tl-empty {
+    color: var(--text-color-2);
+    font-size: 0.86rem;
+    padding: 24px 0;
+    text-align: center;
+}
+
+/* Timeline grid */
+.camp-tl {
+    min-width: 700px;
+}
+
+.camp-tl-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    min-height: 36px;
+    margin-bottom: 6px;
+}
+.camp-tl-row.camp-tl-header-row { margin-bottom: 2px; }
+
+/* Left label column */
+.camp-tl-name {
+    width: 220px;
+    min-width: 220px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-color);
+    padding-right: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+.camp-tl-header-row .camp-tl-name { color: transparent; }
+
+/* Track (right side) */
+.camp-tl-track {
+    flex: 1;
+    position: relative;
+    height: 36px;
+    background: var(--background-color, #f5f5f5);
+    border-radius: 6px;
+}
+
+/* Month labels */
+.camp-tl-months {
+    display: flex;
+    height: 24px;
+    background: transparent;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+}
+.camp-tl-month {
+    font-size: 0.72rem;
+    color: var(--text-color-2);
+    text-align: center;
+    border-right: 1px solid var(--border-color);
+    white-space: nowrap;
+    overflow: hidden;
+    padding-top: 4px;
+    flex-shrink: 0;
+}
+.camp-tl-month:last-child { border-right: none; }
+
+/* Today vertical line */
+.camp-tl-today {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ef4444;
+    opacity: 0.6;
+    z-index: 1;
+    border-radius: 1px;
+}
+
+/* Campaign bar */
+.camp-tl-bar {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 22px;
+    border-radius: 5px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    cursor: default;
+    transition: filter 0.12s;
+    min-width: 4px;
+}
+.camp-tl-bar:hover { filter: brightness(1.15); }
+.camp-tl-bar.camp-tl-ongoing {
+    border-right: 3px dashed rgba(255,255,255,0.7);
+}
+.camp-tl-bar-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #fff;
+    padding: 0 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    pointer-events: none;
+}
+
+/* Start/end pins */
+.camp-tl-pin {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-color);
+    z-index: 3;
+    border: 2px solid var(--widget-background-color);
+}
+.camp-tl-pin-ongoing {
+    background: transparent;
+    border: 2px dashed var(--text-color-2);
+}
+
+/* Date labels below bars */
+.camp-tl-date-label {
+    position: absolute;
+    bottom: -1px;
+    font-size: 0.63rem;
+    color: var(--text-color-2);
+    white-space: nowrap;
+    transform: translateX(-50%);
+    pointer-events: none;
+    font-weight: 500;
+}
+.camp-tl-date-start { color: var(--text-color); }
+.camp-tl-date-end   { color: var(--text-color-2); }

@@ -4,13 +4,13 @@ from django.contrib.auth import login, logout, authenticate
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
 from opencirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformAuditLog, PlatformSettings, CtiProvider, IncidentCategory, Campaign
-from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, sync_incident_times, get_incidents_by_day_and_severity
+from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, sync_incident_times
 from .threat_intel import schedule_lookup, ELIGIBLE_TYPES as THREAT_INTEL_ELIGIBLE_TYPES
 import json
 import os
 import re
 import random
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date as dt_date
 from django.utils import timezone
 from django.template.loader import render_to_string
 from xhtml2pdf import pisa
@@ -114,68 +114,34 @@ def home(request):
     ]
 
 
-    
-    # Prepare graphs data
-    # Pie chart
-    piechart_data = {
-        'labels': list(Counter(inc.status for inc in incidents_list).keys()),
-        'values': list(Counter(inc.status for inc in incidents_list).values()),
-    }
-    # Get sorted unique dates
-    timechart_data = get_incidents_by_day_and_severity()
-
-    # Extract sorted dates
-    dates = sorted(timechart_data.keys())
-
-    # Extract unique severities
-    severities = set()
-    for sev_data in timechart_data.values():
-        severities.update(sev_data.keys())
-    severities = sorted(severities)  # Sort to maintain order
-
-    # Prepare data for Chart.js
-    severity_data = {sev: [timechart_data[date].get(sev, 0) for date in dates] for sev in severities}
-
-    # Prepare dataset for Chart.js
-    datasets = []
-    for severity in severities:
-        datasets.append({
-            "label": severity,
-            "data": severity_data[severity],
-            # "borderColor": severity_colors.get(severity, "gray"),
-        })
-
-    context = {
-        "labels": dates,
-        "datasets": datasets
-    }
-
     # Stats bar
     total_count = len(incidents_list)
     active_count = sum(1 for inc in incidents_list if inc.status in ('OPEN', 'IN_PROGRESS'))
     critical_count = sum(1 for inc in incidents_list if inc.severity == 'CRITICAL')
     total_iocs = sum(inc.genericiocs.count() for inc in incidents_list)
 
-    # Severity distribution donut
-    severity_counter = Counter(inc.severity for inc in incidents_list)
-    severity_chart_data = {
-        'labels': list(severity_counter.keys()),
-        'values': list(severity_counter.values()),
-    }
-
     from .choices_processor import INCIDENT_RESOLUTION_CHOICES
+
+    # ── Threat Intel context (merged into home page) ──
+    from .choices_processor import choices_context
+    from django.http import HttpRequest as _HttpRequest
+    _req = _HttpRequest()
+    _choices = choices_context(_req)
+
+    ti_incidents = _accessible_incidents(request.user)
+    ti_campaigns = Campaign.objects.all().prefetch_related('incidents') if _has_platform_access(request.user) else Campaign.objects.none()
+    all_iocs     = GenericIoc.objects.filter(incident__in=ti_incidents)
+    ti_total_iocs  = all_iocs.count()
+    ti_unique_iocs = all_iocs.values('value').distinct().count()
 
     return render(request, 'home.html', {
         'incidents': incidents_list,
         'user': request.user,
-        'status_counts': piechart_data,
-        'timechart_data': context,
         'kpis': kpis,
         'total_count': total_count,
         'active_count': active_count,
         'critical_count': critical_count,
         'total_iocs': total_iocs,
-        'severity_chart_data': severity_chart_data,
         'INCIDENT_RESOLUTION_CHOICES': INCIDENT_RESOLUTION_CHOICES,
         'INCIDENT_STATUS_CHOICES': [
             ('OPEN', 'Open'), ('IN_PROGRESS', 'In Progress'),
@@ -185,8 +151,16 @@ def home(request):
             ('LOW', 'Low'), ('MEDIUM', 'Medium'),
             ('HIGH', 'High'), ('CRITICAL', 'Critical'),
         ],
-        'campaigns': Campaign.objects.all().order_by('name') if _has_platform_access(request.user) else Campaign.objects.none(),
+        'campaigns': ti_campaigns,
         'categories': IncidentCategory.objects.all().order_by('name'),
+        # Threat Intel
+        'ti_total_iocs':    ti_total_iocs,
+        'ti_unique_iocs':   ti_unique_iocs,
+        'ti_incident_count': ti_incidents.count(),
+        'ti_campaign_count': ti_campaigns.count(),
+        'IOC_TYPE_CHOICES':   _choices['GENERIC_IOC_TYPE_CHOICES'],
+        'IOC_STATUS_CHOICES': _choices['GENERIC_IOC_STATUS_CHOICES'],
+        'cti_configured':  CtiProvider.objects.filter(enabled=True).exclude(api_key='').exists(),
     })
 
 
@@ -3167,36 +3141,8 @@ def _ti_ioc_queryset(user, params):
 
 @login_required(login_url='login')
 def threat_intel(request):
-    """GET /threat-intel/ — Threat Intelligence Hub page."""
-    from django.db.models import Count
-
-    incidents   = _accessible_incidents(request.user)
-    campaigns   = Campaign.objects.all().prefetch_related('incidents') if _has_platform_access(request.user) else Campaign.objects.none()
-    all_iocs    = GenericIoc.objects.filter(incident__in=incidents)
-    total_iocs  = all_iocs.count()
-    unique_iocs = all_iocs.values('value').distinct().count()
-
-    malicious_count = all_iocs.filter(reputation__status='malicious').count()
-    pct_malicious   = round(malicious_count / total_iocs * 100, 1) if total_iocs else 0
-
-    from .choices_processor import choices_context
-    from django.http import HttpRequest
-    req = HttpRequest()
-    choices = choices_context(req)
-
-    context = {
-        'incidents':       incidents.order_by('-created_at'),
-        'campaigns':       campaigns,
-        'total_iocs':      total_iocs,
-        'unique_iocs':     unique_iocs,
-        'pct_malicious':   pct_malicious,
-        'incident_count':  incidents.count(),
-        'campaign_count':  campaigns.count(),
-        'IOC_TYPE_CHOICES':   choices['GENERIC_IOC_TYPE_CHOICES'],
-        'IOC_STATUS_CHOICES': choices['GENERIC_IOC_STATUS_CHOICES'],
-        'cti_configured':  CtiProvider.objects.filter(enabled=True).exclude(api_key='').exists(),
-    }
-    return render(request, 'threat_intel.html', context)
+    """Redirect to merged home page, Threat Intel tab."""
+    return redirect('/home?tab=ioc')
 
 
 @login_required(login_url='login')
@@ -3390,10 +3336,12 @@ def api_campaigns_list(request):
     accessible_ids = list(_accessible_incidents(request.user).values_list('id', flat=True))
     campaigns = Campaign.objects.prefetch_related('incidents').order_by('-created_at')
 
+    attributed_incident_ids = set()
     data = []
     for c in campaigns:
         accessible_incidents = c.incidents.filter(id__in=accessible_ids).select_related()
         incident_ids = [i.id for i in accessible_incidents]
+        attributed_incident_ids.update(incident_ids)
         ioc_count = GenericIoc.objects.filter(incident_id__in=incident_ids).count()
         data.append({
             'id':           c.id,
@@ -3409,7 +3357,8 @@ def api_campaigns_list(request):
                              for i in accessible_incidents],
         })
 
-    return JsonResponse({'campaigns': data})
+    unattributed = _accessible_incidents(request.user).exclude(id__in=attributed_incident_ids).count()
+    return JsonResponse({'campaigns': data, 'unattributed_count': unattributed})
 
 
 _HEX_COLOR_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
@@ -3738,6 +3687,51 @@ def api_ti_campaign_stats(request):
     closed_total = resolved + closed
     tp_rate = round(tp_count / closed_total * 100) if closed_total else None
 
+    # ── Chart datasets for the overview charts ─────────────────────────────
+    # Incidents by month + severity (stacked bar)
+    sev_by_month_qs = (
+        incidents
+        .annotate(month=TruncMonth('created_at'))
+        .values('month', 'severity')
+        .annotate(cnt=Count('id'))
+        .order_by('month')
+    )
+    sev_by_month_data = {}
+    for row in sev_by_month_qs:
+        if row['month']:
+            m = row['month'].strftime('%Y-%m')
+            if m not in sev_by_month_data:
+                sev_by_month_data[m] = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+            sev_by_month_data[m][row['severity']] = row['cnt']
+    severity_by_month = [
+        {'month': m, **counts} for m, counts in sorted(sev_by_month_data.items())
+    ]
+
+    # Status + severity counts (doughnuts)
+    status_counts_map  = dict(incidents.values('status').annotate(c=Count('id')).values_list('status', 'c'))
+    severity_counts_map = dict(incidents.values('severity').annotate(c=Count('id')).values_list('severity', 'c'))
+
+    # Resolutions by month (stacked bar)
+    res_by_month_qs = (
+        incidents
+        .exclude(resolution='')
+        .filter(status__in=['CLOSED', 'RESOLVED'])
+        .annotate(month=TruncMonth('updated_at'))
+        .values('month', 'resolution')
+        .annotate(cnt=Count('id'))
+        .order_by('month')
+    )
+    res_by_month_data = {}
+    for row in res_by_month_qs:
+        if row['month']:
+            m = row['month'].strftime('%Y-%m')
+            if m not in res_by_month_data:
+                res_by_month_data[m] = {}
+            res_by_month_data[m][row['resolution']] = row['cnt']
+    resolution_by_month = [
+        {'month': m, **counts} for m, counts in sorted(res_by_month_data.items())
+    ]
+
     return JsonResponse({
         'total':       total,
         'open':        open_,
@@ -3752,6 +3746,11 @@ def api_ti_campaign_stats(request):
         'avg_duration': fmt_td(sla['avg_dur']),
         'resolution_breakdown': resolution_breakdown,
         'tp_rate':     tp_rate,
+        # chart data
+        'severity_by_month':   severity_by_month,
+        'status_counts':       status_counts_map,
+        'severity_counts':     severity_counts_map,
+        'resolution_by_month': resolution_by_month,
     })
 
 

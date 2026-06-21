@@ -3,74 +3,82 @@
 
 {% block styles %}
 <style>
-.settings-page {
-    padding: 32px 32px;
-    max-width: 700px;
+/* ── Layout ── */
+.sp-page {
+    max-width: 1600px;
     margin: 0 auto;
+    padding: 32px 24px 48px;
 }
-
-.settings-page h1 {
-    font-size: 1.3rem;
+.sp-title {
+    font-size: 1.25rem;
     font-weight: 700;
+    margin: 0 0 28px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     color: var(--text-color-1);
-    margin: 0 0 28px 0;
 }
+.sp-title i { color: var(--accent-color); }
 
-.settings-section {
+/* ── Section cards ── */
+.sp-section {
     background: var(--widget-background-color);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     margin-bottom: 20px;
     overflow: hidden;
 }
-
-.settings-section-header {
-    padding: 12px 20px;
+.sp-section-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
     border-bottom: 1px solid var(--border-color);
     background: var(--main-color-1);
 }
-
-.settings-section-header h2 {
+.sp-section-head h2 {
+    margin: 0;
     font-size: 0.78rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.07em;
     color: var(--text-color-1);
+}
+.sp-section-head i { color: var(--accent-color); font-size: 0.85rem; }
+.sp-admin-badge {
+    margin-left: auto;
+    font-size: 0.68rem;
+    font-weight: 700;
+    background: rgba(196,152,64,0.15);
+    color: var(--accent-color);
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+}
+.sp-section-body { padding: 0; }
+.sp-section-desc {
+    padding: 14px 20px 0;
+    font-size: 0.82rem;
+    color: var(--text-color-2);
+    line-height: 1.5;
     margin: 0;
 }
 
-.settings-row {
+/* ── Form rows ── */
+.sp-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 20px;
     padding: 14px 20px;
     border-bottom: 1px solid var(--border-color);
-    gap: 20px;
 }
+.sp-row:last-child { border-bottom: none; }
+.sp-row-label strong { display: block; font-size: 0.88rem; margin-bottom: 2px; }
+.sp-row-label span  { font-size: 0.77rem; color: var(--text-color-2); line-height: 1.4; }
 
-.settings-row:last-child {
-    border-bottom: none;
-}
-
-.settings-row-label {
-    flex: 1;
-    min-width: 0;
-}
-
-.settings-row-label strong {
-    display: block;
-    font-size: 0.88rem;
-    color: var(--text-color-1);
-    margin-bottom: 2px;
-}
-
-.settings-row-label span {
-    font-size: 0.77rem;
-    color: var(--text-color-2);
-    line-height: 1.4;
-}
-
-.settings-select {
+/* ── Inputs / selects ── */
+.sp-select, .sp-input {
     padding: 7px 10px;
     border: 1px solid var(--border-color);
     border-radius: 7px;
@@ -78,330 +86,366 @@
     color: var(--text-color-1);
     font-size: 0.85rem;
     font-family: inherit;
-    cursor: pointer;
-    min-width: 140px;
-    flex-shrink: 0;
     transition: border-color 0.15s;
 }
+.sp-select { min-width: 140px; cursor: pointer; }
+.sp-select:focus, .sp-input:focus { outline: none; border-color: var(--accent-color); }
+.sp-input-mono { font-family: monospace; }
 
-.settings-select:focus {
-    outline: none;
-    border-color: var(--main-color-3);
+/* ── Buttons ── */
+.sp-btn-primary {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 22px; background: var(--accent-color); color: #fff;
+    border: none; border-radius: 8px; font-size: 0.86rem; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: opacity 0.15s;
+    white-space: nowrap;
+}
+.sp-btn-primary:hover { opacity: 0.88; }
+.sp-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.sp-btn-secondary {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 16px; background: transparent;
+    border: 1px solid var(--border-color); border-radius: 8px;
+    color: var(--text-color-2); font-size: 0.84rem; font-family: inherit;
+    cursor: pointer; transition: background 0.12s; white-space: nowrap;
+}
+.sp-btn-secondary:hover { background: var(--border-color); }
+.sp-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+.sp-btn-danger {
+    padding: 5px 12px; border: 1px solid #dc2626; border-radius: 7px;
+    background: transparent; color: #dc2626; font-size: 0.8rem;
+    cursor: pointer; font-family: inherit; transition: background 0.12s;
+}
+.sp-btn-danger:hover { background: #fee2e2; }
+
+/* ── Flash messages ── */
+.sp-flash-ok  { font-size: 0.82rem; font-weight: 600; color: #16a34a; display: none; }
+.sp-flash-err { font-size: 0.82rem; font-weight: 600; color: #dc2626; display: none; }
+
+/* ── Table ── */
+.sp-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.sp-table th {
+    padding: 9px 14px; text-align: left;
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--text-color-2);
+    background: var(--background-color); border-bottom: 1px solid var(--border-color);
+}
+.sp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-color); }
+.sp-table tbody tr:last-child td { border-bottom: none; }
+.sp-table tbody tr:hover { background: rgba(0,0,0,.02); }
+.sp-table-wrap { overflow-x: auto; }
+
+/* ── CTI enable pill ── */
+.sp-pill-on  { padding: 3px 12px; border-radius: 20px; border: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; font-family: inherit; background: rgba(22,163,74,.15); color: #16a34a; }
+.sp-pill-off { padding: 3px 12px; border-radius: 20px; border: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; font-family: inherit; background: rgba(107,114,128,.15); color: #6b7280; }
+
+/* ── CTI add form ── */
+.sp-add-form {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    align-items: flex-end; padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+}
+.sp-field { display: flex; flex-direction: column; gap: 5px; }
+.sp-field label {
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-color-2);
 }
 
-.settings-save-row {
-    margin-top: 24px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
+/* ── Users table role select ── */
+.sp-role-select {
+    padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 7px;
+    background: var(--background-color); color: var(--text-color-1);
+    font-size: 0.82rem; font-family: inherit; cursor: pointer;
+}
+.sp-role-select:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Audit log filters ── */
+.al-filters {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    align-items: flex-end; padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+.al-filter-field { display: flex; flex-direction: column; gap: 4px; }
+.al-filter-field label {
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-color-2);
+}
+.al-filter-input {
+    padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 7px;
+    background: var(--background-color); color: var(--text-color-1);
+    font-size: 0.82rem; font-family: inherit;
+}
+.al-filter-input:focus { outline: none; border-color: var(--accent-color); }
+
+/* ── Audit log table ── */
+.al-table-wrap { overflow-x: auto; }
+.al-table { width: 100%; border-collapse: collapse; font-size: 0.81rem; min-width: 800px; }
+.al-table th {
+    padding: 9px 12px; text-align: left;
+    font-size: 0.67rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--text-color-2);
+    background: var(--background-color); border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+.al-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+.al-table tbody tr:last-child td { border-bottom: none; }
+.al-table tbody tr:hover { background: rgba(0,0,0,.02); }
+
+/* ── Audit badges ── */
+.al-badge {
+    display: inline-block; font-size: 0.67rem; font-weight: 700;
+    padding: 2px 7px; border-radius: 20px; letter-spacing: .03em;
+    white-space: nowrap; border: 1px solid transparent;
+}
+.al-src-platform { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
+.al-src-incident { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+.al-act-login,.al-act-logout,.al-act-register { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+.al-act-role_change,.al-act-settings_change   { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.al-act-incident_create,.al-act-create        { background: #dcfce7; color: #166534; border-color: #86efac; }
+.al-act-incident_delete,.al-act-delete        { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.al-act-update  { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+.al-act-export  { background: #e0e7ff; color: #3730a3; border-color: #a5b4fc; }
+.al-act-access  { background: #f3f4f6; color: #4b5563; border-color: #d1d5db; }
+.al-act-cti_change,.al-act-ai_change { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+.al-act-other   { background: #f3f4f6; color: #4b5563; border-color: #d1d5db; }
+
+/* ── Audit pagination ── */
+.al-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; border-top: 1px solid var(--border-color);
+    font-size: 0.81rem; color: var(--text-color-2);
+}
+.al-pagination { display: flex; align-items: center; gap: 8px; }
+
+/* ── Save row ── */
+.sp-save-row {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 24px; padding: 0 0 4px;
 }
 
-.btn-settings-save {
-    padding: 11px 28px;
-    background: var(--accent-color);
-    color: #fff;
-    border: none;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: background 0.15s;
-}
-
-.btn-settings-save:hover { background: #a8832c; }
-
-.settings-saved-msg {
-    font-size: 0.85rem;
-    color: var(--accent-color);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-}
-
-@media (max-width: 640px) {
-    .settings-page { padding: 16px 14px; }
-    .settings-row { flex-wrap: wrap; gap: 10px; }
-    .settings-select { min-width: 100%; }
+/* ── Responsive ── */
+@media (max-width: 700px) {
+    .sp-page { padding: 16px 12px 40px; }
+    .sp-row { flex-wrap: wrap; gap: 10px; }
+    .sp-select { min-width: 100%; }
+    .al-filters { gap: 8px; }
+    .al-filter-input { width: 100%; box-sizing: border-box; }
+    .al-footer { flex-direction: column; gap: 10px; align-items: flex-start; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
 <main>
-<form class="settings-page" method="POST" action="/settings">
-    {% csrf_token %}
+<div class="sp-page">
 
-    <h1>
-        <i class="fa-solid fa-gear" style="color:var(--accent-color);margin-right:8px;"></i>
-        Settings
-    </h1>
+<form method="POST" action="/settings">
+{% csrf_token %}
 
-    <!-- ── Platform Defaults ── -->
-    <div class="settings-section">
-        <div class="settings-section-header"><h2>Platform Defaults</h2></div>
-        <div class="settings-row">
-            <div class="settings-row-label">
-                <strong>Default incident severity</strong>
-                <span>Pre-selected severity when creating a new incident</span>
-            </div>
-            <select class="settings-select" name="default_severity">
-                {% for value, label in INCIDENT_SEVERITY_CHOICES %}
-                <option value="{{ value }}"
-                    {% if prefs.default_severity == value %}selected
-                    {% elif not prefs.default_severity and value == 'MEDIUM' %}selected
-                    {% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="settings-row">
-            <div class="settings-row-label">
-                <strong>Default chart period</strong>
-                <span>Time range shown in home page charts</span>
-            </div>
-            <select class="settings-select" name="chart_period">
-                <option value="7d"  {% if prefs.chart_period == '7d' %}selected{% endif %}>Last 7 days</option>
-                <option value="30d" {% if prefs.chart_period == '30d' or not prefs.chart_period %}selected{% endif %}>Last 30 days</option>
-                <option value="all" {% if prefs.chart_period == 'all' %}selected{% endif %}>All time</option>
-            </select>
-        </div>
+<h1 class="sp-title"><i class="fa-solid fa-gear"></i> Settings</h1>
+
+<!-- ── Platform Defaults ── -->
+<div class="sp-section">
+    <div class="sp-section-head">
+        <i class="fa-solid fa-sliders"></i>
+        <h2>Platform Defaults</h2>
     </div>
+    <div class="sp-row">
+        <div class="sp-row-label">
+            <strong>Default incident severity</strong>
+            <span>Pre-selected severity when creating a new incident</span>
+        </div>
+        <select class="sp-select" name="default_severity">
+            {% for value, label in INCIDENT_SEVERITY_CHOICES %}
+            <option value="{{ value }}"
+                {% if prefs.default_severity == value %}selected
+                {% elif not prefs.default_severity and value == 'MEDIUM' %}selected
+                {% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="sp-row">
+        <div class="sp-row-label">
+            <strong>Default chart period</strong>
+            <span>Time range shown in home page charts</span>
+        </div>
+        <select class="sp-select" name="chart_period">
+            <option value="7d"  {% if prefs.chart_period == '7d' %}selected{% endif %}>Last 7 days</option>
+            <option value="30d" {% if prefs.chart_period == '30d' or not prefs.chart_period %}selected{% endif %}>Last 30 days</option>
+            <option value="all" {% if prefs.chart_period == 'all' %}selected{% endif %}>All time</option>
+        </select>
+    </div>
+</div>
 
 {% if user.is_admin %}
-    <!-- ── CTI Integration (admin only) ── -->
-    <div class="settings-section" id="cti-config-section">
-        <div class="settings-section-header" style="display:flex;align-items:center;gap:8px;">
-            <h2 style="margin:0;"><i class="fa-solid fa-shield-halved" style="color:var(--accent-color);margin-right:6px;"></i>CTI Integration</h2>
-            <span style="font-size:0.72rem;font-weight:600;background:rgba(196,152,64,0.15);color:var(--accent-color);padding:2px 8px;border-radius:20px;letter-spacing:0.04em;">ADMIN</span>
-        </div>
 
-        <!-- Configured providers table -->
-        {% if cti_providers %}
-        <div style="overflow-x:auto;border-bottom:1px solid var(--border-color);">
-            <table style="width:100%;border-collapse:collapse;font-size:0.86rem;">
-                <thead>
-                    <tr>
-                        <th style="padding:9px 14px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-color-2);background:var(--background-color);">Provider</th>
-                        <th style="padding:9px 14px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-color-2);background:var(--background-color);">Key</th>
-                        <th style="padding:9px 14px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-color-2);background:var(--background-color);">Enabled</th>
-                        <th style="padding:9px 14px;background:var(--background-color);"></th>
-                    </tr>
-                </thead>
-                <tbody id="cti-provider-tbody">
-                    {% for p in cti_providers %}
-                    <tr data-provider="{{ p.name }}">
-                        <td style="padding:10px 14px;color:var(--text-color-1);font-weight:600;">{{ p.get_name_display }}</td>
-                        <td style="padding:10px 14px;color:var(--text-color-2);font-size:0.8rem;">
-                            {% if p.api_key %}
-                            <span style="color:#28a745;"><i class="fa-solid fa-check-circle"></i> Configured</span>
-                            {% else %}
-                            <span style="color:#dc3545;"><i class="fa-solid fa-circle-xmark"></i> Not set</span>
-                            {% endif %}
-                        </td>
-                        <td style="padding:10px 14px;">
-                            <button type="button"
-                                    class="cti-enable-toggle"
-                                    data-name="{{ p.name }}"
-                                    data-enabled="{{ p.enabled|yesno:'true,false' }}"
-                                    style="padding:4px 12px;border-radius:20px;border:none;
-                                           font-size:0.75rem;font-weight:700;cursor:pointer;
-                                           font-family:inherit;letter-spacing:0.03em;
-                                           background:{% if p.enabled %}rgba(22,163,74,0.15){% else %}rgba(107,114,128,0.15){% endif %};
-                                           color:{% if p.enabled %}#16a34a{% else %}#6b7280{% endif %};">
-                                {% if p.enabled %}● Enabled{% else %}○ Disabled{% endif %}
-                            </button>
-                        </td>
-                        <td style="padding:10px 14px;text-align:right;">
-                            <button type="button" class="cti-delete-btn"
-                                    data-name="{{ p.name }}"
-                                    style="padding:5px 12px;border:1px solid #dc3545;border-radius:7px;background:transparent;color:#dc3545;font-size:0.8rem;cursor:pointer;font-family:inherit;">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p style="padding:14px 20px;color:var(--text-color-2);font-size:0.85rem;margin:0;">No providers configured yet.</p>
-        {% endif %}
-
-        <!-- Add provider form -->
-        <div style="padding:18px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
-            <div style="display:flex;flex-direction:column;gap:5px;">
-                <label style="font-size:0.72rem;font-weight:600;color:var(--text-color-2);text-transform:uppercase;letter-spacing:0.06em;">Provider</label>
-                <select id="cti-new-name" class="settings-select" style="min-width:180px;">
-                    <option value="VIRUSTOTAL">VirusTotal</option>
-                    <option value="ABUSEIPDB">AbuseIPDB</option>
-                    <option value="SHODAN">Shodan</option>
-                    <option value="OTXALIENVAULT">OTX AlienVault</option>
-                    <option value="MISP">MISP</option>
-                </select>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:200px;">
-                <label style="font-size:0.72rem;font-weight:600;color:var(--text-color-2);text-transform:uppercase;letter-spacing:0.06em;">API key</label>
-                <input type="password" id="cti-new-key" autocomplete="off"
-                       placeholder="Paste API key…"
-                       style="padding:7px 10px;border:1px solid var(--border-color);border-radius:7px;
-                              background:var(--background-color);color:var(--text-color-1);
-                              font-size:0.85rem;font-family:monospace;">
-            </div>
-            <div style="display:flex;flex-direction:column;gap:5px;" id="cti-base-url-wrap" style="display:none;">
-                <label style="font-size:0.72rem;font-weight:600;color:var(--text-color-2);text-transform:uppercase;letter-spacing:0.06em;">Base URL (MISP)</label>
-                <input type="text" id="cti-new-base-url" placeholder="https://misp.example.com"
-                       style="padding:7px 10px;border:1px solid var(--border-color);border-radius:7px;
-                              background:var(--background-color);color:var(--text-color-1);font-size:0.85rem;">
-            </div>
-            <button type="button" id="cti-add-btn" class="btn-settings-save" style="padding:9px 20px;font-size:0.85rem;white-space:nowrap;">
-                <i class="fa-solid fa-plus"></i> Add provider
-            </button>
-        </div>
-
-        <div style="padding:0 20px 14px;">
-            <span id="cti-save-msg" style="display:none;font-size:0.83rem;font-weight:600;color:var(--accent-color);"><i class="fa-solid fa-check"></i> Saved</span>
-            <span id="cti-save-err" style="display:none;font-size:0.83rem;font-weight:600;color:#dc3545;"></span>
-        </div>
+<!-- ── CTI Integration ── -->
+<div class="sp-section" id="cti-config-section">
+    <div class="sp-section-head">
+        <i class="fa-solid fa-shield-halved"></i>
+        <h2>CTI Integration</h2>
+        <span class="sp-admin-badge">ADMIN</span>
     </div>
+
+    {% if cti_providers %}
+    <div class="sp-table-wrap">
+        <table class="sp-table">
+            <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>API Key</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="cti-provider-tbody">
+                {% for p in cti_providers %}
+                <tr data-provider="{{ p.name }}">
+                    <td style="font-weight:600;">{{ p.get_name_display }}</td>
+                    <td>
+                        {% if p.api_key %}
+                        <span style="color:#16a34a;font-size:0.82rem;"><i class="fa-solid fa-check-circle"></i> Configured</span>
+                        {% else %}
+                        <span style="color:#dc2626;font-size:0.82rem;"><i class="fa-solid fa-circle-xmark"></i> Not set</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button type="button" class="cti-enable-toggle {% if p.enabled %}sp-pill-on{% else %}sp-pill-off{% endif %}"
+                                data-name="{{ p.name }}" data-enabled="{{ p.enabled|yesno:'true,false' }}">
+                            {% if p.enabled %}● Enabled{% else %}○ Disabled{% endif %}
+                        </button>
+                    </td>
+                    <td style="text-align:right;">
+                        <button type="button" class="sp-btn-danger cti-delete-btn" data-name="{{ p.name }}">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="sp-section-desc" style="padding-bottom:14px;">No providers configured yet.</p>
+    {% endif %}
+
+    <div class="sp-add-form">
+        <div class="sp-field">
+            <label>Provider</label>
+            <select id="cti-new-name" class="sp-select" style="min-width:180px;">
+                <option value="VIRUSTOTAL">VirusTotal</option>
+                <option value="ABUSEIPDB">AbuseIPDB</option>
+                <option value="SHODAN">Shodan</option>
+                <option value="OTXALIENVAULT">OTX AlienVault</option>
+                <option value="MISP">MISP</option>
+            </select>
+        </div>
+        <div class="sp-field" style="flex:1;min-width:200px;">
+            <label>API key</label>
+            <input type="password" id="cti-new-key" class="sp-input sp-input-mono" autocomplete="off" placeholder="Paste API key…">
+        </div>
+        <div class="sp-field" id="cti-base-url-wrap" style="display:none;flex:1;min-width:200px;">
+            <label>Base URL (MISP)</label>
+            <input type="text" id="cti-new-base-url" class="sp-input" placeholder="https://misp.example.com">
+        </div>
+        <button type="button" id="cti-add-btn" class="sp-btn-primary">
+            <i class="fa-solid fa-plus"></i> Add provider
+        </button>
+    </div>
+    <div style="padding:0 20px 12px;display:flex;gap:10px;align-items:center;">
+        <span id="cti-save-msg" class="sp-flash-ok"><i class="fa-solid fa-check"></i> Saved</span>
+        <span id="cti-save-err" class="sp-flash-err"></span>
+    </div>
+</div>
 
 <script>
 (function () {
-    const csrf      = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-    const saveMsg   = document.getElementById('cti-save-msg');
-    const saveErr   = document.getElementById('cti-save-err');
+    const csrf    = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+    const saveMsg = document.getElementById('cti-save-msg');
+    const saveErr = document.getElementById('cti-save-err');
 
     function flash(ok, msg) {
-        saveMsg.style.display = 'none';
-        saveErr.style.display = 'none';
+        saveMsg.style.display = 'none'; saveErr.style.display = 'none';
         if (ok) { saveMsg.style.display = 'inline'; setTimeout(() => saveMsg.style.display = 'none', 3000); }
         else    { saveErr.textContent = msg; saveErr.style.display = 'inline'; }
     }
-
     async function apiPost(url, body) {
-        const r = await fetch(url, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-            body:    JSON.stringify(body),
-        });
+        const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf}, body:JSON.stringify(body) });
         return { ok: r.ok, data: await r.json() };
     }
-
-    // Show base-url field for MISP only
     const nameSelect = document.getElementById('cti-new-name');
     const baseWrap   = document.getElementById('cti-base-url-wrap');
-    nameSelect.addEventListener('change', () => {
-        baseWrap.style.display = nameSelect.value === 'MISP' ? 'flex' : 'none';
-    });
-
-    // Add provider
+    nameSelect.addEventListener('change', () => { baseWrap.style.display = nameSelect.value === 'MISP' ? 'flex' : 'none'; });
     document.getElementById('cti-add-btn').addEventListener('click', async () => {
-        const name    = nameSelect.value;
-        const api_key = document.getElementById('cti-new-key').value.trim();
+        const name     = nameSelect.value;
+        const api_key  = document.getElementById('cti-new-key').value.trim();
         const base_url = document.getElementById('cti-new-base-url')?.value.trim() || '';
         if (!api_key) { flash(false, 'API key is required.'); return; }
-
         const { ok, data } = await apiPost('/api/cti-providers/', { name, api_key, base_url, enabled: true });
-        if (ok) { flash(true); location.reload(); }
-        else    { flash(false, data.error || 'Save failed.'); }
+        if (ok) { flash(true); location.reload(); } else { flash(false, data.error || 'Save failed.'); }
     });
-
-    // Enable/disable toggle pill
     document.querySelectorAll('.cti-enable-toggle').forEach(btn => {
         btn.addEventListener('click', async () => {
             const newEnabled = btn.dataset.enabled !== 'true';
-            const { ok, data } = await apiPost('/api/cti-providers/', {
-                name: btn.dataset.name, enabled: newEnabled,
-            });
+            const { ok, data } = await apiPost('/api/cti-providers/', { name: btn.dataset.name, enabled: newEnabled });
             if (ok) {
                 btn.dataset.enabled = newEnabled ? 'true' : 'false';
                 btn.textContent     = newEnabled ? '● Enabled' : '○ Disabled';
-                btn.style.background = newEnabled ? 'rgba(22,163,74,0.15)' : 'rgba(107,114,128,0.15)';
-                btn.style.color      = newEnabled ? '#16a34a'               : '#6b7280';
+                btn.className       = 'cti-enable-toggle ' + (newEnabled ? 'sp-pill-on' : 'sp-pill-off');
                 flash(true);
-            } else {
-                flash(false, data.error || 'Failed.');
-            }
+            } else { flash(false, data.error || 'Failed.'); }
         });
     });
-
-    // Delete provider
     document.querySelectorAll('.cti-delete-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             if (!confirm(`Remove ${btn.dataset.name}?`)) return;
             const { ok, data } = await apiPost('/api/cti-providers/delete/', { name: btn.dataset.name });
-            if (ok) btn.closest('tr').remove();
-            else    flash(false, data.error || 'Delete failed.');
+            if (ok) btn.closest('tr').remove(); else flash(false, data.error || 'Delete failed.');
         });
     });
 })();
 </script>
 
-    <!-- ── AI Configuration (admin only) ── -->
-    <div class="settings-section" id="ai-config-section">
-        <div class="settings-section-header" style="display:flex;align-items:center;gap:8px;">
-            <h2 style="margin:0;"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent-color);margin-right:6px;"></i>AI Configuration</h2>
-            <span style="font-size:0.72rem;font-weight:600;background:rgba(196,152,64,0.15);color:var(--accent-color);padding:2px 8px;border-radius:20px;letter-spacing:0.04em;">ADMIN</span>
+<!-- ── AI Configuration ── -->
+<div class="sp-section" id="ai-config-section">
+    <div class="sp-section-head">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <h2>AI Configuration</h2>
+        <span class="sp-admin-badge">ADMIN</span>
+    </div>
+    <div class="sp-row">
+        <div class="sp-row-label">
+            <strong>AI provider</strong>
+            <span>Select the AI service used for incident text generation</span>
         </div>
-
-        <div class="settings-row">
-            <div class="settings-row-label">
-                <strong>AI provider</strong>
-                <span>Select the AI service used for incident text generation</span>
-            </div>
-            <select class="settings-select" id="ai-provider-select">
-                <option value="NONE"      {% if platform.ai_provider == 'NONE'      %}selected{% endif %}>Disabled</option>
-                <option value="ANTHROPIC" {% if platform.ai_provider == 'ANTHROPIC' %}selected{% endif %}>Anthropic (Claude)</option>
-                <option value="OPENAI"    {% if platform.ai_provider == 'OPENAI'    %}selected{% endif %}>OpenAI (GPT)</option>
-            </select>
+        <select class="sp-select" id="ai-provider-select">
+            <option value="NONE"      {% if platform.ai_provider == 'NONE'      %}selected{% endif %}>Disabled</option>
+            <option value="ANTHROPIC" {% if platform.ai_provider == 'ANTHROPIC' %}selected{% endif %}>Anthropic (Claude)</option>
+            <option value="OPENAI"    {% if platform.ai_provider == 'OPENAI'    %}selected{% endif %}>OpenAI (GPT)</option>
+        </select>
+    </div>
+    <div class="sp-row" id="ai-key-row" {% if platform.ai_provider == 'NONE' %}style="display:none;"{% endif %}>
+        <div class="sp-row-label">
+            <strong>API key</strong>
+            <span id="ai-key-hint">{% if platform.ai_api_key %}Key is configured — enter a new value to replace it{% else %}No key set yet{% endif %}</span>
         </div>
-
-        <div class="settings-row" id="ai-key-row" {% if platform.ai_provider == 'NONE' %}style="display:none;"{% endif %}>
-            <div class="settings-row-label">
-                <strong>API key</strong>
-                <span id="ai-key-hint">
-                    {% if platform.ai_api_key %}
-                    Key is configured — enter a new value to replace it
-                    {% else %}
-                    No key set yet
-                    {% endif %}
-                </span>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-                <input type="password"
-                       id="ai-api-key-input"
-                       placeholder="{% if platform.ai_api_key %}••••••••••••••••{% else %}Paste API key…{% endif %}"
-                       autocomplete="off"
-                       style="padding:7px 10px;border:1px solid var(--border-color);border-radius:7px;
-                              background:var(--background-color);color:var(--text-color-1);
-                              font-size:0.85rem;font-family:monospace;width:260px;
-                              transition:border-color 0.15s;">
-                {% if platform.ai_api_key %}
-                <button type="button" id="ai-clear-key-btn"
-                        style="padding:6px 12px;border:1px solid var(--border-color);border-radius:7px;
-                               background:transparent;color:var(--text-color-2);font-size:0.8rem;
-                               cursor:pointer;font-family:inherit;white-space:nowrap;">
-                    Clear key
-                </button>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="settings-row" style="border-top:1px solid var(--border-color);padding-top:14px;">
-            <div style="display:flex;align-items:center;gap:12px;">
-                <button type="button" id="save-ai-config-btn" class="btn-settings-save" style="padding:9px 22px;font-size:0.85rem;">
-                    <i class="fa-solid fa-floppy-disk"></i> Save AI config
-                </button>
-                <span id="ai-save-msg" style="display:none;font-size:0.83rem;font-weight:600;color:var(--accent-color);">
-                    <i class="fa-solid fa-check"></i> Saved
-                </span>
-                <span id="ai-save-err" style="display:none;font-size:0.83rem;font-weight:600;color:#dc3545;"></span>
-            </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+            <input type="password" id="ai-api-key-input" class="sp-input sp-input-mono"
+                   placeholder="{% if platform.ai_api_key %}••••••••••••••••{% else %}Paste API key…{% endif %}"
+                   autocomplete="off" style="width:240px;">
+            {% if platform.ai_api_key %}
+            <button type="button" id="ai-clear-key-btn" class="sp-btn-secondary">Clear key</button>
+            {% endif %}
         </div>
     </div>
+    <div class="sp-row" style="justify-content:flex-start;gap:14px;">
+        <button type="button" id="save-ai-config-btn" class="sp-btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i> Save AI config
+        </button>
+        <span id="ai-save-msg" class="sp-flash-ok"><i class="fa-solid fa-check"></i> Saved</span>
+        <span id="ai-save-err" class="sp-flash-err"></span>
+    </div>
+</div>
 
 <script>
 (function () {
@@ -414,195 +458,147 @@
     const saveErr        = document.getElementById('ai-save-err');
     const csrf           = document.querySelector('[name="csrfmiddlewaretoken"]').value;
 
-    // Show/hide key row when provider changes
-    if (providerSelect) {
-        providerSelect.addEventListener('change', () => {
-            keyRow.style.display = providerSelect.value === 'NONE' ? 'none' : '';
-        });
-    }
-
-    // Clear existing key (send empty key + NONE then re-select)
-    if (clearBtn) {
-        clearBtn.addEventListener('click', async () => {
-            if (!confirm('Remove the stored API key?')) return;
-            await postAiConfig('NONE', '');
-            // Reset UI
-            providerSelect.value  = 'NONE';
-            keyRow.style.display  = 'none';
-            clearBtn.style.display = 'none';
-        });
-    }
-
-    // Save
-    if (saveBtn) {
-        saveBtn.addEventListener('click', async () => {
-            await postAiConfig(providerSelect.value, keyInput ? keyInput.value.trim() : '');
-            if (keyInput) keyInput.value = '';
-        });
-    }
-
+    providerSelect?.addEventListener('change', () => {
+        keyRow.style.display = providerSelect.value === 'NONE' ? 'none' : '';
+    });
+    clearBtn?.addEventListener('click', async () => {
+        if (!confirm('Remove the stored API key?')) return;
+        await postAiConfig('NONE', '');
+        providerSelect.value = 'NONE'; keyRow.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
+    });
+    saveBtn?.addEventListener('click', async () => {
+        await postAiConfig(providerSelect.value, keyInput?.value.trim() || '');
+        if (keyInput) keyInput.value = '';
+    });
     async function postAiConfig(provider, key) {
-        saveMsg.style.display = 'none';
-        saveErr.style.display = 'none';
+        saveMsg.style.display = 'none'; saveErr.style.display = 'none';
         saveBtn.disabled = true;
-
         try {
             const r = await fetch('/api/platform-settings/', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-                body:    JSON.stringify({ ai_provider: provider, ai_api_key: key }),
+                method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf},
+                body: JSON.stringify({ ai_provider: provider, ai_api_key: key }),
             });
             const data = await r.json();
             if (r.ok) {
-                saveMsg.style.display = 'inline-flex';
-                setTimeout(() => { saveMsg.style.display = 'none'; }, 3000);
-                // Update hint text
+                saveMsg.style.display = 'inline';
+                setTimeout(() => saveMsg.style.display = 'none', 3000);
                 const hint = document.getElementById('ai-key-hint');
-                if (hint) hint.textContent = data.key_set
-                    ? 'Key is configured — enter a new value to replace it'
-                    : 'No key set yet';
-            } else {
-                saveErr.textContent   = data.error || 'Save failed.';
-                saveErr.style.display = 'inline';
-            }
-        } catch(e) {
-            saveErr.textContent   = 'Error: ' + e.message;
-            saveErr.style.display = 'inline';
-        } finally {
-            saveBtn.disabled = false;
-        }
+                if (hint) hint.textContent = data.key_set ? 'Key is configured — enter a new value to replace it' : 'No key set yet';
+            } else { saveErr.textContent = data.error || 'Save failed.'; saveErr.style.display = 'inline'; }
+        } catch(e) { saveErr.textContent = 'Error: ' + e.message; saveErr.style.display = 'inline'; }
+        finally { saveBtn.disabled = false; }
     }
 })();
 </script>
-{% endif %}
 
-{% if user.is_admin %}
-<!-- ── Platform Users ──────────────────────────────────────────── -->
-<div class="settings-section" id="users-section">
-    <div class="settings-section-header" style="display:flex;align-items:center;gap:8px;">
+<!-- ── Platform Users ── -->
+<div class="sp-section" id="users-section">
+    <div class="sp-section-head">
         <i class="fa-solid fa-users"></i>
         <h2>Platform Users</h2>
+        <span class="sp-admin-badge">ADMIN</span>
     </div>
-    <p style="font-size:0.82rem;color:var(--text-color-2);margin:0 0 16px 0;">
+    <p class="sp-section-desc" style="padding-bottom:14px;">
         Assign platform-wide roles so analysts can see all incidents without being invited to each one.<br>
-        <strong>SOC Analyst</strong> — RESPONDER access to every incident. &nbsp;
-        <strong>SOC Lead</strong> — INCIDENT_LEAD access to every incident (same as admin for incident data).
+        <strong>SOC Analyst</strong> — Responder access to every incident. &nbsp;
+        <strong>SOC Lead</strong> — Incident Lead access to every incident.
     </p>
-    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-        <thead>
-            <tr style="border-bottom:1px solid var(--border-color);">
-                <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">User</th>
-                <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Email</th>
-                <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Platform role</th>
-                <th style="padding:8px 10px;width:80px;"></th>
+    <div class="sp-table-wrap">
+        <table class="sp-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Email</th>
+                    <th>Platform Role</th>
+                    <th style="width:90px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for u in all_users %}
+            <tr id="user-row-{{ u.id }}">
+                <td style="font-weight:600;">
+                    {{ u.displayname|default:u.username }}
+                    {% if u.is_admin %}<span style="font-size:0.65rem;background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:20px;margin-left:6px;font-weight:700;">ADMIN</span>{% endif %}
+                </td>
+                <td style="color:var(--text-color-2);">{{ u.email|default:"—" }}</td>
+                <td>
+                    <select class="sp-role-select user-role-select" data-uid="{{ u.id }}"
+                            {% if u == user %}disabled title="Cannot change your own role"{% endif %}>
+                        <option value=""            {% if u.platform_role == '' %}selected{% endif %}>No platform role</option>
+                        <option value="SOC_ANALYST" {% if u.platform_role == 'SOC_ANALYST' %}selected{% endif %}>SOC Analyst</option>
+                        <option value="SOC_LEAD"    {% if u.platform_role == 'SOC_LEAD' %}selected{% endif %}>SOC Lead</option>
+                    </select>
+                </td>
+                <td>
+                    <span id="saved-{{ u.id }}" class="sp-flash-ok"><i class="fa-solid fa-check"></i> Saved</span>
+                    <span id="err-{{ u.id }}"   class="sp-flash-err"></span>
+                </td>
             </tr>
-        </thead>
-        <tbody>
-        {% for u in all_users %}
-        <tr style="border-bottom:1px solid var(--border-color);" id="user-row-{{ u.id }}">
-            <td style="padding:9px 10px;font-weight:600;">
-                {{ u.displayname|default:u.username }}
-                {% if u.is_admin %}<span style="font-size:0.65rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;margin-left:6px;font-weight:700;">ADMIN</span>{% endif %}
-            </td>
-            <td style="padding:9px 10px;color:var(--text-color-2);">{{ u.email }}</td>
-            <td style="padding:9px 10px;">
-                <select class="home-filter-select user-role-select" data-uid="{{ u.id }}"
-                        style="font-size:0.82rem;padding:5px 10px;"
-                        {% if u == user %}disabled title="Cannot change your own role"{% endif %}>
-                    <option value=""           {% if u.platform_role == '' %}selected{% endif %}>No platform role</option>
-                    <option value="SOC_ANALYST"{% if u.platform_role == 'SOC_ANALYST' %}selected{% endif %}>SOC Analyst</option>
-                    <option value="SOC_LEAD"   {% if u.platform_role == 'SOC_LEAD' %}selected{% endif %}>SOC Lead</option>
-                </select>
-            </td>
-            <td style="padding:9px 10px;">
-                <span class="user-role-saved" id="saved-{{ u.id }}"
-                      style="font-size:0.75rem;color:#16a34a;display:none;">
-                    <i class="fa-solid fa-check"></i> Saved
-                </span>
-                <span class="user-role-err" id="err-{{ u.id }}"
-                      style="font-size:0.75rem;color:#dc2626;display:none;"></span>
-            </td>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
 (function() {
-    const csrf = document.getElementById('csrf-token')?.value
-        ?? document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] ?? '';
-
+    const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
     document.querySelectorAll('.user-role-select').forEach(sel => {
         sel.addEventListener('change', async () => {
             const uid     = sel.dataset.uid;
-            const role    = sel.value;
             const savedEl = document.getElementById('saved-' + uid);
             const errEl   = document.getElementById('err-' + uid);
-            savedEl.style.display = 'none';
-            errEl.style.display   = 'none';
+            savedEl.style.display = 'none'; errEl.style.display = 'none';
             try {
                 const resp = await fetch(`/api/admin/users/${uid}/set-platform-role/`, {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-                    body:    JSON.stringify({ platform_role: role }),
+                    method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf},
+                    body: JSON.stringify({ platform_role: sel.value }),
                 });
                 const data = await resp.json();
-                if (resp.ok) {
-                    savedEl.style.display = 'inline';
-                    setTimeout(() => savedEl.style.display = 'none', 2500);
-                } else {
-                    errEl.textContent   = data.error || 'Error';
-                    errEl.style.display = 'inline';
-                }
-            } catch(e) {
-                errEl.textContent   = 'Network error';
-                errEl.style.display = 'inline';
-            }
+                if (resp.ok) { savedEl.style.display = 'inline'; setTimeout(() => savedEl.style.display = 'none', 2500); }
+                else { errEl.textContent = data.error || 'Error'; errEl.style.display = 'inline'; }
+            } catch(e) { errEl.textContent = 'Network error'; errEl.style.display = 'inline'; }
         });
     });
 })();
 </script>
-{% endif %}
 
-    <!-- ── Save ── -->
-    <div class="settings-save-row">
-        <button type="submit" class="btn-settings-save">
-            <i class="fa-solid fa-floppy-disk"></i> Save settings
-        </button>
-        {% if request.GET.saved %}
-        <span class="settings-saved-msg">
-            <i class="fa-solid fa-check"></i> Settings saved
-        </span>
-        {% endif %}
-    </div>
+{% endif %}{# is_admin #}
+
+<!-- ── Save defaults ── -->
+<div class="sp-save-row">
+    <button type="submit" class="sp-btn-primary">
+        <i class="fa-solid fa-floppy-disk"></i> Save settings
+    </button>
+    {% if request.GET.saved %}
+    <span class="sp-flash-ok" style="display:inline;"><i class="fa-solid fa-check"></i> Settings saved</span>
+    {% endif %}
+</div>
 
 </form>
 
 {% if user.is_admin %}
-<!-- ── Platform Audit Logs ──────────────────────────────────────────── -->
-<div class="settings-section" id="audit-logs-section" style="margin-top:28px;">
-    <div class="settings-section-header" style="display:flex;align-items:center;gap:8px;">
+<!-- ── Platform Audit Logs ── -->
+<div class="sp-section" id="audit-logs-section" style="margin-top:20px;">
+    <div class="sp-section-head">
         <i class="fa-solid fa-scroll"></i>
         <h2>Platform Audit Logs</h2>
+        <span class="sp-admin-badge">ADMIN</span>
     </div>
-    <p style="font-size:0.82rem;color:var(--text-color-2);margin:0 0 18px 0;">
-        Combined log of all incident-level and platform-level events.
-    </p>
 
-    <!-- Filters -->
-    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:flex-end;">
-        <div>
-            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Source</label>
-            <select id="al-source" class="home-filter-select" style="font-size:0.82rem;padding:6px 10px;">
+    <div class="al-filters">
+        <div class="al-filter-field">
+            <label>Source</label>
+            <select id="al-source" class="al-filter-input">
                 <option value="all">All</option>
                 <option value="platform">Platform</option>
                 <option value="incident">Incident</option>
             </select>
         </div>
-        <div>
-            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Action</label>
-            <select id="al-action" class="home-filter-select" style="font-size:0.82rem;padding:6px 10px;">
+        <div class="al-filter-field">
+            <label>Action</label>
+            <select id="al-action" class="al-filter-input">
                 <option value="">All actions</option>
                 <optgroup label="Platform">
                     <option value="LOGIN">Login</option>
@@ -624,112 +620,81 @@
                 </optgroup>
             </select>
         </div>
-        <div>
-            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">User</label>
-            <input id="al-user" type="text" placeholder="Username…" class="home-filter-select"
-                   style="font-size:0.82rem;padding:6px 10px;border:1px solid var(--border-color);border-radius:6px;background:var(--widget-background-color);color:var(--text-color-1);">
+        <div class="al-filter-field">
+            <label>User</label>
+            <input id="al-user" type="text" class="al-filter-input" placeholder="Username…" style="width:130px;">
         </div>
-        <div>
-            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Search</label>
-            <input id="al-search" type="text" placeholder="Keyword in description…" class="home-filter-select"
-                   style="font-size:0.82rem;padding:6px 10px;border:1px solid var(--border-color);border-radius:6px;background:var(--widget-background-color);color:var(--text-color-1);min-width:200px;">
+        <div class="al-filter-field" style="flex:1;min-width:160px;">
+            <label>Search</label>
+            <input id="al-search" type="text" class="al-filter-input" placeholder="Keyword in description…">
         </div>
-        <div>
-            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">From</label>
-            <input id="al-date-from" type="date" class="home-filter-select" style="font-size:0.82rem;padding:6px 10px;">
+        <div class="al-filter-field">
+            <label>From</label>
+            <input id="al-date-from" type="date" class="al-filter-input">
         </div>
-        <div>
-            <label style="display:block;font-size:0.73rem;font-weight:700;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">To</label>
-            <input id="al-date-to" type="date" class="home-filter-select" style="font-size:0.82rem;padding:6px 10px;">
+        <div class="al-filter-field">
+            <label>To</label>
+            <input id="al-date-to" type="date" class="al-filter-input">
         </div>
-        <button id="al-apply" class="home-btn-primary" style="align-self:flex-end;">
+        <button id="al-apply" class="sp-btn-primary" style="align-self:flex-end;">
             <i class="fa-solid fa-filter"></i> Apply
         </button>
-        <button id="al-export-csv" class="home-btn-cancel" style="align-self:flex-end;" title="Export to CSV">
+        <button id="al-export-csv" class="sp-btn-secondary" style="align-self:flex-end;" title="Export current filters to CSV">
             <i class="fa-solid fa-download"></i> CSV
         </button>
     </div>
 
-    <!-- Table -->
-    <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;" id="al-table">
+    <div class="al-table-wrap">
+        <table class="al-table">
             <thead>
-                <tr style="border-bottom:1px solid var(--border-color);">
-                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Timestamp</th>
-                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Source</th>
-                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Action</th>
-                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">User</th>
-                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">IP</th>
-                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Object</th>
-                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Description</th>
-                    <th style="text-align:left;padding:8px 10px;font-size:0.73rem;color:var(--text-color-2);text-transform:uppercase;letter-spacing:.05em;">Incident</th>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Source</th>
+                    <th>Action</th>
+                    <th>User</th>
+                    <th>IP</th>
+                    <th>Object</th>
+                    <th>Description</th>
+                    <th>Incident</th>
                 </tr>
             </thead>
             <tbody id="al-tbody">
-                <tr><td colspan="8" style="padding:24px;text-align:center;color:var(--text-color-2);">Loading…</td></tr>
+                <tr><td colspan="8" style="padding:28px;text-align:center;color:var(--text-color-2);">Loading…</td></tr>
             </tbody>
         </table>
     </div>
 
-    <!-- Pagination -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;font-size:0.82rem;color:var(--text-color-2);">
-        <span id="al-count"></span>
-        <div style="display:flex;gap:8px;align-items:center;">
-            <button id="al-prev" class="home-btn-cancel" style="padding:5px 14px;font-size:0.8rem;" disabled>
+    <div class="al-footer">
+        <span id="al-count" style="color:var(--text-color-2);"></span>
+        <div class="al-pagination">
+            <button id="al-prev" class="sp-btn-secondary" style="padding:5px 14px;" disabled>
                 <i class="fa-solid fa-chevron-left"></i> Prev
             </button>
-            <span id="al-page-info"></span>
-            <button id="al-next" class="home-btn-cancel" style="padding:5px 14px;font-size:0.8rem;">
+            <span id="al-page-info" style="font-size:0.82rem;color:var(--text-color-2);white-space:nowrap;"></span>
+            <button id="al-next" class="sp-btn-secondary" style="padding:5px 14px;">
                 Next <i class="fa-solid fa-chevron-right"></i>
             </button>
         </div>
     </div>
 </div>
 
-<style>
-#audit-logs-section .al-badge {
-    display: inline-block; font-size: 0.68rem; font-weight: 700;
-    padding: 2px 7px; border-radius: 20px; letter-spacing: .03em; white-space: nowrap;
-}
-.al-src-platform { background: #ede9fe; color: #5b21b6; }
-.al-src-incident { background: #dbeafe; color: #1e40af; }
-.al-act-login, .al-act-logout, .al-act-register { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-.al-act-role_change, .al-act-settings_change { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-.al-act-incident_create { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-.al-act-incident_delete, .al-act-delete { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-.al-act-create { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-.al-act-update { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
-.al-act-export { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }
-.al-act-access { background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }
-.al-act-cti_change, .al-act-ai_change { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
-</style>
-
 <script>
 (function() {
-    const csrf = document.getElementById('csrf-token')?.value
-        ?? document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] ?? '';
-
     let currentPage = 1;
 
     function fmtTs(iso) {
         const d = new Date(iso);
         return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
     }
-
-    function actionBadge(action) {
-        const cls = 'al-badge al-act-' + action.toLowerCase();
-        return `<span class="${cls}">${action}</span>`;
-    }
-
+    function badge(cls, text) { return `<span class="al-badge ${cls}">${text}</span>`; }
     function srcBadge(src) {
-        const cls = 'al-badge al-src-' + src;
-        const icon = src === 'platform' ? 'fa-server' : 'fa-shield-halved';
-        return `<span class="${cls}"><i class="fa-solid ${icon}"></i> ${src}</span>`;
+        const icon = src === 'platform' ? '<i class="fa-solid fa-server"></i> ' : '<i class="fa-solid fa-shield-halved"></i> ';
+        return badge('al-src-' + src, icon + src);
     }
+    function actionBadge(action) { return badge('al-act-' + action.toLowerCase(), action.replace(/_/g,' ')); }
 
-    async function loadLogs(page) {
-        currentPage = page;
-        const params = new URLSearchParams({
+    function collectParams(page) {
+        return new URLSearchParams({
             page,
             source:    document.getElementById('al-source').value,
             action:    document.getElementById('al-action').value,
@@ -738,81 +703,74 @@
             date_from: document.getElementById('al-date-from').value,
             date_to:   document.getElementById('al-date-to').value,
         });
+    }
 
+    async function loadLogs(page) {
+        currentPage = page;
         const tbody = document.getElementById('al-tbody');
-        tbody.innerHTML = '<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--text-color-2);">Loading…</td></tr>';
-
+        tbody.innerHTML = '<tr><td colspan="8" style="padding:28px;text-align:center;color:var(--text-color-2);">Loading…</td></tr>';
         try {
-            const r    = await fetch('/api/platform/audit-logs/?' + params);
+            const r    = await fetch('/api/platform/audit-logs/?' + collectParams(page));
             const data = await r.json();
 
-            document.getElementById('al-count').textContent =
-                `${data.total} entr${data.total === 1 ? 'y' : 'ies'}`;
-            document.getElementById('al-page-info').textContent =
-                `Page ${data.page} / ${data.num_pages}`;
+            document.getElementById('al-count').textContent    = `${data.total} entr${data.total===1?'y':'ies'}`;
+            document.getElementById('al-page-info').textContent = `Page ${data.page} / ${data.num_pages}`;
             document.getElementById('al-prev').disabled = data.page <= 1;
             document.getElementById('al-next').disabled = data.page >= data.num_pages;
 
             if (!data.logs.length) {
-                tbody.innerHTML = '<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--text-color-2);">No log entries found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="padding:28px;text-align:center;color:var(--text-color-2);">No entries found.</td></tr>';
                 return;
             }
-
             tbody.innerHTML = data.logs.map(row => `
-                <tr style="border-bottom:1px solid var(--border-color);">
-                    <td style="padding:8px 10px;white-space:nowrap;font-size:0.78rem;color:var(--text-color-2);">${fmtTs(row.timestamp)}</td>
-                    <td style="padding:8px 10px;">${srcBadge(row.source)}</td>
-                    <td style="padding:8px 10px;">${actionBadge(row.action)}</td>
-                    <td style="padding:8px 10px;font-weight:600;">${row.user}</td>
-                    <td style="padding:8px 10px;font-size:0.76rem;color:var(--text-color-2);">${row.ip_address || '—'}</td>
-                    <td style="padding:8px 10px;font-size:0.78rem;color:var(--text-color-2);">${row.object_type || '—'}</td>
-                    <td style="padding:8px 10px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${row.description.replace(/"/g,'&quot;')}">${row.description}</td>
-                    <td style="padding:8px 10px;font-size:0.78rem;">${
+                <tr>
+                    <td style="white-space:nowrap;color:var(--text-color-2);">${fmtTs(row.timestamp)}</td>
+                    <td>${srcBadge(row.source)}</td>
+                    <td>${actionBadge(row.action)}</td>
+                    <td style="font-weight:600;">${row.user}</td>
+                    <td style="color:var(--text-color-2);font-size:0.76rem;">${row.ip_address||'—'}</td>
+                    <td style="color:var(--text-color-2);font-size:0.78rem;">${row.object_type||'—'}</td>
+                    <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                        title="${row.description.replace(/"/g,'&quot;')}">${row.description}</td>
+                    <td style="font-size:0.78rem;">${
                         row.incident_id
                             ? `<a href="/incident/${row.incident_id}/overview" style="color:var(--main-color-3);text-decoration:none;">${row.incident_name}</a>`
                             : '—'
                     }</td>
                 </tr>`).join('');
         } catch(e) {
-            tbody.innerHTML = '<tr><td colspan="8" style="padding:24px;text-align:center;color:#dc2626;">Failed to load logs.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="padding:28px;text-align:center;color:#dc2626;">Failed to load logs.</td></tr>';
         }
     }
 
     document.getElementById('al-apply').addEventListener('click', () => loadLogs(1));
     document.getElementById('al-prev').addEventListener('click', () => loadLogs(currentPage - 1));
     document.getElementById('al-next').addEventListener('click', () => loadLogs(currentPage + 1));
+    document.getElementById('al-search').addEventListener('keydown', e => { if (e.key==='Enter') loadLogs(1); });
 
-    // CSV export
     document.getElementById('al-export-csv').addEventListener('click', async () => {
-        const params = new URLSearchParams({
-            page: 1, page_size: 5000,
-            source:    document.getElementById('al-source').value,
-            action:    document.getElementById('al-action').value,
-            user:      document.getElementById('al-user').value.trim(),
-            search:    document.getElementById('al-search').value.trim(),
-            date_from: document.getElementById('al-date-from').value,
-            date_to:   document.getElementById('al-date-to').value,
-        });
+        const params = collectParams(1);
+        params.set('page_size', '5000');
         const r    = await fetch('/api/platform/audit-logs/?' + params);
         const data = await r.json();
         const header = ['timestamp','source','action','user','ip_address','object_type','description','incident'];
         const rows   = data.logs.map(l => [
             l.timestamp, l.source, l.action, l.user, l.ip_address,
             l.object_type, '"' + l.description.replace(/"/g,'""') + '"',
-            l.incident_name || '',
+            l.incident_name||'',
         ].join(','));
-        const blob = new Blob([header.join(',') + '\n' + rows.join('\n')], {type:'text/csv'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'platform_audit_logs.csv';
+        const a = Object.assign(document.createElement('a'), {
+            href: URL.createObjectURL(new Blob([header.join(',')+'\n'+rows.join('\n')], {type:'text/csv'})),
+            download: 'platform_audit_logs.csv',
+        });
         a.click();
     });
 
-    // Auto-load on page open
     loadLogs(1);
 })();
 </script>
 {% endif %}
 
+</div>{# sp-page #}
 </main>
 {% endblock %}
