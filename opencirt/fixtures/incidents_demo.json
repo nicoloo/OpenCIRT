@@ -28,7 +28,9 @@
       "categories": [
         1,
         2
-      ]
+      ],
+      "resolution": "true_positive",
+      "resolution_note": "Confirmed LockBit ransomware attack. Encrypted shares recovered from backups. No ransom paid."
     }
   },
   {
@@ -60,7 +62,9 @@
       "categories": [
         3,
         11
-      ]
+      ],
+      "resolution": "true_positive",
+      "resolution_note": "Confirmed APT28 credential harvesting campaign. Compromised accounts secured, fraudulent transactions reversed."
     }
   },
   {
@@ -92,7 +96,9 @@
       "categories": [
         4,
         10
-      ]
+      ],
+      "resolution": "",
+      "resolution_note": ""
     }
   },
   {
