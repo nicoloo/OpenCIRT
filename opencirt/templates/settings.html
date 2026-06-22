@@ -2,249 +2,41 @@
 {% load static %}
 
 {% block styles %}
-<style>
-/* ── Layout ── */
-.sp-page {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 32px 24px 48px;
-}
-.sp-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin: 0 0 28px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--text-color-1);
-}
-.sp-title i { color: var(--accent-color); }
-
-/* ── Section cards ── */
-.sp-section {
-    background: var(--widget-background-color);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    margin-bottom: 20px;
-    overflow: hidden;
-}
-.sp-section-head {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border-color);
-    background: var(--main-color-1);
-}
-.sp-section-head h2 {
-    margin: 0;
-    font-size: 0.78rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--text-color-1);
-}
-.sp-section-head i { color: var(--accent-color); font-size: 0.85rem; }
-.sp-admin-badge {
-    margin-left: auto;
-    font-size: 0.68rem;
-    font-weight: 700;
-    background: rgba(196,152,64,0.15);
-    color: var(--accent-color);
-    padding: 2px 8px;
-    border-radius: 20px;
-    letter-spacing: 0.04em;
-}
-.sp-section-body { padding: 0; }
-.sp-section-desc {
-    padding: 14px 20px 0;
-    font-size: 0.82rem;
-    color: var(--text-color-2);
-    line-height: 1.5;
-    margin: 0;
-}
-
-/* ── Form rows ── */
-.sp-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-.sp-row:last-child { border-bottom: none; }
-.sp-row-label strong { display: block; font-size: 0.88rem; margin-bottom: 2px; }
-.sp-row-label span  { font-size: 0.77rem; color: var(--text-color-2); line-height: 1.4; }
-
-/* ── Inputs / selects ── */
-.sp-select, .sp-input {
-    padding: 7px 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 7px;
-    background: var(--background-color);
-    color: var(--text-color-1);
-    font-size: 0.85rem;
-    font-family: inherit;
-    transition: border-color 0.15s;
-}
-.sp-select { min-width: 140px; cursor: pointer; }
-.sp-select:focus, .sp-input:focus { outline: none; border-color: var(--accent-color); }
-.sp-input-mono { font-family: monospace; }
-
-/* ── Buttons ── */
-.sp-btn-primary {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 9px 22px; background: var(--accent-color); color: #fff;
-    border: none; border-radius: 8px; font-size: 0.86rem; font-weight: 600;
-    font-family: inherit; cursor: pointer; transition: opacity 0.15s;
-    white-space: nowrap;
-}
-.sp-btn-primary:hover { opacity: 0.88; }
-.sp-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.sp-btn-secondary {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 7px 16px; background: transparent;
-    border: 1px solid var(--border-color); border-radius: 8px;
-    color: var(--text-color-2); font-size: 0.84rem; font-family: inherit;
-    cursor: pointer; transition: background 0.12s; white-space: nowrap;
-}
-.sp-btn-secondary:hover { background: var(--border-color); }
-.sp-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
-.sp-btn-danger {
-    padding: 5px 12px; border: 1px solid #dc2626; border-radius: 7px;
-    background: transparent; color: #dc2626; font-size: 0.8rem;
-    cursor: pointer; font-family: inherit; transition: background 0.12s;
-}
-.sp-btn-danger:hover { background: #fee2e2; }
-
-/* ── Flash messages ── */
-.sp-flash-ok  { font-size: 0.82rem; font-weight: 600; color: #16a34a; display: none; }
-.sp-flash-err { font-size: 0.82rem; font-weight: 600; color: #dc2626; display: none; }
-
-/* ── Table ── */
-.sp-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
-.sp-table th {
-    padding: 9px 14px; text-align: left;
-    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.07em; color: var(--text-color-2);
-    background: var(--background-color); border-bottom: 1px solid var(--border-color);
-}
-.sp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-color); }
-.sp-table tbody tr:last-child td { border-bottom: none; }
-.sp-table tbody tr:hover { background: rgba(0,0,0,.02); }
-.sp-table-wrap { overflow-x: auto; }
-
-/* ── CTI enable pill ── */
-.sp-pill-on  { padding: 3px 12px; border-radius: 20px; border: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; font-family: inherit; background: rgba(22,163,74,.15); color: #16a34a; }
-.sp-pill-off { padding: 3px 12px; border-radius: 20px; border: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; font-family: inherit; background: rgba(107,114,128,.15); color: #6b7280; }
-
-/* ── CTI add form ── */
-.sp-add-form {
-    display: flex; flex-wrap: wrap; gap: 10px;
-    align-items: flex-end; padding: 16px 20px;
-    border-top: 1px solid var(--border-color);
-}
-.sp-field { display: flex; flex-direction: column; gap: 5px; }
-.sp-field label {
-    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--text-color-2);
-}
-
-/* ── Users table role select ── */
-.sp-role-select {
-    padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 7px;
-    background: var(--background-color); color: var(--text-color-1);
-    font-size: 0.82rem; font-family: inherit; cursor: pointer;
-}
-.sp-role-select:disabled { opacity: 0.55; cursor: not-allowed; }
-
-/* ── Audit log filters ── */
-.al-filters {
-    display: flex; flex-wrap: wrap; gap: 10px;
-    align-items: flex-end; padding: 16px 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-.al-filter-field { display: flex; flex-direction: column; gap: 4px; }
-.al-filter-field label {
-    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--text-color-2);
-}
-.al-filter-input {
-    padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 7px;
-    background: var(--background-color); color: var(--text-color-1);
-    font-size: 0.82rem; font-family: inherit;
-}
-.al-filter-input:focus { outline: none; border-color: var(--accent-color); }
-
-/* ── Audit log table ── */
-.al-table-wrap { overflow-x: auto; }
-.al-table { width: 100%; border-collapse: collapse; font-size: 0.81rem; min-width: 800px; }
-.al-table th {
-    padding: 9px 12px; text-align: left;
-    font-size: 0.67rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.07em; color: var(--text-color-2);
-    background: var(--background-color); border-bottom: 1px solid var(--border-color);
-    white-space: nowrap;
-}
-.al-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-.al-table tbody tr:last-child td { border-bottom: none; }
-.al-table tbody tr:hover { background: rgba(0,0,0,.02); }
-
-/* ── Audit badges ── */
-.al-badge {
-    display: inline-block; font-size: 0.67rem; font-weight: 700;
-    padding: 2px 7px; border-radius: 20px; letter-spacing: .03em;
-    white-space: nowrap; border: 1px solid transparent;
-}
-.al-src-platform { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
-.al-src-incident { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
-.al-act-login,.al-act-logout,.al-act-register { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
-.al-act-role_change,.al-act-settings_change   { background: #fef3c7; color: #92400e; border-color: #fde68a; }
-.al-act-incident_create,.al-act-create        { background: #dcfce7; color: #166534; border-color: #86efac; }
-.al-act-incident_delete,.al-act-delete        { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-.al-act-update  { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
-.al-act-export  { background: #e0e7ff; color: #3730a3; border-color: #a5b4fc; }
-.al-act-access  { background: #f3f4f6; color: #4b5563; border-color: #d1d5db; }
-.al-act-cti_change,.al-act-ai_change { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
-.al-act-other   { background: #f3f4f6; color: #4b5563; border-color: #d1d5db; }
-
-/* ── Audit pagination ── */
-.al-footer {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 20px; border-top: 1px solid var(--border-color);
-    font-size: 0.81rem; color: var(--text-color-2);
-}
-.al-pagination { display: flex; align-items: center; gap: 8px; }
-
-/* ── Save row ── */
-.sp-save-row {
-    display: flex; align-items: center; gap: 14px;
-    margin-top: 24px; padding: 0 0 4px;
-}
-
-/* ── Responsive ── */
-@media (max-width: 700px) {
-    .sp-page { padding: 16px 12px 40px; }
-    .sp-row { flex-wrap: wrap; gap: 10px; }
-    .sp-select { min-width: 100%; }
-    .al-filters { gap: 8px; }
-    .al-filter-input { width: 100%; box-sizing: border-box; }
-    .al-footer { flex-direction: column; gap: 10px; align-items: flex-start; }
-}
-</style>
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <link rel="stylesheet" href="{% static 'css/settings.css' %}">
 {% endblock %}
 
 {% block content %}
 <main>
-<div class="sp-page">
-
-<form method="POST" action="/settings">
-{% csrf_token %}
+<div class="home-page">
 
 <h1 class="sp-title"><i class="fa-solid fa-gear"></i> Settings</h1>
 
-<!-- ── Platform Defaults ── -->
+<!-- Tab bar -->
+<div class="sp-tabs-bar">
+    <button class="sp-tab-btn active" data-tab="config" onclick="switchTab('config',this)">
+        <i class="fa-solid fa-sliders"></i> Configuration
+    </button>
+    {% if user.is_admin %}
+    <button class="sp-tab-btn" data-tab="integrations" onclick="switchTab('integrations',this)">
+        <i class="fa-solid fa-plug"></i> Integrations
+    </button>
+    <button class="sp-tab-btn" data-tab="users" onclick="switchTab('users',this)">
+        <i class="fa-solid fa-users"></i> Users
+    </button>
+    <button class="sp-tab-btn" data-tab="logs" onclick="switchTab('logs',this)">
+        <i class="fa-solid fa-scroll"></i> Logs
+    </button>
+    {% endif %}
+</div>
+
+<!-- ═══════════════════════════════
+     Tab: Configuration
+═══════════════════════════════ -->
+<div id="panel-config">
+<form method="POST" action="/settings">
+{% csrf_token %}
+
 <div class="sp-section">
     <div class="sp-section-head">
         <i class="fa-solid fa-sliders"></i>
@@ -275,29 +67,39 @@
             <option value="all" {% if prefs.chart_period == 'all' %}selected{% endif %}>All time</option>
         </select>
     </div>
+    <div class="sp-save-row">
+        <button type="submit" class="sp-btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i> Save
+        </button>
+        {% if request.GET.saved %}
+        <span class="sp-flash-ok" style="display:inline;"><i class="fa-solid fa-check"></i> Saved</span>
+        {% endif %}
+    </div>
 </div>
+
+</form>
+</div><!-- /panel-config -->
 
 {% if user.is_admin %}
 
-<!-- ── CTI Integration ── -->
-<div class="sp-section" id="cti-config-section">
+<!-- ═══════════════════════════════
+     Tab: Integrations
+═══════════════════════════════ -->
+<div id="panel-integrations" style="display:none">
+
+<!-- CTI -->
+<div class="sp-section">
     <div class="sp-section-head">
         <i class="fa-solid fa-shield-halved"></i>
-        <h2>CTI Integration</h2>
+        <h2>CTI Providers</h2>
         <span class="sp-admin-badge">ADMIN</span>
     </div>
-
     {% if cti_providers %}
     <div class="sp-table-wrap">
         <table class="sp-table">
-            <thead>
-                <tr>
-                    <th>Provider</th>
-                    <th>API Key</th>
-                    <th>Status</th>
-                    <th></th>
-                </tr>
-            </thead>
+            <thead><tr>
+                <th>Provider</th><th>API Key</th><th>Status</th><th></th>
+            </tr></thead>
             <tbody id="cti-provider-tbody">
                 {% for p in cti_providers %}
                 <tr data-provider="{{ p.name }}">
@@ -326,9 +128,8 @@
         </table>
     </div>
     {% else %}
-    <p class="sp-section-desc" style="padding-bottom:14px;">No providers configured yet.</p>
+    <p style="padding:16px 20px;font-size:0.85rem;color:var(--text-color-2);margin:0;">No providers configured yet.</p>
     {% endif %}
-
     <div class="sp-add-form">
         <div class="sp-field">
             <label>Provider</label>
@@ -352,62 +153,14 @@
             <i class="fa-solid fa-plus"></i> Add provider
         </button>
     </div>
-    <div style="padding:0 20px 12px;display:flex;gap:10px;align-items:center;">
+    <div style="padding:0 20px 14px;display:flex;gap:10px;align-items:center;">
         <span id="cti-save-msg" class="sp-flash-ok"><i class="fa-solid fa-check"></i> Saved</span>
         <span id="cti-save-err" class="sp-flash-err"></span>
     </div>
 </div>
 
-<script>
-(function () {
-    const csrf    = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-    const saveMsg = document.getElementById('cti-save-msg');
-    const saveErr = document.getElementById('cti-save-err');
-
-    function flash(ok, msg) {
-        saveMsg.style.display = 'none'; saveErr.style.display = 'none';
-        if (ok) { saveMsg.style.display = 'inline'; setTimeout(() => saveMsg.style.display = 'none', 3000); }
-        else    { saveErr.textContent = msg; saveErr.style.display = 'inline'; }
-    }
-    async function apiPost(url, body) {
-        const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf}, body:JSON.stringify(body) });
-        return { ok: r.ok, data: await r.json() };
-    }
-    const nameSelect = document.getElementById('cti-new-name');
-    const baseWrap   = document.getElementById('cti-base-url-wrap');
-    nameSelect.addEventListener('change', () => { baseWrap.style.display = nameSelect.value === 'MISP' ? 'flex' : 'none'; });
-    document.getElementById('cti-add-btn').addEventListener('click', async () => {
-        const name     = nameSelect.value;
-        const api_key  = document.getElementById('cti-new-key').value.trim();
-        const base_url = document.getElementById('cti-new-base-url')?.value.trim() || '';
-        if (!api_key) { flash(false, 'API key is required.'); return; }
-        const { ok, data } = await apiPost('/api/cti-providers/', { name, api_key, base_url, enabled: true });
-        if (ok) { flash(true); location.reload(); } else { flash(false, data.error || 'Save failed.'); }
-    });
-    document.querySelectorAll('.cti-enable-toggle').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const newEnabled = btn.dataset.enabled !== 'true';
-            const { ok, data } = await apiPost('/api/cti-providers/', { name: btn.dataset.name, enabled: newEnabled });
-            if (ok) {
-                btn.dataset.enabled = newEnabled ? 'true' : 'false';
-                btn.textContent     = newEnabled ? '● Enabled' : '○ Disabled';
-                btn.className       = 'cti-enable-toggle ' + (newEnabled ? 'sp-pill-on' : 'sp-pill-off');
-                flash(true);
-            } else { flash(false, data.error || 'Failed.'); }
-        });
-    });
-    document.querySelectorAll('.cti-delete-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            if (!confirm(`Remove ${btn.dataset.name}?`)) return;
-            const { ok, data } = await apiPost('/api/cti-providers/delete/', { name: btn.dataset.name });
-            if (ok) btn.closest('tr').remove(); else flash(false, data.error || 'Delete failed.');
-        });
-    });
-})();
-</script>
-
-<!-- ── AI Configuration ── -->
-<div class="sp-section" id="ai-config-section">
+<!-- AI -->
+<div class="sp-section">
     <div class="sp-section-head">
         <i class="fa-solid fa-wand-magic-sparkles"></i>
         <h2>AI Configuration</h2>
@@ -438,7 +191,7 @@
             {% endif %}
         </div>
     </div>
-    <div class="sp-row" style="justify-content:flex-start;gap:14px;">
+    <div class="sp-save-row">
         <button type="button" id="save-ai-config-btn" class="sp-btn-primary">
             <i class="fa-solid fa-floppy-disk"></i> Save AI config
         </button>
@@ -447,73 +200,29 @@
     </div>
 </div>
 
-<script>
-(function () {
-    const providerSelect = document.getElementById('ai-provider-select');
-    const keyRow         = document.getElementById('ai-key-row');
-    const keyInput       = document.getElementById('ai-api-key-input');
-    const clearBtn       = document.getElementById('ai-clear-key-btn');
-    const saveBtn        = document.getElementById('save-ai-config-btn');
-    const saveMsg        = document.getElementById('ai-save-msg');
-    const saveErr        = document.getElementById('ai-save-err');
-    const csrf           = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+</div><!-- /panel-integrations -->
 
-    providerSelect?.addEventListener('change', () => {
-        keyRow.style.display = providerSelect.value === 'NONE' ? 'none' : '';
-    });
-    clearBtn?.addEventListener('click', async () => {
-        if (!confirm('Remove the stored API key?')) return;
-        await postAiConfig('NONE', '');
-        providerSelect.value = 'NONE'; keyRow.style.display = 'none';
-        if (clearBtn) clearBtn.style.display = 'none';
-    });
-    saveBtn?.addEventListener('click', async () => {
-        await postAiConfig(providerSelect.value, keyInput?.value.trim() || '');
-        if (keyInput) keyInput.value = '';
-    });
-    async function postAiConfig(provider, key) {
-        saveMsg.style.display = 'none'; saveErr.style.display = 'none';
-        saveBtn.disabled = true;
-        try {
-            const r = await fetch('/api/platform-settings/', {
-                method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf},
-                body: JSON.stringify({ ai_provider: provider, ai_api_key: key }),
-            });
-            const data = await r.json();
-            if (r.ok) {
-                saveMsg.style.display = 'inline';
-                setTimeout(() => saveMsg.style.display = 'none', 3000);
-                const hint = document.getElementById('ai-key-hint');
-                if (hint) hint.textContent = data.key_set ? 'Key is configured — enter a new value to replace it' : 'No key set yet';
-            } else { saveErr.textContent = data.error || 'Save failed.'; saveErr.style.display = 'inline'; }
-        } catch(e) { saveErr.textContent = 'Error: ' + e.message; saveErr.style.display = 'inline'; }
-        finally { saveBtn.disabled = false; }
-    }
-})();
-</script>
+<!-- ═══════════════════════════════
+     Tab: Users
+═══════════════════════════════ -->
+<div id="panel-users" style="display:none">
 
-<!-- ── Platform Users ── -->
-<div class="sp-section" id="users-section">
+<div class="sp-section">
     <div class="sp-section-head">
         <i class="fa-solid fa-users"></i>
         <h2>Platform Users</h2>
         <span class="sp-admin-badge">ADMIN</span>
     </div>
-    <p class="sp-section-desc" style="padding-bottom:14px;">
-        Assign platform-wide roles so analysts can see all incidents without being invited to each one.<br>
-        <strong>SOC Analyst</strong> — Responder access to every incident. &nbsp;
+    <p style="padding:12px 20px 0;font-size:0.82rem;color:var(--text-color-2);margin:0;line-height:1.55;">
+        Assign platform-wide roles so analysts can see all incidents without an individual invite.<br>
+        <strong>SOC Analyst</strong> — Responder access to every incident.&nbsp;&nbsp;
         <strong>SOC Lead</strong> — Incident Lead access to every incident.
     </p>
-    <div class="sp-table-wrap">
+    <div class="sp-table-wrap" style="margin-top:14px;">
         <table class="sp-table">
-            <thead>
-                <tr>
-                    <th>User</th>
-                    <th>Email</th>
-                    <th>Platform Role</th>
-                    <th style="width:90px;"></th>
-                </tr>
-            </thead>
+            <thead><tr>
+                <th>User</th><th>Email</th><th>Platform Role</th><th style="width:90px;"></th>
+            </tr></thead>
             <tbody>
             {% for u in all_users %}
             <tr id="user-row-{{ u.id }}">
@@ -541,52 +250,19 @@
     </div>
 </div>
 
-<script>
-(function() {
-    const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-    document.querySelectorAll('.user-role-select').forEach(sel => {
-        sel.addEventListener('change', async () => {
-            const uid     = sel.dataset.uid;
-            const savedEl = document.getElementById('saved-' + uid);
-            const errEl   = document.getElementById('err-' + uid);
-            savedEl.style.display = 'none'; errEl.style.display = 'none';
-            try {
-                const resp = await fetch(`/api/admin/users/${uid}/set-platform-role/`, {
-                    method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf},
-                    body: JSON.stringify({ platform_role: sel.value }),
-                });
-                const data = await resp.json();
-                if (resp.ok) { savedEl.style.display = 'inline'; setTimeout(() => savedEl.style.display = 'none', 2500); }
-                else { errEl.textContent = data.error || 'Error'; errEl.style.display = 'inline'; }
-            } catch(e) { errEl.textContent = 'Network error'; errEl.style.display = 'inline'; }
-        });
-    });
-})();
-</script>
+</div><!-- /panel-users -->
 
-{% endif %}{# is_admin #}
+<!-- ═══════════════════════════════
+     Tab: Logs
+═══════════════════════════════ -->
+<div id="panel-logs" style="display:none">
 
-<!-- ── Save defaults ── -->
-<div class="sp-save-row">
-    <button type="submit" class="sp-btn-primary">
-        <i class="fa-solid fa-floppy-disk"></i> Save settings
-    </button>
-    {% if request.GET.saved %}
-    <span class="sp-flash-ok" style="display:inline;"><i class="fa-solid fa-check"></i> Settings saved</span>
-    {% endif %}
-</div>
-
-</form>
-
-{% if user.is_admin %}
-<!-- ── Platform Audit Logs ── -->
-<div class="sp-section" id="audit-logs-section" style="margin-top:20px;">
+<div class="sp-section">
     <div class="sp-section-head">
         <i class="fa-solid fa-scroll"></i>
         <h2>Platform Audit Logs</h2>
         <span class="sp-admin-badge">ADMIN</span>
     </div>
-
     <div class="al-filters">
         <div class="al-filter-field">
             <label>Source</label>
@@ -639,33 +315,23 @@
         <button id="al-apply" class="sp-btn-primary" style="align-self:flex-end;">
             <i class="fa-solid fa-filter"></i> Apply
         </button>
-        <button id="al-export-csv" class="sp-btn-secondary" style="align-self:flex-end;" title="Export current filters to CSV">
+        <button id="al-export-csv" class="sp-btn-secondary" style="align-self:flex-end;" title="Export to CSV">
             <i class="fa-solid fa-download"></i> CSV
         </button>
     </div>
-
     <div class="al-table-wrap">
         <table class="al-table">
-            <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>Source</th>
-                    <th>Action</th>
-                    <th>User</th>
-                    <th>IP</th>
-                    <th>Object</th>
-                    <th>Description</th>
-                    <th>Incident</th>
-                </tr>
-            </thead>
+            <thead><tr>
+                <th>Timestamp</th><th>Source</th><th>Action</th><th>User</th>
+                <th>IP</th><th>Object</th><th>Description</th><th>Incident</th>
+            </tr></thead>
             <tbody id="al-tbody">
                 <tr><td colspan="8" style="padding:28px;text-align:center;color:var(--text-color-2);">Loading…</td></tr>
             </tbody>
         </table>
     </div>
-
     <div class="al-footer">
-        <span id="al-count" style="color:var(--text-color-2);"></span>
+        <span id="al-count"></span>
         <div class="al-pagination">
             <button id="al-prev" class="sp-btn-secondary" style="padding:5px 14px;" disabled>
                 <i class="fa-solid fa-chevron-left"></i> Prev
@@ -678,99 +344,194 @@
     </div>
 </div>
 
-<script>
-(function() {
-    let currentPage = 1;
+</div><!-- /panel-logs -->
 
-    function fmtTs(iso) {
-        const d = new Date(iso);
-        return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    }
-    function badge(cls, text) { return `<span class="al-badge ${cls}">${text}</span>`; }
-    function srcBadge(src) {
-        const icon = src === 'platform' ? '<i class="fa-solid fa-server"></i> ' : '<i class="fa-solid fa-shield-halved"></i> ';
-        return badge('al-src-' + src, icon + src);
-    }
-    function actionBadge(action) { return badge('al-act-' + action.toLowerCase(), action.replace(/_/g,' ')); }
+{% endif %}{# is_admin #}
 
-    function collectParams(page) {
-        return new URLSearchParams({
-            page,
-            source:    document.getElementById('al-source').value,
-            action:    document.getElementById('al-action').value,
-            user:      document.getElementById('al-user').value.trim(),
-            search:    document.getElementById('al-search').value.trim(),
-            date_from: document.getElementById('al-date-from').value,
-            date_to:   document.getElementById('al-date-to').value,
-        });
-    }
-
-    async function loadLogs(page) {
-        currentPage = page;
-        const tbody = document.getElementById('al-tbody');
-        tbody.innerHTML = '<tr><td colspan="8" style="padding:28px;text-align:center;color:var(--text-color-2);">Loading…</td></tr>';
-        try {
-            const r    = await fetch('/api/platform/audit-logs/?' + collectParams(page));
-            const data = await r.json();
-
-            document.getElementById('al-count').textContent    = `${data.total} entr${data.total===1?'y':'ies'}`;
-            document.getElementById('al-page-info').textContent = `Page ${data.page} / ${data.num_pages}`;
-            document.getElementById('al-prev').disabled = data.page <= 1;
-            document.getElementById('al-next').disabled = data.page >= data.num_pages;
-
-            if (!data.logs.length) {
-                tbody.innerHTML = '<tr><td colspan="8" style="padding:28px;text-align:center;color:var(--text-color-2);">No entries found.</td></tr>';
-                return;
-            }
-            tbody.innerHTML = data.logs.map(row => `
-                <tr>
-                    <td style="white-space:nowrap;color:var(--text-color-2);">${fmtTs(row.timestamp)}</td>
-                    <td>${srcBadge(row.source)}</td>
-                    <td>${actionBadge(row.action)}</td>
-                    <td style="font-weight:600;">${row.user}</td>
-                    <td style="color:var(--text-color-2);font-size:0.76rem;">${row.ip_address||'—'}</td>
-                    <td style="color:var(--text-color-2);font-size:0.78rem;">${row.object_type||'—'}</td>
-                    <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                        title="${row.description.replace(/"/g,'&quot;')}">${row.description}</td>
-                    <td style="font-size:0.78rem;">${
-                        row.incident_id
-                            ? `<a href="/incident/${row.incident_id}/overview" style="color:var(--main-color-3);text-decoration:none;">${row.incident_name}</a>`
-                            : '—'
-                    }</td>
-                </tr>`).join('');
-        } catch(e) {
-            tbody.innerHTML = '<tr><td colspan="8" style="padding:28px;text-align:center;color:#dc2626;">Failed to load logs.</td></tr>';
-        }
-    }
-
-    document.getElementById('al-apply').addEventListener('click', () => loadLogs(1));
-    document.getElementById('al-prev').addEventListener('click', () => loadLogs(currentPage - 1));
-    document.getElementById('al-next').addEventListener('click', () => loadLogs(currentPage + 1));
-    document.getElementById('al-search').addEventListener('keydown', e => { if (e.key==='Enter') loadLogs(1); });
-
-    document.getElementById('al-export-csv').addEventListener('click', async () => {
-        const params = collectParams(1);
-        params.set('page_size', '5000');
-        const r    = await fetch('/api/platform/audit-logs/?' + params);
-        const data = await r.json();
-        const header = ['timestamp','source','action','user','ip_address','object_type','description','incident'];
-        const rows   = data.logs.map(l => [
-            l.timestamp, l.source, l.action, l.user, l.ip_address,
-            l.object_type, '"' + l.description.replace(/"/g,'""') + '"',
-            l.incident_name||'',
-        ].join(','));
-        const a = Object.assign(document.createElement('a'), {
-            href: URL.createObjectURL(new Blob([header.join(',')+'\n'+rows.join('\n')], {type:'text/csv'})),
-            download: 'platform_audit_logs.csv',
-        });
-        a.click();
-    });
-
-    loadLogs(1);
-})();
-</script>
-{% endif %}
-
-</div>{# sp-page #}
+</div>{# home-page #}
 </main>
+
+<script>
+/* ── Tab switching (same pattern as threat_intel) ── */
+function switchTab(name, btn) {
+    document.querySelectorAll('.sp-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['config','integrations','users','logs'].forEach(t => {
+        const el = document.getElementById('panel-' + t);
+        if (el) el.style.display = (t === name) ? 'block' : 'none';
+    });
+    try { localStorage.setItem('sp_tab', name); } catch(e) {}
+    if (name === 'logs') loadLogs(1);
+}
+
+/* Restore last active tab */
+(function() {
+    let saved;
+    try { saved = localStorage.getItem('sp_tab'); } catch(e) {}
+    if (saved && document.getElementById('panel-' + saved)) {
+        const btn = document.querySelector('.sp-tab-btn[data-tab="' + saved + '"]');
+        if (btn) switchTab(saved, btn);
+    }
+})();
+
+/* ── CTI providers ── */
+(function () {
+    const csrf    = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+    const saveMsg = document.getElementById('cti-save-msg');
+    const saveErr = document.getElementById('cti-save-err');
+    if (!saveMsg) return;
+
+    function flash(ok, msg) {
+        saveMsg.style.display = 'none'; saveErr.style.display = 'none';
+        if (ok) { saveMsg.style.display = 'inline'; setTimeout(() => saveMsg.style.display = 'none', 3000); }
+        else    { saveErr.textContent = msg; saveErr.style.display = 'inline'; }
+    }
+    async function apiPost(url, body) {
+        const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf}, body:JSON.stringify(body) });
+        return { ok: r.ok, data: await r.json() };
+    }
+    const nameSelect = document.getElementById('cti-new-name');
+    const baseWrap   = document.getElementById('cti-base-url-wrap');
+    nameSelect.addEventListener('change', () => { baseWrap.style.display = nameSelect.value === 'MISP' ? 'flex' : 'none'; });
+    document.getElementById('cti-add-btn').addEventListener('click', async () => {
+        const name = nameSelect.value, api_key = document.getElementById('cti-new-key').value.trim();
+        const base_url = document.getElementById('cti-new-base-url')?.value.trim() || '';
+        if (!api_key) { flash(false, 'API key is required.'); return; }
+        const { ok, data } = await apiPost('/api/cti-providers/', { name, api_key, base_url, enabled: true });
+        if (ok) { flash(true); location.reload(); } else flash(false, data.error || 'Save failed.');
+    });
+    document.querySelectorAll('.cti-enable-toggle').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const newEnabled = btn.dataset.enabled !== 'true';
+            const { ok, data } = await apiPost('/api/cti-providers/', { name: btn.dataset.name, enabled: newEnabled });
+            if (ok) {
+                btn.dataset.enabled = newEnabled ? 'true' : 'false';
+                btn.textContent     = newEnabled ? '● Enabled' : '○ Disabled';
+                btn.className       = 'cti-enable-toggle ' + (newEnabled ? 'sp-pill-on' : 'sp-pill-off');
+                flash(true);
+            } else flash(false, data.error || 'Failed.');
+        });
+    });
+    document.querySelectorAll('.cti-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!confirm('Remove ' + btn.dataset.name + '?')) return;
+            const { ok, data } = await apiPost('/api/cti-providers/delete/', { name: btn.dataset.name });
+            if (ok) btn.closest('tr').remove(); else flash(false, data.error || 'Delete failed.');
+        });
+    });
+})();
+
+/* ── AI config ── */
+(function () {
+    const providerSelect = document.getElementById('ai-provider-select');
+    if (!providerSelect) return;
+    const keyRow   = document.getElementById('ai-key-row');
+    const keyInput = document.getElementById('ai-api-key-input');
+    const clearBtn = document.getElementById('ai-clear-key-btn');
+    const saveBtn  = document.getElementById('save-ai-config-btn');
+    const saveMsg  = document.getElementById('ai-save-msg');
+    const saveErr  = document.getElementById('ai-save-err');
+    const csrf     = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+
+    providerSelect.addEventListener('change', () => { keyRow.style.display = providerSelect.value === 'NONE' ? 'none' : ''; });
+    clearBtn?.addEventListener('click', async () => {
+        if (!confirm('Remove the stored API key?')) return;
+        await postAiConfig('NONE', '');
+        providerSelect.value = 'NONE'; keyRow.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
+    });
+    saveBtn?.addEventListener('click', async () => {
+        await postAiConfig(providerSelect.value, keyInput?.value.trim() || '');
+        if (keyInput) keyInput.value = '';
+    });
+    async function postAiConfig(provider, key) {
+        saveMsg.style.display = 'none'; saveErr.style.display = 'none'; saveBtn.disabled = true;
+        try {
+            const r = await fetch('/api/platform-settings/', {
+                method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf},
+                body: JSON.stringify({ ai_provider: provider, ai_api_key: key }),
+            });
+            const data = await r.json();
+            if (r.ok) {
+                saveMsg.style.display = 'inline'; setTimeout(() => saveMsg.style.display = 'none', 3000);
+                const hint = document.getElementById('ai-key-hint');
+                if (hint) hint.textContent = data.key_set ? 'Key is configured — enter a new value to replace it' : 'No key set yet';
+            } else { saveErr.textContent = data.error || 'Save failed.'; saveErr.style.display = 'inline'; }
+        } catch(e) { saveErr.textContent = 'Error: ' + e.message; saveErr.style.display = 'inline'; }
+        finally { saveBtn.disabled = false; }
+    }
+})();
+
+/* ── Users role ── */
+(function() {
+    const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+    document.querySelectorAll('.user-role-select').forEach(sel => {
+        sel.addEventListener('change', async () => {
+            const uid = sel.dataset.uid;
+            const savedEl = document.getElementById('saved-' + uid);
+            const errEl   = document.getElementById('err-' + uid);
+            savedEl.style.display = 'none'; errEl.style.display = 'none';
+            try {
+                const resp = await fetch('/api/admin/users/' + uid + '/set-platform-role/', {
+                    method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf},
+                    body: JSON.stringify({ platform_role: sel.value }),
+                });
+                const data = await resp.json();
+                if (resp.ok) { savedEl.style.display = 'inline'; setTimeout(() => savedEl.style.display = 'none', 2500); }
+                else { errEl.textContent = data.error || 'Error'; errEl.style.display = 'inline'; }
+            } catch(e) { errEl.textContent = 'Network error'; errEl.style.display = 'inline'; }
+        });
+    });
+})();
+
+/* ── Audit logs ── */
+let alPage = 1;
+function loadLogs(page) {
+    alPage = page;
+    const tbody = document.getElementById('al-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:28px;text-align:center;color:var(--text-color-2);">Loading…</td></tr>';
+    const params = new URLSearchParams({
+        page,
+        source:    document.getElementById('al-source')?.value    || 'all',
+        action:    document.getElementById('al-action')?.value    || '',
+        user:      document.getElementById('al-user')?.value.trim()   || '',
+        search:    document.getElementById('al-search')?.value.trim() || '',
+        date_from: document.getElementById('al-date-from')?.value || '',
+        date_to:   document.getElementById('al-date-to')?.value   || '',
+    });
+    function fmtTs(iso) { const d = new Date(iso); return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+    function badge(cls, txt) { return '<span class="al-badge ' + cls + '">' + txt + '</span>'; }
+    fetch('/api/platform/audit-logs/?' + params).then(r => r.json()).then(data => {
+        document.getElementById('al-count').textContent     = data.total + ' entr' + (data.total===1?'y':'ies');
+        document.getElementById('al-page-info').textContent = 'Page ' + data.page + ' / ' + data.num_pages;
+        document.getElementById('al-prev').disabled = data.page <= 1;
+        document.getElementById('al-next').disabled = data.page >= data.num_pages;
+        if (!data.logs.length) { tbody.innerHTML = '<tr><td colspan="8" style="padding:28px;text-align:center;color:var(--text-color-2);">No entries found.</td></tr>'; return; }
+        tbody.innerHTML = data.logs.map(row =>
+            '<tr>' +
+            '<td style="white-space:nowrap;color:var(--text-color-2);">' + fmtTs(row.timestamp) + '</td>' +
+            '<td>' + badge('al-src-' + row.source, row.source) + '</td>' +
+            '<td>' + badge('al-act-' + row.action.toLowerCase(), row.action.replace(/_/g,' ')) + '</td>' +
+            '<td style="font-weight:600;">' + row.user + '</td>' +
+            '<td style="color:var(--text-color-2);font-size:0.76rem;">' + (row.ip_address||'—') + '</td>' +
+            '<td style="color:var(--text-color-2);font-size:0.78rem;">' + (row.object_type||'—') + '</td>' +
+            '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + row.description.replace(/"/g,'&quot;') + '">' + row.description + '</td>' +
+            '<td style="font-size:0.78rem;">' + (row.incident_id ? '<a href="/incident/'+row.incident_id+'/overview" style="color:var(--main-color-3);text-decoration:none;">'+row.incident_name+'</a>' : '—') + '</td>' +
+            '</tr>'
+        ).join('');
+    }).catch(() => { tbody.innerHTML = '<tr><td colspan="8" style="padding:28px;text-align:center;color:#dc2626;">Failed to load logs.</td></tr>'; });
+}
+document.getElementById('al-apply')?.addEventListener('click', () => loadLogs(1));
+document.getElementById('al-prev')?.addEventListener('click', () => loadLogs(alPage - 1));
+document.getElementById('al-next')?.addEventListener('click', () => loadLogs(alPage + 1));
+document.getElementById('al-search')?.addEventListener('keydown', e => { if (e.key==='Enter') loadLogs(1); });
+document.getElementById('al-export-csv')?.addEventListener('click', async () => {
+    const params = new URLSearchParams({ page:1, page_size:5000, source: document.getElementById('al-source')?.value||'all', action: document.getElementById('al-action')?.value||'', user: document.getElementById('al-user')?.value.trim()||'', search: document.getElementById('al-search')?.value.trim()||'', date_from: document.getElementById('al-date-from')?.value||'', date_to: document.getElementById('al-date-to')?.value||'' });
+    const data = await (await fetch('/api/platform/audit-logs/?' + params)).json();
+    const rows = data.logs.map(l => [l.timestamp,l.source,l.action,l.user,l.ip_address,l.object_type,'"'+l.description.replace(/"/g,'""')+'"',l.incident_name||''].join(','));
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([['timestamp','source','action','user','ip_address','object_type','description','incident'].join(',')+'\n'+rows.join('\n')],{type:'text/csv'})), download:'platform_audit_logs.csv' });
+    a.click();
+});
+</script>
 {% endblock %}

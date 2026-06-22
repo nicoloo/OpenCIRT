@@ -326,8 +326,4 @@ class Migration(migrations.Migration):
             code=seed_default_admin,
             reverse_code=migrations.RunPython.noop,
         ),
-        migrations.RunPython(
-            code=load_demo_incidents,
-            reverse_code=migrations.RunPython.noop,
-        ),
     ]
