@@ -71,6 +71,7 @@ urlpatterns = [
     path('api/incident/<int:id>/remove-category/', views.remove_incident_category, name='remove_incident_category'),
     path('api/platform-settings/', views.save_platform_settings, name='save_platform_settings'),
     path('api/admin/users/<int:user_id>/set-platform-role/', views.api_admin_set_platform_role, name='api_admin_set_platform_role'),
+    path('api/platform/audit-logs/', views.api_platform_audit_logs, name='api_platform_audit_logs'),
     path('api/cti-providers/', views.save_cti_provider, name='save_cti_provider'),
     path('api/cti-providers/delete/', views.delete_cti_provider, name='delete_cti_provider'),
     path('api/incident/<int:id>/ioc/<int:ioc_id>/reputation/', views.ioc_reputation, name='ioc_reputation'),

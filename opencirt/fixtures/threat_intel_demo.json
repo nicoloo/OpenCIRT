@@ -1,6 +1,66 @@
 [
   {
     "model": "opencirt.campaign",
+    "pk": 4,
+    "fields": {
+      "name": "Supply Chain Attack — CI/CD Pipeline",
+      "description": "Compromise of a third-party build dependency injected malicious code into internal CI/CD pipelines. Affected 4 production services before detection. Attributed to a financially motivated group exploiting an open-source maintainer account.",
+      "color": "#f97316",
+      "created_by": 1,
+      "created_at": "2025-11-10T08:00:00Z",
+      "updated_at": "2025-11-10T08:00:00Z",
+      "start_date": "2025-11-01",
+      "end_date": "2026-01-20",
+      "incidents": []
+    }
+  },
+  {
+    "model": "opencirt.campaign",
+    "pk": 5,
+    "fields": {
+      "name": "Credential Stuffing — Customer Portal",
+      "description": "Large-scale credential stuffing attack using combo lists from prior breaches. Over 15,000 login attempts per hour at peak. 312 accounts successfully compromised before adaptive rate-limiting was deployed.",
+      "color": "#0d9488",
+      "created_by": 1,
+      "created_at": "2026-01-18T09:00:00Z",
+      "updated_at": "2026-01-18T09:00:00Z",
+      "start_date": "2026-01-15",
+      "end_date": "2026-03-31",
+      "incidents": [3]
+    }
+  },
+  {
+    "model": "opencirt.campaign",
+    "pk": 6,
+    "fields": {
+      "name": "Zero-day Exploitation — Edge Gateway",
+      "description": "Active exploitation of an unpatched RCE in the perimeter VPN gateway. Multiple threat actors observed leveraging the same vulnerability. Patches applied but post-compromise persistence mechanisms still being hunted.",
+      "color": "#8b5cf6",
+      "created_by": 1,
+      "created_at": "2026-05-03T11:00:00Z",
+      "updated_at": "2026-05-03T11:00:00Z",
+      "start_date": "2026-05-01",
+      "end_date": null,
+      "incidents": []
+    }
+  },
+  {
+    "model": "opencirt.campaign",
+    "pk": 7,
+    "fields": {
+      "name": "Insider Threat — Finance Data Exfiltration",
+      "description": "Departing employee exfiltrated financial reports and customer PII via personal cloud storage. DLP alerts triggered post-departure during quarterly audit. Legal hold in place; investigation ongoing with HR and legal.",
+      "color": "#e11d48",
+      "created_by": 1,
+      "created_at": "2026-06-11T14:00:00Z",
+      "updated_at": "2026-06-11T14:00:00Z",
+      "start_date": "2026-06-10",
+      "end_date": null,
+      "incidents": []
+    }
+  },
+  {
+    "model": "opencirt.campaign",
     "pk": 1,
     "fields": {
       "name": "Q2 2026 LockBit / Ransomware Wave",

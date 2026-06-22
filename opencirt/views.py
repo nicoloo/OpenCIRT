@@ -3,14 +3,14 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import login, logout, authenticate
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
-from opencirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformSettings, CtiProvider, IncidentCategory, Campaign
-from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, sync_incident_times, get_incidents_by_day_and_severity
+from opencirt.models import Incident, Note, User, Message, GenericIoc, UserRole, Task, Action, Impact, SharedFile, AuditLog, PlatformAuditLog, PlatformSettings, CtiProvider, IncidentCategory, Campaign
+from .utils import verify_permissions, user_is_incident_responder_orpublic, user_is_incident_responder, update_first_actions, sync_incident_times
 from .threat_intel import schedule_lookup, ELIGIBLE_TYPES as THREAT_INTEL_ELIGIBLE_TYPES
 import json
 import os
 import re
 import random
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date as dt_date
 from django.utils import timezone
 from django.template.loader import render_to_string
 from xhtml2pdf import pisa
@@ -69,6 +69,19 @@ def _audit(incident, request, action, object_type, description):
     except Exception:
         pass
 
+def _platform_audit(request, action, object_type, description, user=None):
+    """Create a PlatformAuditLog entry. Never raises — logs silently on error."""
+    try:
+        PlatformAuditLog.objects.create(
+            user=user if user is not None else (request.user if request.user.is_authenticated else None),
+            ip_address=_get_client_ip(request),
+            action=action,
+            object_type=object_type,
+            description=description,
+        )
+    except Exception:
+        pass
+
 # TLP → python-docx RGBColor mapping (used by download_incident_word)
 TLP_COLORS = {
     'WHITE': RGBColor(80, 80, 80),
@@ -101,68 +114,34 @@ def home(request):
     ]
 
 
-    
-    # Prepare graphs data
-    # Pie chart
-    piechart_data = {
-        'labels': list(Counter(inc.status for inc in incidents_list).keys()),
-        'values': list(Counter(inc.status for inc in incidents_list).values()),
-    }
-    # Get sorted unique dates
-    timechart_data = get_incidents_by_day_and_severity()
-
-    # Extract sorted dates
-    dates = sorted(timechart_data.keys())
-
-    # Extract unique severities
-    severities = set()
-    for sev_data in timechart_data.values():
-        severities.update(sev_data.keys())
-    severities = sorted(severities)  # Sort to maintain order
-
-    # Prepare data for Chart.js
-    severity_data = {sev: [timechart_data[date].get(sev, 0) for date in dates] for sev in severities}
-
-    # Prepare dataset for Chart.js
-    datasets = []
-    for severity in severities:
-        datasets.append({
-            "label": severity,
-            "data": severity_data[severity],
-            # "borderColor": severity_colors.get(severity, "gray"),
-        })
-
-    context = {
-        "labels": dates,
-        "datasets": datasets
-    }
-
     # Stats bar
     total_count = len(incidents_list)
     active_count = sum(1 for inc in incidents_list if inc.status in ('OPEN', 'IN_PROGRESS'))
     critical_count = sum(1 for inc in incidents_list if inc.severity == 'CRITICAL')
     total_iocs = sum(inc.genericiocs.count() for inc in incidents_list)
 
-    # Severity distribution donut
-    severity_counter = Counter(inc.severity for inc in incidents_list)
-    severity_chart_data = {
-        'labels': list(severity_counter.keys()),
-        'values': list(severity_counter.values()),
-    }
-
     from .choices_processor import INCIDENT_RESOLUTION_CHOICES
+
+    # ── Threat Intel context (merged into home page) ──
+    from .choices_processor import choices_context
+    from django.http import HttpRequest as _HttpRequest
+    _req = _HttpRequest()
+    _choices = choices_context(_req)
+
+    ti_incidents = _accessible_incidents(request.user)
+    ti_campaigns = Campaign.objects.all().prefetch_related('incidents') if _has_platform_access(request.user) else Campaign.objects.none()
+    all_iocs     = GenericIoc.objects.filter(incident__in=ti_incidents)
+    ti_total_iocs  = all_iocs.count()
+    ti_unique_iocs = all_iocs.values('value').distinct().count()
 
     return render(request, 'home.html', {
         'incidents': incidents_list,
         'user': request.user,
-        'status_counts': piechart_data,
-        'timechart_data': context,
         'kpis': kpis,
         'total_count': total_count,
         'active_count': active_count,
         'critical_count': critical_count,
         'total_iocs': total_iocs,
-        'severity_chart_data': severity_chart_data,
         'INCIDENT_RESOLUTION_CHOICES': INCIDENT_RESOLUTION_CHOICES,
         'INCIDENT_STATUS_CHOICES': [
             ('OPEN', 'Open'), ('IN_PROGRESS', 'In Progress'),
@@ -172,8 +151,16 @@ def home(request):
             ('LOW', 'Low'), ('MEDIUM', 'Medium'),
             ('HIGH', 'High'), ('CRITICAL', 'Critical'),
         ],
-        'campaigns': Campaign.objects.all().order_by('name') if _has_platform_access(request.user) else Campaign.objects.none(),
+        'campaigns': ti_campaigns,
         'categories': IncidentCategory.objects.all().order_by('name'),
+        # Threat Intel
+        'ti_total_iocs':    ti_total_iocs,
+        'ti_unique_iocs':   ti_unique_iocs,
+        'ti_incident_count': ti_incidents.count(),
+        'ti_campaign_count': ti_campaigns.count(),
+        'IOC_TYPE_CHOICES':   _choices['GENERIC_IOC_TYPE_CHOICES'],
+        'IOC_STATUS_CHOICES': _choices['GENERIC_IOC_STATUS_CHOICES'],
+        'cti_configured':  CtiProvider.objects.filter(enabled=True).exclude(api_key='').exists(),
     })
 
 
@@ -210,6 +197,7 @@ def register(request):
             return render(request, 'register.html', {'error': 'Password must be at least 8 characters.', 'username': username})
         user = User.objects.create_user(username=username, password=password)
         login(request, user)
+        _platform_audit(request, 'REGISTER', 'User', f'New account created: {username}', user=user)
         return redirect('/home')
     return render(request, 'register.html')
 
@@ -226,6 +214,7 @@ def custom_login(request):
         if user is not None:
             _login_rate_limit_reset(ip)
             login(request, user)
+            _platform_audit(request, 'LOGIN', 'User', f'User logged in: {username}', user=user)
             next_url = request.GET.get('next', '/home')
             if not url_has_allowed_host_and_scheme(
                 next_url,
@@ -238,6 +227,8 @@ def custom_login(request):
     return render(request, 'login.html')
 
 def custom_logout(request):
+    if request.user.is_authenticated:
+        _platform_audit(request, 'LOGOUT', 'User', f'User logged out: {request.user.username}')
     logout(request)
     return redirect('login')
 
@@ -746,6 +737,8 @@ def create_incident(request):
             display_role='Incident Lead',
         )
 
+        _platform_audit(request, 'INCIDENT_CREATE', 'Incident',
+                        f'Incident created: "{name}" (id={incident.id}, severity={severity})')
         return redirect('incident_invite', id=incident.id)
 
     return render(request, 'incidents/create_incident.html', {'user': request.user})
@@ -808,6 +801,8 @@ def settings_view(request):
         prefs['chart_period'] = request.POST.get('chart_period', '30d')
         user.preferences = prefs
         user.save()
+        _platform_audit(request, 'SETTINGS_CHANGE', 'UserPreferences',
+                        f'User preferences updated by {user.username}')
         return redirect('/settings?saved=1')
 
     platform      = PlatformSettings.get()
@@ -844,9 +839,115 @@ def api_admin_set_platform_role(request, user_id):
     if new_role not in valid:
         return JsonResponse({'error': 'Invalid platform_role.'}, status=400)
 
+    old_role = target.platform_role or 'None'
     target.platform_role = new_role
     target.save(update_fields=['platform_role'])
+    _platform_audit(request, 'ROLE_CHANGE', 'User',
+                    f'Platform role changed for {target.username}: {old_role} → {new_role or "None"} '
+                    f'(by {request.user.username})')
     return JsonResponse({'status': 'ok', 'platform_role': new_role})
+
+
+@login_required(login_url='login')
+def api_platform_audit_logs(request):
+    """
+    GET /api/platform/audit-logs/
+    Admin-only. Returns paginated combined audit logs (incident + platform level).
+    Query params: page, page_size, user, action, source (incident|platform|all), search, date_from, date_to
+    """
+    if not request.user.is_admin:
+        return JsonResponse({'error': 'Admin only.'}, status=403)
+
+    PAGE_SIZE = int(request.GET.get('page_size', 50))
+    PAGE_SIZE = min(max(PAGE_SIZE, 1), 200)
+    page = max(1, int(request.GET.get('page', 1)))
+
+    filter_user   = request.GET.get('user', '').strip()
+    filter_action = request.GET.get('action', '').strip()
+    filter_source = request.GET.get('source', 'all')   # 'incident', 'platform', 'all'
+    filter_search = request.GET.get('search', '').strip()
+    date_from     = request.GET.get('date_from', '').strip()
+    date_to       = request.GET.get('date_to', '').strip()
+
+    rows = []
+
+    # ── Incident-level audit logs ─────────────────────────────────────────────
+    if filter_source in ('all', 'incident'):
+        qs = AuditLog.objects.select_related('user', 'incident')
+        if filter_user:
+            qs = qs.filter(user__username__icontains=filter_user)
+        if filter_action:
+            qs = qs.filter(action=filter_action)
+        if filter_search:
+            qs = qs.filter(description__icontains=filter_search)
+        if date_from:
+            try:
+                qs = qs.filter(timestamp__date__gte=date_from)
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                qs = qs.filter(timestamp__date__lte=date_to)
+            except ValueError:
+                pass
+        for entry in qs:
+            rows.append({
+                'source':      'incident',
+                'timestamp':   entry.timestamp.isoformat(),
+                'user':        entry.user.username if entry.user else '—',
+                'ip_address':  entry.ip_address,
+                'action':      entry.action,
+                'object_type': entry.object_type,
+                'description': entry.description,
+                'incident_id': entry.incident_id,
+                'incident_name': entry.incident.name if entry.incident else '—',
+            })
+
+    # ── Platform-level audit logs ─────────────────────────────────────────────
+    if filter_source in ('all', 'platform'):
+        qs = PlatformAuditLog.objects.select_related('user')
+        if filter_user:
+            qs = qs.filter(user__username__icontains=filter_user)
+        if filter_action:
+            qs = qs.filter(action=filter_action)
+        if filter_search:
+            qs = qs.filter(description__icontains=filter_search)
+        if date_from:
+            try:
+                qs = qs.filter(timestamp__date__gte=date_from)
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                qs = qs.filter(timestamp__date__lte=date_to)
+            except ValueError:
+                pass
+        for entry in qs:
+            rows.append({
+                'source':      'platform',
+                'timestamp':   entry.timestamp.isoformat(),
+                'user':        entry.user.username if entry.user else '—',
+                'ip_address':  entry.ip_address,
+                'action':      entry.action,
+                'object_type': entry.object_type,
+                'description': entry.description,
+                'incident_id': None,
+                'incident_name': None,
+            })
+
+    # Sort combined by timestamp desc, then paginate
+    rows.sort(key=lambda r: r['timestamp'], reverse=True)
+    total   = len(rows)
+    offset  = (page - 1) * PAGE_SIZE
+    page_rows = rows[offset: offset + PAGE_SIZE]
+
+    return JsonResponse({
+        'logs':       page_rows,
+        'total':      total,
+        'page':       page,
+        'page_size':  PAGE_SIZE,
+        'num_pages':  max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE),
+    })
 
 
 @login_required(login_url='login')
@@ -2706,6 +2807,8 @@ def save_platform_settings(request):
         ps.ai_api_key = ''
 
     ps.save()
+    _platform_audit(request, 'AI_CHANGE', 'PlatformSettings',
+                    f'AI provider set to {ps.ai_provider} by {request.user.username}')
     return JsonResponse({
         'status':      'saved',
         'ai_provider': ps.ai_provider,
@@ -2754,6 +2857,8 @@ def save_cti_provider(request):
         provider.enabled = bool(body['enabled'])
 
     provider.save()
+    _platform_audit(request, 'CTI_CHANGE', 'CtiProvider',
+                    f'CTI provider {provider.name} saved (enabled={provider.enabled}) by {request.user.username}')
     return JsonResponse({
         'status':  'saved',
         'name':    provider.name,
@@ -2777,6 +2882,8 @@ def delete_cti_provider(request):
 
     name = body.get('name', '').upper()
     CtiProvider.objects.filter(name=name).delete()
+    _platform_audit(request, 'CTI_CHANGE', 'CtiProvider',
+                    f'CTI provider {name} deleted by {request.user.username}')
     return JsonResponse({'status': 'deleted', 'name': name})
 
 
@@ -3034,36 +3141,8 @@ def _ti_ioc_queryset(user, params):
 
 @login_required(login_url='login')
 def threat_intel(request):
-    """GET /threat-intel/ — Threat Intelligence Hub page."""
-    from django.db.models import Count
-
-    incidents   = _accessible_incidents(request.user)
-    campaigns   = Campaign.objects.all().prefetch_related('incidents') if _has_platform_access(request.user) else Campaign.objects.none()
-    all_iocs    = GenericIoc.objects.filter(incident__in=incidents)
-    total_iocs  = all_iocs.count()
-    unique_iocs = all_iocs.values('value').distinct().count()
-
-    malicious_count = all_iocs.filter(reputation__status='malicious').count()
-    pct_malicious   = round(malicious_count / total_iocs * 100, 1) if total_iocs else 0
-
-    from .choices_processor import choices_context
-    from django.http import HttpRequest
-    req = HttpRequest()
-    choices = choices_context(req)
-
-    context = {
-        'incidents':       incidents.order_by('-created_at'),
-        'campaigns':       campaigns,
-        'total_iocs':      total_iocs,
-        'unique_iocs':     unique_iocs,
-        'pct_malicious':   pct_malicious,
-        'incident_count':  incidents.count(),
-        'campaign_count':  campaigns.count(),
-        'IOC_TYPE_CHOICES':   choices['GENERIC_IOC_TYPE_CHOICES'],
-        'IOC_STATUS_CHOICES': choices['GENERIC_IOC_STATUS_CHOICES'],
-        'cti_configured':  CtiProvider.objects.filter(enabled=True).exclude(api_key='').exists(),
-    }
-    return render(request, 'threat_intel.html', context)
+    """Redirect to merged home page, Threat Intel tab."""
+    return redirect('/home?tab=ioc')
 
 
 @login_required(login_url='login')
@@ -3257,10 +3336,12 @@ def api_campaigns_list(request):
     accessible_ids = list(_accessible_incidents(request.user).values_list('id', flat=True))
     campaigns = Campaign.objects.prefetch_related('incidents').order_by('-created_at')
 
+    attributed_incident_ids = set()
     data = []
     for c in campaigns:
         accessible_incidents = c.incidents.filter(id__in=accessible_ids).select_related()
         incident_ids = [i.id for i in accessible_incidents]
+        attributed_incident_ids.update(incident_ids)
         ioc_count = GenericIoc.objects.filter(incident_id__in=incident_ids).count()
         data.append({
             'id':           c.id,
@@ -3276,7 +3357,8 @@ def api_campaigns_list(request):
                              for i in accessible_incidents],
         })
 
-    return JsonResponse({'campaigns': data})
+    unattributed = _accessible_incidents(request.user).exclude(id__in=attributed_incident_ids).count()
+    return JsonResponse({'campaigns': data, 'unattributed_count': unattributed})
 
 
 _HEX_COLOR_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
@@ -3605,6 +3687,51 @@ def api_ti_campaign_stats(request):
     closed_total = resolved + closed
     tp_rate = round(tp_count / closed_total * 100) if closed_total else None
 
+    # ── Chart datasets for the overview charts ─────────────────────────────
+    # Incidents by month + severity (stacked bar)
+    sev_by_month_qs = (
+        incidents
+        .annotate(month=TruncMonth('created_at'))
+        .values('month', 'severity')
+        .annotate(cnt=Count('id'))
+        .order_by('month')
+    )
+    sev_by_month_data = {}
+    for row in sev_by_month_qs:
+        if row['month']:
+            m = row['month'].strftime('%Y-%m')
+            if m not in sev_by_month_data:
+                sev_by_month_data[m] = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+            sev_by_month_data[m][row['severity']] = row['cnt']
+    severity_by_month = [
+        {'month': m, **counts} for m, counts in sorted(sev_by_month_data.items())
+    ]
+
+    # Status + severity counts (doughnuts)
+    status_counts_map  = dict(incidents.values('status').annotate(c=Count('id')).values_list('status', 'c'))
+    severity_counts_map = dict(incidents.values('severity').annotate(c=Count('id')).values_list('severity', 'c'))
+
+    # Resolutions by month (stacked bar)
+    res_by_month_qs = (
+        incidents
+        .exclude(resolution='')
+        .filter(status__in=['CLOSED', 'RESOLVED'])
+        .annotate(month=TruncMonth('updated_at'))
+        .values('month', 'resolution')
+        .annotate(cnt=Count('id'))
+        .order_by('month')
+    )
+    res_by_month_data = {}
+    for row in res_by_month_qs:
+        if row['month']:
+            m = row['month'].strftime('%Y-%m')
+            if m not in res_by_month_data:
+                res_by_month_data[m] = {}
+            res_by_month_data[m][row['resolution']] = row['cnt']
+    resolution_by_month = [
+        {'month': m, **counts} for m, counts in sorted(res_by_month_data.items())
+    ]
+
     return JsonResponse({
         'total':       total,
         'open':        open_,
@@ -3619,6 +3746,11 @@ def api_ti_campaign_stats(request):
         'avg_duration': fmt_td(sla['avg_dur']),
         'resolution_breakdown': resolution_breakdown,
         'tp_rate':     tp_rate,
+        # chart data
+        'severity_by_month':   severity_by_month,
+        'status_counts':       status_counts_map,
+        'severity_counts':     severity_counts_map,
+        'resolution_by_month': resolution_by_month,
     })
 
 
@@ -3915,6 +4047,8 @@ def api_incidents_batch(request):
         deleted = 0
         for inc in list(incidents):
             if _is_lead(inc):
+                _platform_audit(request, 'INCIDENT_DELETE', 'Incident',
+                                f'Incident deleted: "{inc.name}" (id={inc.id})')
                 inc.delete()
                 deleted += 1
         if deleted == 0:
