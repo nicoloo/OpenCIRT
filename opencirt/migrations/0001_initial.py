@@ -37,7 +37,14 @@ def seed_default_admin(apps, schema_editor):
     User = apps.get_model('opencirt', 'User')
     User.objects.filter(username='lead_admin').delete()
 
-    initial_password = secrets.token_urlsafe(16)
+    env_password = os.environ.get('ADMIN_PASSWORD', '').strip()
+    if env_password:
+        initial_password = env_password
+        password_source = 'from .env (ADMIN_PASSWORD)'
+    else:
+        initial_password = secrets.token_urlsafe(16)
+        password_source = 'randomly generated'
+
     _, created = User.objects.get_or_create(
         username='admin',
         defaults={
@@ -51,8 +58,9 @@ def seed_default_admin(apps, schema_editor):
         },
     )
     if created:
-        print(f'\n\033[93m*** OpenCIRT initial admin password: {initial_password} ***\033[0m')
-        print('\033[93m*** Change it immediately after first login. ***\033[0m\n')
+        print(f'\n\033[93m*** OpenCIRT initial admin password: {initial_password} ({password_source}) ***\033[0m')
+        if not env_password:
+            print('\033[93m*** Change it immediately after first login. ***\033[0m\n')
 
 
 def load_demo_incidents(apps, schema_editor):
