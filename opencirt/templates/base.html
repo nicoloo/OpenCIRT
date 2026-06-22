@@ -22,7 +22,7 @@
 
         <a class="topbar-logo" href="/home">
             {% if user.is_authenticated and user.light_mode == 'dark_mode' %}
-            <img src="{% static 'logo_phrase_dark.png' %}" alt="OpenCIRT" style="height:52px;width:auto;" onerror="this.onerror=null;this.src='/static/logo_phrase_light.png'">
+            <img src="{% static 'logo_phrase_dark.png' %}" alt="OpenCIRT" style="height:52px;width:auto;">
             {% else %}
             <img src="{% static 'logo_phrase_light.png' %}" alt="OpenCIRT" style="height:52px;width:auto;">
             {% endif %}
