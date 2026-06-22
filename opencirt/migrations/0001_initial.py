@@ -58,8 +58,10 @@ def seed_default_admin(apps, schema_editor):
         },
     )
     if created:
-        print(f'\n\033[93m*** OpenCIRT initial admin password: {initial_password} ({password_source}) ***\033[0m')
-        if not env_password:
+        if env_password:
+            print('\n\033[93m*** OpenCIRT admin password set from ADMIN_PASSWORD in .env ***\033[0m\n')
+        else:
+            print(f'\n\033[93m*** OpenCIRT initial admin password: {initial_password} ***\033[0m')
             print('\033[93m*** Change it immediately after first login. ***\033[0m\n')
 
 
